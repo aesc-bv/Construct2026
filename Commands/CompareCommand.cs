@@ -76,7 +76,15 @@ namespace AESCConstruct25.Commands
                 for (int i = 0; i < bodies.Count; i++)
                 {
                     var idb1 = bodies[i];
-                    
+                    IPart ipart = idb1.Parent;
+                    Part partMaster = ipart.Master;
+
+                    // Get length data and rename part
+                    Box bbox = idb1.Master.Shape.GetBoundingBox(Matrix.Identity, true);
+                    double length = bbox.Size.Z * 1000;
+
+                    // To do: Save length as custom property and Rename part according to name setting.
+
                     if (!idb1.Parent.Master.CustomProperties.TryGetValue("AESC_Construct", out _))
                         continue;
                     if (matchedBodies.Contains(idb1))
