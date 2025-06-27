@@ -1,0 +1,12 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="AESCConstruct25.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="NameString" Type="System.String" Scope="User">
+      <Value Profile="(Default)">[Name]_[p1]x[p2]_[length]</Value>
+    </Setting>
+    <Setting Name="TypeString" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

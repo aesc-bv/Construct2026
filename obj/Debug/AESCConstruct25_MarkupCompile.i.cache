@@ -4,17 +4,17 @@
 library
 C#
 .cs
-C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\
 AESCConstruct25
 none
 false
 DEBUG;TRACE
 
-21643670913
+318319527
 
-35-534739254
-23852544912
-UI\ProfileSelectionControl.xaml;UI\JointSelectionControl.xaml;
+37-217675695
+20-1123432402
+UI\ProfileSelectionControl.xaml;UI\SettingsControl.xaml;UI\JointSelectionControl.xaml;
 
-False
+True
 

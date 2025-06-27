@@ -33,3 +33,15 @@ C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AES
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\Resources\Images\squareGrid.jpg
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.pdb
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\ProfileSelectionControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\JointSelectionControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\ProfileSelectionControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\JointSelectionControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.cache
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.g.resources
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.Resources.Resources.resources
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb
