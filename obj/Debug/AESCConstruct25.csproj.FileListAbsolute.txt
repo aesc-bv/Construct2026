@@ -1,0 +1,35 @@
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25_MarkupCompile.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.g.resources
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCCons.9867665C.Up2Date
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.dll
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.pdb
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\Resources\Images\squareGrid.jpg
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\ProfileSelectionControl.g.cs
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\ProfileSelectionControl.baml
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\JointSelectionControl.baml
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\JointSelectionControl.g.cs
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.Resources.Resources.resources
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
+C:\Users\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\Resources\Images\squareGrid.jpg
+C:\Users\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
+C:\Users\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\ProfileSelectionControl.baml
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\JointSelectionControl.baml
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\ProfileSelectionControl.g.cs
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\UI\JointSelectionControl.g.cs
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25_MarkupCompile.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.g.resources
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.Resources.Resources.resources
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCCons.9867665C.Up2Date
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.dll
+C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.pdb
+C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\Resources\Images\squareGrid.jpg
+C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll
+C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.pdb

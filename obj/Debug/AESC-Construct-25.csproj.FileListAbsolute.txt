@@ -1,0 +1,3 @@
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESC Construct 25\AESC-Construct-25.dll
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESC Construct 25\AESC-Construct-25.pdb
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESC_Construct_25.dll
