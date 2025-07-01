@@ -1,62 +1,74 @@
-﻿using System;
+﻿using AESCConstruct25.Fastener.Module;
+using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
 namespace AESCConstruct25.UI
 {
-    public partial class FastenersControl : UserControl
+    public partial class FastenersControl : UserControl, INotifyPropertyChanged
     {
+        private readonly FastenerModule _module;
+
         public FastenersControl()
         {
             InitializeComponent();
             DataContext = this;
 
-            // initialize defaults
+            // 1) load data once
+            _module = new FastenerModule();
+
+            // 2) populate type lists
+            BoltTypeOptions = new ObservableCollection<string>(_module.BoltTypes);
+            WasherTypeOptions = new ObservableCollection<string>(_module.WasherTypes);
+            NutTypeOptions = new ObservableCollection<string>(_module.NutTypes);
+
+            // 3) pick initial selections
             SelectedBoltType = BoltTypeOptions.FirstOrDefault();
-            SelectedBoltSize = BoltSizeOptions.ElementAtOrDefault(1);
-            BoltLength = "35";
-
-            IncludeWasherTop = true;
             SelectedWasherTopType = WasherTypeOptions.FirstOrDefault();
-            SelectedWasherTopSize = WasherSizeOptions.ElementAtOrDefault(1);
-
-            IncludeWasherBottom = true;
             SelectedWasherBottomType = WasherTypeOptions.FirstOrDefault();
-            SelectedWasherBottomSize = WasherSizeOptions.ElementAtOrDefault(1);
-
-            IncludeNut = true;
             SelectedNutType = NutTypeOptions.FirstOrDefault();
-            SelectedNutSize = NutSizeOptions.ElementAtOrDefault(1);
 
-            UseCustomPart = false;
-            // populate CustomFileOptions here if needed
+            IncludeWasherTop = false;
+            IncludeWasherBottom = false;
+            IncludeNut = false;
+
+            // 4) fill dependent size lists
+            RefreshBoltSizes();
+            RefreshWasherSizes();
+            RefreshNutSizes();
         }
 
-        // --- Bolt ---
-        public ObservableCollection<string> BoltTypeOptions { get; } = new ObservableCollection<string>
-        {
-            "ISO4014 / DIN931", "ISO4017 / DIN933"
-        };
-        public ObservableCollection<string> BoltSizeOptions { get; } = new ObservableCollection<string>
-        {
-            "M6", "M8", "M10"
-        };
+        // INotifyPropertyChanged...
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(string prop)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
 
-        public string SelectedBoltType { get; set; }
+        // --- Bolt ---
+        public ObservableCollection<string> BoltTypeOptions { get; }
+        public ObservableCollection<string> BoltSizeOptions { get; private set; }
+
+        private string _selectedBoltType;
+        public string SelectedBoltType
+        {
+            get => _selectedBoltType;
+            set
+            {
+                if (_selectedBoltType == value) return;
+                _selectedBoltType = value;
+                OnPropertyChanged(nameof(SelectedBoltType));
+                RefreshBoltSizes();
+            }
+        }
+
         public string SelectedBoltSize { get; set; }
-        public string BoltLength { get; set; }
+        public string BoltLength { get; set; } = "35";
 
         // --- Washers ---
-        public ObservableCollection<string> WasherTypeOptions { get; } = new ObservableCollection<string>
-        {
-            "DIN125A - ISO 7089"
-        };
-        public ObservableCollection<string> WasherSizeOptions { get; } = new ObservableCollection<string>
-        {
-            "M6", "M8"
-        };
+        public ObservableCollection<string> WasherTypeOptions { get; }
+        public ObservableCollection<string> WasherSizeOptions { get; private set; }
 
         public bool IncludeWasherTop { get; set; }
         public string SelectedWasherTopType { get; set; }
@@ -66,77 +78,83 @@ namespace AESCConstruct25.UI
         public string SelectedWasherBottomType { get; set; }
         public string SelectedWasherBottomSize { get; set; }
 
-        // --- Nut ---
-        public bool IncludeNut { get; set; }
-        public ObservableCollection<string> NutTypeOptions { get; } = new ObservableCollection<string>
-        {
-            "DIN 985"
-        };
-        public ObservableCollection<string> NutSizeOptions { get; } = new ObservableCollection<string>
-        {
-            "M6", "M8"
-        };
+        // --- Nuts ---
+        public ObservableCollection<string> NutTypeOptions { get; }
+        public ObservableCollection<string> NutSizeOptions { get; private set; }
 
+        public bool IncludeNut { get; set; }
         public string SelectedNutType { get; set; }
         public string SelectedNutSize { get; set; }
 
-        // --- Custom Part ---
+        // --- Custom & insert ---
         public bool UseCustomPart { get; set; }
         public ObservableCollection<string> CustomFileOptions { get; } = new ObservableCollection<string>();
         public string SelectedCustomFile { get; set; }
 
-        // --- Distance & Insert ---
         public int DistanceMm { get; set; } = 20;
         public bool LockDistance { get; set; }
 
-        private void InsertButton_Click(object sender, RoutedEventArgs e)
+        // Called when Bolt-Type changes
+        private void RefreshBoltSizes()
         {
-            var parms = new FastenerParameters
-            {
-                BoltType = SelectedBoltType,
-                BoltSize = SelectedBoltSize,
-                BoltLength = BoltLength,
-                IncludeWasherTop = IncludeWasherTop,
-                WasherTopType = SelectedWasherTopType,
-                WasherTopSize = SelectedWasherTopSize,
-                IncludeWasherBottom = IncludeWasherBottom,
-                WasherBottomType = SelectedWasherBottomType,
-                WasherBottomSize = SelectedWasherBottomSize,
-                IncludeNut = IncludeNut,
-                NutType = SelectedNutType,
-                NutSize = SelectedNutSize,
-                UseCustomPart = UseCustomPart,
-                CustomFilePath = SelectedCustomFile,
-                DistanceMm = DistanceMm,
-                LockDistance = LockDistance
-            };
-
-            // TODO: call your SpaceClaim API with `parms`
+            var sizes = _module.BoltSizesFor(SelectedBoltType).ToList();
+            BoltSizeOptions = new ObservableCollection<string>(sizes);
+            SelectedBoltSize = sizes.FirstOrDefault();
+            OnPropertyChanged(nameof(BoltSizeOptions));
+            OnPropertyChanged(nameof(SelectedBoltSize));
         }
+
+        // Called when any Washer-Type changes (we use top type for both)
+        private void RefreshWasherSizes()
+        {
+            var sizes = _module.WasherSizesFor(SelectedWasherTopType).ToList();
+            WasherSizeOptions = new ObservableCollection<string>(sizes);
+            SelectedWasherTopSize = sizes.FirstOrDefault();
+            SelectedWasherBottomSize = sizes.FirstOrDefault();
+            OnPropertyChanged(nameof(WasherSizeOptions));
+            OnPropertyChanged(nameof(SelectedWasherTopSize));
+            OnPropertyChanged(nameof(SelectedWasherBottomSize));
+        }
+
+        // Called when Nut-Type changes
+        private void RefreshNutSizes()
+        {
+            var sizes = _module.NutSizesFor(SelectedNutType).ToList();
+            NutSizeOptions = new ObservableCollection<string>(sizes);
+            SelectedNutSize = sizes.FirstOrDefault();
+            OnPropertyChanged(nameof(NutSizeOptions));
+            OnPropertyChanged(nameof(SelectedNutSize));
+        }
+
 
         private void GetSizesButton_Click(object sender, RoutedEventArgs e)
         {
-            // TO DO
+            // you can call your CheckSize logic here
+            FastenerModule.CheckSize();
         }
-    }
 
-    public class FastenerParameters
-    {
-        public string BoltType { get; set; }
-        public string BoltSize { get; set; }
-        public string BoltLength { get; set; }
-        public bool IncludeWasherTop { get; set; }
-        public string WasherTopType { get; set; }
-        public string WasherTopSize { get; set; }
-        public bool IncludeWasherBottom { get; set; }
-        public string WasherBottomType { get; set; }
-        public string WasherBottomSize { get; set; }
-        public bool IncludeNut { get; set; }
-        public string NutType { get; set; }
-        public string NutSize { get; set; }
-        public bool UseCustomPart { get; set; }
-        public string CustomFilePath { get; set; }
-        public int DistanceMm { get; set; }
-        public bool LockDistance { get; set; }
+        private void InsertButton_Click(object sender, RoutedEventArgs e)
+        {
+            // push UI state into module
+            _module.SetBoltType(SelectedBoltType);
+            _module.SetBoltSize(SelectedBoltSize);
+            _module.SetBoltLength(BoltLength);
+            _module.SetIncludeWasherTop(IncludeWasherTop);
+            _module.SetWasherTopType(SelectedWasherTopType);
+            _module.SetWasherTopSize(SelectedWasherTopSize);
+            _module.SetIncludeWasherBottom(IncludeWasherBottom);
+            _module.SetWasherBottomType(SelectedWasherBottomType);
+            _module.SetWasherBottomSize(SelectedWasherBottomSize);
+            _module.SetIncludeNut(IncludeNut);
+            _module.SetNutType(SelectedNutType);
+            _module.SetNutSize(SelectedNutSize);
+            _module.SetUseCustomPart(UseCustomPart);
+            _module.SetCustomFile(SelectedCustomFile);
+            _module.SetDistance(DistanceMm);
+            _module.SetLockDistance(LockDistance);
+
+            // then invoke creation
+            _module.CreateFasteners();
+        }
     }
 }

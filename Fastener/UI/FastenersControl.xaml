@@ -53,7 +53,7 @@
                 <TextBlock Text="Type" VerticalAlignment="Center"/>
                 <ComboBox x:Name="BoltTypeCombo" Grid.Column="1"
                           ItemsSource="{Binding BoltTypeOptions}"
-                          SelectedItem="{Binding SelectedBoltType}" Margin="5,0"/>
+                          SelectedItem="{Binding SelectedBoltType}" Margin="5,0" />
 
                 <TextBlock Text="Size" Grid.Row="1" VerticalAlignment="Center"/>
                 <ComboBox x:Name="BoltSizeCombo" Grid.Row="1" Grid.Column="1"

@@ -39,6 +39,11 @@
                 <TextBox Text="{Binding Angle}" Width="40"/>
             </StackPanel>
             <StackPanel/>
+            <StackPanel>
+                <CheckBox Content="Place in middle"
+                IsChecked="{Binding InsertInMiddle}"
+                VerticalAlignment="Bottom"/>
+            </StackPanel>
         </UniformGrid>
 
         <!-- 2) Illustration -->
