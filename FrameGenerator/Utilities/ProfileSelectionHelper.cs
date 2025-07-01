@@ -22,7 +22,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             {
                 ITrimmedCurve curve = null;
 
-                if (obj is not NurbsCurve nurbsCurve)
+                if (obj is not NurbsCurve)
                 {
                     if (obj is DesignCurve designCurve)
                     {
@@ -40,12 +40,16 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                         //Logger.Log("Selected ComponentEdge via Master.");
                     }
 
-                    if (curve != null)
+
+                    var testStraight = curve.Geometry as Line;
+                    if (curve != null && testStraight != null)
                     {
+                        Logger.Log("testStraight");
                         selectedCurves.Add(curve);
                     }
                     else
                     {
+                        Logger.Log("testStraight false");
                         //Logger.Log("Skipped object - no valid curve shape.");
                     }
                 }

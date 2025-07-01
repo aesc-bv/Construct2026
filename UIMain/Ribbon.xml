@@ -17,25 +17,42 @@
 						size="large"
 						autoExpandOnClick="true"
 						style="imageandtext">
+						<!-- vertical stack: first row for buttons, then each checkbox below -->
 						<container id="AESCConstruct25.ExportContainer"
-								   layoutOrientation="horizontal"
-								   itemSpacing="6"
-								   isGroup="false">
-							<button id="AESCConstruct25.ExportExcelBtn"
-									command="AESCConstruct25.ExportExcel"
-									label="Excel"
-									size="large"
-									style="imageandtext"/>
-							<button id="AESCConstruct25.ExportBOMBtn"
-									command="AESCConstruct25.ExportBOM"
-									label="BOM"
-									size="large"
-									style="imageandtext"/>
-							<button id="AESCConstruct25.ExportSTEPBtn"
-									command="AESCConstruct25.ExportSTEP"
-									label="STEP"
-									size="large"
-									style="imageandtext"/>
+							layoutOrientation="vertical"
+							itemSpacing="6"
+							isGroup="false">
+
+							<!-- Row of export buttons -->
+							<container id="AESCConstruct25.ExportButtonRow"
+									   layoutOrientation="horizontal"
+									   itemSpacing="6"
+									   isGroup="false">
+								<button id="AESCConstruct25.ExportExcelBtn"
+										command="AESCConstruct25.ExportExcel"
+										label="Excel"
+										size="large"
+										style="imageandtext"/>
+								<button id="AESCConstruct25.ExportBOMBtn"
+										command="AESCConstruct25.ExportBOM"
+										label="BOM"
+										size="large"
+										style="imageandtext"/>
+								<button id="AESCConstruct25.ExportSTEPBtn"
+										command="AESCConstruct25.ExportSTEP"
+										label="STEP"
+										size="large"
+										style="imageandtext"/>
+							</container>
+							<checkBox id="AddMaterialCheckboxExcel"
+								label="Add material to part name"
+								size="small"
+									  IsCheckable="True"/>
+							<checkBox id="AddMaterialCheckboxBOM"
+								label="Add material to part name"
+								size="small"
+									  StaysOpenOnClick="True"
+									  IsCheckable="True"/>
 						</container>
 					</button>
 					<button id="AESCConstruct25.UpdateBOM"
