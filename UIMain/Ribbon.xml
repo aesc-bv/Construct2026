@@ -90,6 +90,13 @@
 								size="large"
 								showLabel="true"
 								showImage="false"/>
+
+					<button id="AESCConstruct25.Fastener"
+								command="AESCConstruct25.Fastener"
+								label="Fastener"
+								size="large"
+								showLabel="true"
+								showImage="false"/>
 				</group>
 			</tab>
 		</tabs>

@@ -151,15 +151,6 @@ namespace AESCConstruct25
                     rotateC.Executing += (s, e) =>
                         RotateComponentCommand.Execute(Window.ActiveWindow, 90);
 
-                    //var toggleExcel = Command.Create("AESCConstruct25.ToggleAddMaterialExcel");
-                    //toggleExcel.Text = ""; // no text in the ribbon itself
-                    //toggleExcel.CheckedChanged += (s, e) => { /* flip your bool and leave pane open */ };
-
-                    //var toggleBOM = Command.Create("AESCConstruct25.ToggleAddMaterialBOM");
-                    //toggleBOM.Text = "";
-                    //toggleBOM.CheckedChanged += (s, e) => { /* flip your bool and leave pane open */ };
-
-
                     //var Plate = Command.Create("AESCConstruct25.Plate");
                     //Plate.Text = "Plate";
                     //Plate.Hint = Plate.";

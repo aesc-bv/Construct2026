@@ -16,6 +16,7 @@ namespace AESCConstruct25.UIMain
 		public const string JointCommand = "AESCConstruct25.JointSidebar";
         public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
         public const string PlateCommand = "AESCConstruct25.Plate";
+        public const string FastenerCommand = "AESCConstruct25.Fastener";
 
         // PROFILE
         static PanelTab _profileTab;
@@ -40,6 +41,11 @@ namespace AESCConstruct25.UIMain
         static ElementHost _plateHost;
         static PlatesControl _plateControl;
 
+        static PanelTab _fastenerTab;
+        static Panel _fastenerPanel;
+        static ElementHost _fastenerHost;
+        static FastenersControl _fastenerControl;
+
 
         public static void RegisterAll()
 		{
@@ -62,6 +68,11 @@ namespace AESCConstruct25.UIMain
             plCmd.Text = "Plate";
             plCmd.Hint = "Open the plate‐creation pane";
             plCmd.Executing += OnPlateToggle;
+
+            var fCmd = Command.Create(FastenerCommand);
+            fCmd.Text = "Fastener";
+            fCmd.Hint = "Open the fastener insertion pane";
+            fCmd.Executing += OnFastenerToggle;
         }
 
         static void OnSettingsToggle(object sender, EventArgs e)
@@ -224,6 +235,57 @@ namespace AESCConstruct25.UIMain
             _plateTab = PanelTab.Create(cmd, _platePanel, DockLocation.Right, 500, false);
             _plateTab?.Activate();
         }
+
+        static void OnFastenerToggle(object sender, EventArgs e)
+        {
+            var cmd = (Command)sender;
+
+            // close everything else
+            CloseProfile();
+            CloseJoint();
+            CloseSettings();
+            ClosePlate();
+
+            // if already open, close it
+            if (_fastenerTab != null)
+            {
+                CloseFastener();
+                return;
+            }
+
+            // build/rebuild
+            if (_fastenerPanel == null || _fastenerPanel.IsDisposed)
+            {
+                _fastenerControl = new FastenersControl();
+                _fastenerHost = new ElementHost
+                {
+                    Dock = DockStyle.Fill,
+                    Child = _fastenerControl
+                };
+                _fastenerPanel = new Panel { Dock = DockStyle.Fill };
+                _fastenerPanel.Controls.Add(_fastenerHost);
+            }
+
+            // show on the right
+            _fastenerTab = PanelTab.Create(cmd, _fastenerPanel, DockLocation.Right, 500, false);
+            _fastenerTab?.Activate();
+        }
+
+        public static void CloseFastener()
+        {
+            if (_fastenerTab != null)
+            {
+                _fastenerTab.Close();
+                _fastenerTab = null;
+            }
+            if (_fastenerPanel != null && !_fastenerPanel.IsDisposed)
+                _fastenerPanel.Dispose();
+
+            _fastenerPanel = null;
+            _fastenerHost = null;
+            _fastenerControl = null;
+        }
+
 
         public static void ClosePlate()
         {
