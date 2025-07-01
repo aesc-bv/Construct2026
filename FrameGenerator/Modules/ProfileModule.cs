@@ -5,13 +5,13 @@ using System.Linq;
 using System.Drawing;
 using AESCConstruct25.FrameGenerator.Modules.Profiles;
 using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System.Windows.Media;
 using Color = System.Drawing.Color;
-using Point = SpaceClaim.Api.V251.Geometry.Point;
-using Matrix = SpaceClaim.Api.V251.Geometry.Matrix;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
+using Matrix = SpaceClaim.Api.V242.Geometry.Matrix;
 
 namespace AESCConstruct25.FrameGenerator.Modules
 {

@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Drawing;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using AESCConstruct25.FrameGenerator.Utilities;
-using Point = SpaceClaim.Api.V251.Geometry.Point;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
 using System.Globalization;
 
 namespace AESCConstruct25.FrameGenerator.Utilities

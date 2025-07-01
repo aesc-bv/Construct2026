@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using AESCConstruct25.Properties;     // for Settings.Default
-using SpaceClaim.Api.V251;           // for Component
+using SpaceClaim.Api.V242;           // for Component
 using AESCConstruct25.FrameGenerator.Modules;       // for CustomPartProperty
 
 namespace AESCConstruct25.FrameGenerator.Utilities

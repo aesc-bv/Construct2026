@@ -3,10 +3,10 @@ using System.Windows;
 using System.Windows.Controls;
 using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251;           // for Window.ActiveWindow
-using SpaceClaim.Api.V251.Extensibility;
-using Application = SpaceClaim.Api.V251.Application;
-using Window = SpaceClaim.Api.V251.Window; // for WriteBlock
+using SpaceClaim.Api.V242;           // for Window.ActiveWindow
+using SpaceClaim.Api.V242.Extensibility;
+using Application = SpaceClaim.Api.V242.Application;
+using Window = SpaceClaim.Api.V242.Window; // for WriteBlock
 
 namespace AESCConstruct25.FrameGenerator.UI
 {

@@ -5,15 +5,15 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;                             // for WPF Window, MessageBox, etc.
 using System.Windows.Controls;                    // for WPF UserControl, TextBox, RadioButton, etc.
-using SpaceClaim.Api.V251;                        // for SpaceClaim API (Document, Window.ActiveWindow)
-using SpaceClaim.Api.V251.Geometry;               // for ITrimmedCurve, Point, etc.
+using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
+using SpaceClaim.Api.V242.Geometry;               // for ITrimmedCurve, Point, etc.
 using System.Windows.Media.Imaging;               // if you ever need WPF BitmapImage
 using DXFProfile = AESCConstruct25.FrameGenerator.Utilities.DXFProfile;
 using UserControl = System.Windows.Controls.UserControl;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using AESCConstruct25.FrameGenerator.Commands;
 using Orientation = System.Windows.Controls.Orientation;
-using Application = SpaceClaim.Api.V251.Application;
+using Application = SpaceClaim.Api.V242.Application;
 using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
 
 namespace AESCConstruct25.FrameGenerator.UI
@@ -298,7 +298,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // 2) Open the DXF in SpaceClaim so that Window.ActiveWindow is valid
                 try
                 {
-                    SpaceClaim.Api.V251.Document.Open(dxfPath, null);
+                    SpaceClaim.Api.V242.Document.Open(dxfPath, null);
                 }
                 catch (Exception ex)
                 {
@@ -314,7 +314,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 DXFProfile profile = DXFImportHelper.DXFtoProfile();
 
                 // 4) Close that DXF window
-                SpaceClaim.Api.V251.Window.ActiveWindow?.Close();
+                SpaceClaim.Api.V242.Window.ActiveWindow?.Close();
 
                 if (profile == null)
                 {

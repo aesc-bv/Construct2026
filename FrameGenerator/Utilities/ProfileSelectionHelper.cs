@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using AESCConstruct25.FrameGenerator.Modules.Profiles;
 using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 
 namespace AESCConstruct25.FrameGenerator.Utilities
 {
@@ -22,29 +22,32 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             {
                 ITrimmedCurve curve = null;
 
-                if (obj is DesignCurve designCurve)
+                if (obj is not NurbsCurve nurbsCurve)
                 {
-                    curve = designCurve.Shape;
-                    //Logger.Log("Selected DesignCurve.");
-                }
-                else if (obj is DesignEdge edge)
-                {
-                    curve = edge.Shape;
-                    //Logger.Log("Selected DesignEdge.");
-                }
-                else if (obj.Master is DesignEdge componentEdge)
-                {
-                    curve = componentEdge.Shape;
-                    //Logger.Log("Selected ComponentEdge via Master.");
-                }
+                    if (obj is DesignCurve designCurve)
+                    {
+                        curve = designCurve.Shape;
+                        //Logger.Log("Selected DesignCurve.");
+                    }
+                    else if (obj is DesignEdge edge)
+                    {
+                        curve = edge.Shape;
+                        //Logger.Log("Selected DesignEdge.");
+                    }
+                    else if (obj.Master is DesignEdge componentEdge)
+                    {
+                        curve = componentEdge.Shape;
+                        //Logger.Log("Selected ComponentEdge via Master.");
+                    }
 
-                if (curve != null)
-                {
-                    selectedCurves.Add(curve);
-                }
-                else
-                {
-                    //Logger.Log("Skipped object - no valid curve shape.");
+                    if (curve != null)
+                    {
+                        selectedCurves.Add(curve);
+                    }
+                    else
+                    {
+                        //Logger.Log("Skipped object - no valid curve shape.");
+                    }
                 }
             }
 

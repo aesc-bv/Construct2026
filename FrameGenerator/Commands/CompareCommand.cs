@@ -1,7 +1,7 @@
 ﻿using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -54,7 +54,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 var comp1 = mainPart
                   .GetDescendants<IComponent>()
                   .OfType<Component>()
-                  .First(c => c.Template == part);
+                  .FirstOrDefault(c => c.Template == part);
+
+                if (comp1 == null)
+                    continue;
 
                 // compute bbox dims
                 var bb = idb.Shape.GetBoundingBox(Matrix.Identity, tight: true);

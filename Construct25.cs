@@ -9,9 +9,9 @@ using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.UI;
 using AESCConstruct25.FrameGenerator.Utilities;
 //using AESCConstruct25.UIMain;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Extensibility;
-using SpaceClaim.Api.V251.Geometry;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Extensibility;
+using SpaceClaim.Api.V242.Geometry;
 using System.Drawing;
 using Image = System.Drawing.Image;
 
@@ -150,6 +150,12 @@ namespace AESCConstruct25
                     rotateC.Hint = "Rotate the selected component 90° CW.";
                     rotateC.Executing += (s, e) =>
                         RotateComponentCommand.Execute(Window.ActiveWindow, 90);
+
+
+                    //var Plate = Command.Create("AESCConstruct25.Plate");
+                    //Plate.Text = "Plate";
+                    //Plate.Hint = Plate.";
+                    //Plate.Executing += Plate_Executing;
 
                     //Logger.Log("AESCConstruct25: Registered AESCConstruct25.RotateCC");
                     //Logger.Log("AESCConstruct25: Registered AESCConstruct25.RotateC");

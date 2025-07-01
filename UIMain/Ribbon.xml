@@ -66,6 +66,13 @@
 						command="AESCConstruct25.SettingsSidebar"
 						label="Settings"
 						size="large"/>
+
+					<button id="AESCConstruct25.Plate"
+								command="AESCConstruct25.Plate"
+								label="Plate"
+								size="large"
+								showLabel="true"
+								showImage="false"/>
 				</group>
 			</tab>
 		</tabs>

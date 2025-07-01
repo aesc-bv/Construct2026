@@ -1,10 +1,10 @@
-﻿using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
 using System.Linq;
 using AESCConstruct25.FrameGenerator.Utilities;
-using Point = SpaceClaim.Api.V251.Geometry.Point;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
 using System;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 

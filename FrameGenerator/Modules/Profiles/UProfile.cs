@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using SpaceClaim.Api.V251.Geometry;
+using SpaceClaim.Api.V242.Geometry;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
