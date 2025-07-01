@@ -33,13 +33,8 @@ C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\Resources\Images\squareGrid.jpg
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.pdb
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\ProfileSelectionControl.baml
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\JointSelectionControl.baml
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\ProfileSelectionControl.g.cs
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\UI\JointSelectionControl.g.cs
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.cache
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.g.resources
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.Resources.Resources.resources
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
@@ -70,3 +65,20 @@ C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_Markup
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.baml
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.UIMain.Resources.resources
 C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\UIMain\Images\squareGrid.jpg
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\SettingsControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\JointSelectionControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\SettingsControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\JointSelectionControl.g.cs
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.lref
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.baml
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.UIMain.Resources.resources
+C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCCons.9867665C.Up2Date
