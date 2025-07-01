@@ -46,8 +46,6 @@ namespace AESCConstruct25.UIMain
         static ElementHost _fastenerHost;
         static FastenersControl _fastenerControl;
 
-        public static bool IncludeMaterialInExcel { get; set; }
-        public static bool IncludeMaterialInBOM { get; set; }
 
         public static void RegisterAll()
 		{
@@ -215,6 +213,7 @@ namespace AESCConstruct25.UIMain
             CloseProfile();
             CloseJoint();
             CloseSettings();
+            CloseFastener();
 
             // 2) if already open, just close it
             if (_plateTab != null)
@@ -248,20 +247,20 @@ namespace AESCConstruct25.UIMain
         {
             var cmd = (Command)sender;
 
-            // close everything else
+            // 1) close anything else
             CloseProfile();
             CloseJoint();
             CloseSettings();
-            ClosePlate();
+            //CloseFastener();
 
-            // if already open, close it
+            // 2) if already open, just close it
             if (_fastenerTab != null)
             {
                 CloseFastener();
                 return;
             }
 
-            // build/rebuild
+            // 3) otherwise (re)build the panel
             if (_fastenerPanel == null || _fastenerPanel.IsDisposed)
             {
                 _fastenerControl = new FastenersControl();
@@ -270,11 +269,14 @@ namespace AESCConstruct25.UIMain
                     Dock = DockStyle.Fill,
                     Child = _fastenerControl
                 };
-                _fastenerPanel = new Panel { Dock = DockStyle.Fill };
+                _fastenerPanel = new Panel
+                {
+                    Dock = DockStyle.Fill
+                };
                 _fastenerPanel.Controls.Add(_fastenerHost);
             }
 
-            // show on the right
+            // 4) show it on the right
             _fastenerTab = PanelTab.Create(cmd, _fastenerPanel, DockLocation.Right, 500, false);
             _fastenerTab?.Activate();
         }
