@@ -1,11 +1,11 @@
-﻿using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251;
+﻿using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242.Modeler;
 using System.Diagnostics;
 
 namespace AESCConstruct25.Fastener.Module

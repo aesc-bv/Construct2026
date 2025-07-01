@@ -1,4 +1,4 @@
-﻿using SpaceClaim.Api.V251.Geometry;
+﻿using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;

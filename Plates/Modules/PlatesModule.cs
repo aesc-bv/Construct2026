@@ -1,11 +1,12 @@
-﻿using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251;
+﻿using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242.Modeler;
+using System.Windows.Forms;
 
 namespace AESCConstruct25.Plates.Modules
 {
@@ -48,7 +49,6 @@ namespace AESCConstruct25.Plates.Modules
             // - Names of the part
             // - Placement when not adding to middle is not always correct
             // - 
-
             Window win = Window.ActiveWindow;
             Document doc = win.Document;
             Part mainPart = doc.MainPart;
@@ -231,7 +231,7 @@ namespace AESCConstruct25.Plates.Modules
             }
             else
             {
-                p0 = point - 0.5 * (length - radius) * dirX - 0.5 * width * dirY;
+                p0 = point - 0.5 * (length - 2 * radius) * dirX - 0.5 * (width) * dirY;
                 p1 = p0 + (length - 2 * radius) * dirX;
                 p2 = p1 + radius * dirX + radius * dirY;
                 ITrimmedCurve arc12 = CurveSegment.CreateArc(p1 + radius * dirY, p1, p2, dirZ);

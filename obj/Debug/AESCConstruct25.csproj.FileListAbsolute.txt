@@ -82,3 +82,7 @@ C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_Markup
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.baml
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.UIMain.Resources.resources
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCCons.9867665C.Up2Date
+C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\UIMain\Images\squareGrid.jpg
+C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.dll.config
+C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
+C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
