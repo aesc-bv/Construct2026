@@ -48,9 +48,9 @@
     <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.3.0.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
       <HintPath>packages\DocumentFormat.OpenXml.Framework.3.3.0\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="SpaceClaim.Api.V251, Version=251.1.22911.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
+    <Reference Include="SpaceClaim.Api.V242, Version=242.1.22911.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\SpaceClaim.Api.V251\SpaceClaim.Api.V251.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\SpaceClaim.Api.V242\SpaceClaim.Api.V242.dll</HintPath>
     </Reference>
     <Reference Include="SpaceClaim.Geometry, Version=14.1.22911.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -1,6 +1,6 @@
-﻿using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using AESCConstruct25.FrameGenerator.Modules.Joints;
 using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.FrameGenerator.Modules;
@@ -10,7 +10,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System;
 using SpaceClaim.Geometry;
-using Vector = SpaceClaim.Api.V251.Geometry.Vector;
+using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -331,142 +331,149 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 // 5) Build all valid A–B pairs
                 var workItems = GetConnectedPairs(selectedComponents, jointType);
                 int total = workItems.Count();
-                using (var PT = ProgressTracker.Create(workItems.Count()))
+                if (total > 0)
                 {
-                    int i = 0;
-                    foreach (var (compA, compB) in workItems)
+                    using (var PT = ProgressTracker.Create(workItems.Count()))
                     {
-                        i++;
-                        PT.Progress = i;
-                        PT.Message = msgTemplate + i + "/" + total;
-
-                        if (alreadyProcessed.Contains((compA, compB)) ||
-                            alreadyProcessed.Contains((compB, compA)))
-                            continue;
-
-                        //6) Connection tests
-                        bool aStartConnected = ArePointsConnected(compA, compB, "start");
-                        bool aEndConnected = ArePointsConnected(compA, compB, "end");
-                        bool bStartConnected = ArePointsConnected(compB, compA, "start");
-                        bool bEndConnected = ArePointsConnected(compB, compA, "end");
-
-                        // 7) Lookup cached CurveSegments
-                        var locSegA = curveMap[compA];
-                        var locSegB = curveMap[compB];
-                        if (locSegA == null || locSegB == null)
-                            continue;
-
-                        // 8) Local directions
-                        var dA = (locSegA.EndPoint - locSegA.StartPoint).Direction.ToVector();
-                        var dB = (locSegB.EndPoint - locSegB.StartPoint).Direction.ToVector();
-
-                        // 9) Stable localUp (hemisphere flip)
-                        var rawUp = Vector.Cross(dA, dB);
-                        Vector localUp = rawUp.Magnitude > tol
-                                       ? rawUp.Direction.ToVector()
-                                       : Vector.Create(0, 1, 0);
-                        Vector WY = Vector.Create(0, 1, 0),
-                               WX = Vector.Create(1, 0, 0),
-                               WZ = Vector.Create(0, 0, 1);
-                        if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
-                        else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
-                        else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
-
-                        // 10) Instantiate joint
-                        JointBase joint = CreateJoint(jointType);
-
-                        if (jointType == "T")
+                        int i = 0;
+                        foreach (var (compA, compB) in workItems)
                         {
-                            // ensure compB split once
-                            if (!halves.ContainsKey(compB))
+                            i++;
+                            PT.Progress = i;
+                            PT.Message = msgTemplate + i + "/" + total;
+
+                            if (alreadyProcessed.Contains((compA, compB)) ||
+                                alreadyProcessed.Contains((compB, compA)))
+                                continue;
+
+                            //6) Connection tests
+                            bool aStartConnected = ArePointsConnected(compA, compB, "start");
+                            bool aEndConnected = ArePointsConnected(compA, compB, "end");
+                            bool bStartConnected = ArePointsConnected(compB, compA, "start");
+                            bool bEndConnected = ArePointsConnected(compB, compA, "end");
+
+                            // 7) Lookup cached CurveSegments
+                            var locSegA = curveMap[compA];
+                            var locSegB = curveMap[compB];
+                            if (locSegA == null || locSegB == null)
+                                continue;
+
+                            // 8) Local directions
+                            var dA = (locSegA.EndPoint - locSegA.StartPoint).Direction.ToVector();
+                            var dB = (locSegB.EndPoint - locSegB.StartPoint).Direction.ToVector();
+
+                            // 9) Stable localUp (hemisphere flip)
+                            var rawUp = Vector.Cross(dA, dB);
+                            Vector localUp = rawUp.Magnitude > tol
+                                           ? rawUp.Direction.ToVector()
+                                           : Vector.Create(0, 1, 0);
+                            Vector WY = Vector.Create(0, 1, 0),
+                                   WX = Vector.Create(1, 0, 0),
+                                   WZ = Vector.Create(0, 0, 1);
+                            if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
+                            else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
+                            else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
+
+                            // 10) Instantiate joint
+                            JointBase joint = CreateJoint(jointType);
+
+                            if (jointType == "T")
                             {
-                                var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
-                                if (sB != null && eB != null)
-                                    halves[compB] = (sB, eB);
-                            }
-
-                            // lift A/B into world
-                            Point wA0 = compA.Placement * locSegA.StartPoint;
-                            Point wA1 = compA.Placement * locSegA.EndPoint;
-                            Point wB0 = compB.Placement * locSegB.StartPoint;
-                            Point wB1 = compB.Placement * locSegB.EndPoint;
-
-                            bool cutStart = IsPointOnSegment(wB0, wA0, wA1);
-                            bool cutEnd = IsPointOnSegment(wB1, wA0, wA1);
-
-                            string jointHalfName = cutStart ? "HalfStart"
-                                                   : cutEnd ? "HalfEnd"
-                                                   : null;
-                            if (jointHalfName == null) continue;
-
-                            JointModule.ResetHalfForJoint(
-                                compB,
-                                jointHalfName,
-                                extendProfile: true,
-                                localUp,
-                                allCurves,
-                                new List<Component> { compA, compB }
-                            );
-
-                            Body resetHalf = null;
-                            foreach (var b in compB.Template.Bodies)
-                                if (b.Name == "ExtrudedProfile")
+                                // ensure compB split once
+                                if (!halves.ContainsKey(compB))
                                 {
-                                    resetHalf = b.Shape;
-                                    break;
+                                    var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
+                                    if (sB != null && eB != null)
+                                        halves[compB] = (sB, eB);
                                 }
-                            if (resetHalf == null) continue;
 
-                            joint.Execute(compA, compB, spacing, null, resetHalf);
+                                // lift A/B into world
+                                Point wA0 = compA.Placement * locSegA.StartPoint;
+                                Point wA1 = compA.Placement * locSegA.EndPoint;
+                                Point wB0 = compB.Placement * locSegB.StartPoint;
+                                Point wB1 = compB.Placement * locSegB.EndPoint;
+
+                                bool cutStart = IsPointOnSegment(wB0, wA0, wA1);
+                                bool cutEnd = IsPointOnSegment(wB1, wA0, wA1);
+
+                                string jointHalfName = cutStart ? "HalfStart"
+                                                       : cutEnd ? "HalfEnd"
+                                                       : null;
+                                if (jointHalfName == null) continue;
+
+                                JointModule.ResetHalfForJoint(
+                                    compB,
+                                    jointHalfName,
+                                    extendProfile: true,
+                                    localUp,
+                                    allCurves,
+                                    new List<Component> { compA, compB }
+                                );
+
+                                Body resetHalf = null;
+                                foreach (var b in compB.Template.Bodies)
+                                    if (b.Name == "ExtrudedProfile")
+                                    {
+                                        resetHalf = b.Shape;
+                                        break;
+                                    }
+                                if (resetHalf == null) continue;
+
+                                joint.Execute(compA, compB, spacing, null, resetHalf);
+                            }
+                            else
+                            {
+                                if (aStartConnected || aEndConnected)
+                                    // Non-T joints: ensure both halves exist
+                                    if (!halves.ContainsKey(compA))
+                                    {
+                                        var (sA, eA) = JointModule.SplitBodyAtMidpoint(compA, localUp);
+                                        if (sA != null && eA != null)
+                                            halves[compA] = (sA, eA);
+                                    }
+                                if (!halves.ContainsKey(compB))
+                                {
+                                    var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
+                                    if (sB != null && eB != null)
+                                        halves[compB] = (sB, eB);
+                                }
+
+                                var (aStart, aEnd) = halves[compA];
+                                var (bStart, bEnd) = halves[compB];
+
+                                if (aEndConnected && bStartConnected)
+                                {
+                                    JointModule.ResetHalfForJoint(compA, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    JointModule.ResetHalfForJoint(compB, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    joint.Execute(compA, compB, spacing, aEnd, bStart);
+                                }
+                                else if (aStartConnected && bEndConnected)
+                                {
+                                    JointModule.ResetHalfForJoint(compA, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    JointModule.ResetHalfForJoint(compB, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    joint.Execute(compA, compB, spacing, aStart, bEnd);
+                                }
+                                else if (aStartConnected && bStartConnected)
+                                {
+                                    JointModule.ResetHalfForJoint(compA, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    JointModule.ResetHalfForJoint(compB, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    joint.Execute(compA, compB, spacing, aStart, bStart);
+                                }
+                                else if (aEndConnected && bEndConnected)
+                                {
+                                    JointModule.ResetHalfForJoint(compA, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    JointModule.ResetHalfForJoint(compB, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
+                                    joint.Execute(compA, compB, spacing, aEnd, bEnd);
+                                }
+                            }
+
+                            alreadyProcessed.Add((compA, compB));
                         }
-                        else
-                        {
-                            if(aStartConnected || aEndConnected)
-                            // Non-T joints: ensure both halves exist
-                            if (!halves.ContainsKey(compA))
-                            {
-                                var (sA, eA) = JointModule.SplitBodyAtMidpoint(compA, localUp);
-                                if (sA != null && eA != null)
-                                    halves[compA] = (sA, eA);
-                            }
-                            if (!halves.ContainsKey(compB))
-                            {
-                                var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
-                                if (sB != null && eB != null)
-                                    halves[compB] = (sB, eB);
-                            }
-
-                            var (aStart, aEnd) = halves[compA];
-                            var (bStart, bEnd) = halves[compB];
-
-                            if (aEndConnected && bStartConnected)
-                            {
-                                JointModule.ResetHalfForJoint(compA, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
-                                JointModule.ResetHalfForJoint(compB, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
-                                joint.Execute(compA, compB, spacing, aEnd, bStart);
-                            }
-                            else if (aStartConnected && bEndConnected)
-                            {
-                                JointModule.ResetHalfForJoint(compA, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
-                                JointModule.ResetHalfForJoint(compB, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
-                                joint.Execute(compA, compB, spacing, aStart, bEnd);
-                            }
-                            else if (aStartConnected && bStartConnected)
-                            {
-                                JointModule.ResetHalfForJoint(compA, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
-                                JointModule.ResetHalfForJoint(compB, "HalfStart", true, localUp, allCurves, new List<Component> { compA, compB });
-                                joint.Execute(compA, compB, spacing, aStart, bStart);
-                            }
-                            else if (aEndConnected && bEndConnected)
-                            {
-                                JointModule.ResetHalfForJoint(compA, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
-                                JointModule.ResetHalfForJoint(compB, "HalfEnd", true, localUp, allCurves, new List<Component> { compA, compB });
-                                joint.Execute(compA, compB, spacing, aEnd, bEnd);
-                            }
-                        }
-
-                        alreadyProcessed.Add((compA, compB));
                     }
+                }
+                else
+                {
+                    MessageBox.Show("No joint pair found, check line connections.");
                 }
             }
             if (updateBOM == true)

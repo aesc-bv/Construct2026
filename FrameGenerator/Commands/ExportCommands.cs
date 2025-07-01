@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.ComponentModel;
 using System.Windows.Forms;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
-using Component = SpaceClaim.Api.V251.Component;
-using Body = SpaceClaim.Api.V251.Modeler.Body;
-using Table = SpaceClaim.Api.V251.Table;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
+using Component = SpaceClaim.Api.V242.Component;
+using Body = SpaceClaim.Api.V242.Modeler.Body;
+using Table = SpaceClaim.Api.V242.Table;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -17,7 +17,7 @@ using System.Text;
 using WK.Libraries.BetterFolderBrowserNS;
 using AESCConstruct25.FrameGenerator.Utilities;
 using System.Text.RegularExpressions;
-//using Component = SpaceClaim.Api.V251.Component;
+//using Component = SpaceClaim.Api.V242.Component;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -63,7 +63,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             // 1) Gather all components with bodies
             var comps = doc.MainPart
-                           .GetChildren<SpaceClaim.Api.V251.Component>()
+                           .GetChildren<SpaceClaim.Api.V242.Component>()
                            .Where(c => c.Template.Bodies.Any())
                            .ToList();
             if (!comps.Any())
@@ -217,7 +217,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             // gather components
             var comps = doc.MainPart
-                           .GetChildren<SpaceClaim.Api.V251.Component>()
+                           .GetChildren<SpaceClaim.Api.V242.Component>()
                            .Where(c => c.Template.Bodies.Any())
                            .ToList();
             if (!comps.Any())

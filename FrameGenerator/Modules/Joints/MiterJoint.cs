@@ -1,10 +1,10 @@
-﻿using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using AESCConstruct25.FrameGenerator.Utilities;
 using System.Linq;
-using Point = SpaceClaim.Api.V251.Geometry.Point;
-using Vector = SpaceClaim.Api.V251.Geometry.Vector;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
+using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using System.Globalization;
 using System;
 using System.Drawing;

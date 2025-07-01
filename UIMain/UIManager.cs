@@ -3,9 +3,10 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using AESCConstruct25.FrameGenerator.Utilities;   // for Logger
 using AESCConstruct25.FrameGenerator.UI;
-using SpaceClaim.Api.V251.Extensibility;
+using SpaceClaim.Api.V242.Extensibility;
 using Panel = System.Windows.Forms.Panel;
-using SpaceClaim.Api.V251;
+using SpaceClaim.Api.V242;
+using AESCConstruct25.UI;
 
 namespace AESCConstruct25.UIMain
 {
@@ -14,6 +15,7 @@ namespace AESCConstruct25.UIMain
 		public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
 		public const string JointCommand = "AESCConstruct25.JointSidebar";
         public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
+        public const string PlateCommand = "AESCConstruct25.Plate";
 
         // PROFILE
         static PanelTab _profileTab;
@@ -33,6 +35,12 @@ namespace AESCConstruct25.UIMain
         static ElementHost _settingsHost;
         static SettingsControl _settingsControl;
 
+        static PanelTab _plateTab;
+        static Panel _platePanel;
+        static ElementHost _plateHost;
+        static PlatesControl _plateControl;
+
+
         public static void RegisterAll()
 		{
 			var pCmd = Command.Create(ProfileCommand);
@@ -49,6 +57,11 @@ namespace AESCConstruct25.UIMain
             sCmd.Text = "Settings";
             sCmd.Hint = "Open the settings window";
             sCmd.Executing += OnSettingsToggle;
+
+            var plCmd = Command.Create(PlateCommand);
+            plCmd.Text = "Plate";
+            plCmd.Hint = "Open the plate‐creation pane";
+            plCmd.Executing += OnPlateToggle;
         }
 
         static void OnSettingsToggle(object sender, EventArgs e)
@@ -103,7 +116,7 @@ namespace AESCConstruct25.UIMain
 		{
 			var cmd = (Command)sender;
 			// always close the other one first
-			//CloseJoint();
+			CloseJoint();
 
 			// if it’s already open, just close it
 			if (_profileTab != null)
@@ -141,7 +154,7 @@ namespace AESCConstruct25.UIMain
 		{
 			var cmd = (Command)sender;
 			// always close the other one first
-			//CloseProfile();
+			CloseProfile();
 
 			// if it’s already open, just close it
 			if (_jointTab != null)
@@ -175,10 +188,63 @@ namespace AESCConstruct25.UIMain
 			_jointTab?.Activate();
 		}
 
-		/// <summary>
-		/// Close the Profile panel if it’s open.
-		/// </summary>
-		public static void CloseProfile()
+        static void OnPlateToggle(object sender, EventArgs e)
+        {
+            var cmd = (Command)sender;
+
+            // 1) close anything else
+            CloseProfile();
+            CloseJoint();
+            CloseSettings();
+
+            // 2) if already open, just close it
+            if (_plateTab != null)
+            {
+                ClosePlate();
+                return;
+            }
+
+            // 3) otherwise (re)build the panel
+            if (_platePanel == null || _platePanel.IsDisposed)
+            {
+                _plateControl = new PlatesControl();
+                _plateHost = new ElementHost
+                {
+                    Dock = DockStyle.Fill,
+                    Child = _plateControl
+                };
+                _platePanel = new Panel
+                {
+                    Dock = DockStyle.Fill
+                };
+                _platePanel.Controls.Add(_plateHost);
+            }
+
+            // 4) show it on the right
+            _plateTab = PanelTab.Create(cmd, _platePanel, DockLocation.Right, 500, false);
+            _plateTab?.Activate();
+        }
+
+        public static void ClosePlate()
+        {
+            if (_plateTab != null)
+            {
+                _plateTab.Close();
+                _plateTab = null;
+            }
+
+            if (_platePanel != null && !_platePanel.IsDisposed)
+                _platePanel.Dispose();
+
+            _platePanel = null;
+            _plateHost = null;
+            _plateControl = null;
+        }
+
+        /// <summary>
+        /// Close the Profile panel if it’s open.
+        /// </summary>
+        public static void CloseProfile()
 		{
 			if (_profileTab != null)
 			{

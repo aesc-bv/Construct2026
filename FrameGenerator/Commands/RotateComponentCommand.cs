@@ -3,9 +3,9 @@
 ////using System.Linq;
 ////using AESCConstruct25.FrameGenerator.Modules;
 ////using AESCConstruct25.FrameGenerator.Utilities;
-////using SpaceClaim.Api.V251;
-////using SpaceClaim.Api.V251.Geometry;
-////using SpaceClaim.Api.V251.Modeler;
+////using SpaceClaim.Api.V242;
+////using SpaceClaim.Api.V242.Geometry;
+////using SpaceClaim.Api.V242.Modeler;
 
 ////namespace AESCConstruct25.Commands
 ////{
@@ -86,8 +86,8 @@
 //using System.Linq;
 //using AESCConstruct25.FrameGenerator.Modules;
 //using AESCConstruct25.FrameGenerator.Utilities;
-//using SpaceClaim.Api.V251;
-//using SpaceClaim.Api.V251.Geometry;
+//using SpaceClaim.Api.V242;
+//using SpaceClaim.Api.V242.Geometry;
 
 //namespace AESCConstruct25.Commands
 //{
@@ -189,9 +189,9 @@ using System.Globalization;
 using System.Linq;
 using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
-using SpaceClaim.Api.V251.Modeler;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {

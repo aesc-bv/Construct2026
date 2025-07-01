@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;            // MessageBox
-using SpaceClaim.Api.V251;
-using SpaceClaim.Api.V251.Geometry;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
 using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V251.Extensibility;
+using SpaceClaim.Api.V242.Extensibility;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -41,7 +41,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 .Select(tc => tc as CurveSegment
                             ?? CurveSegment.Create(tc.StartPoint, tc.EndPoint))
                 .ToList();
-            if (rawCurves.Count == 0)
+            if (rawCurves.Count() == 0)
             {
                 MessageBox.Show(
                     "Select at least one straight line or edge.",
@@ -156,7 +156,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
             if(updateBOM == true)
                 //CompareCommand.CompareSimple();
-                 ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
+                ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
             else
                 CompareCommand.CompareSimple();
         }
