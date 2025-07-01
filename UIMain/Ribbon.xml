@@ -1,0 +1,73 @@
+﻿<customUI xmlns="http://schemas.spaceclaim.com/customui">
+	<ribbon>
+		<tabs>
+			<tab id="AESCConstruct25.Tab" label="AESC Construct">
+				<group id="AESCConstruct25.Group" label="Frame Generator">
+					<button id="AESCConstruct25.ProfileSidebarBtn"
+							command="AESCConstruct25.ProfileSidebar"
+							label="Profiles" size="large"/>
+					<button id="AESCConstruct25.JointButton"
+							command="AESCConstruct25.JointSidebar"
+							label="Execute Joint" size="large"/>
+					<button id="AESCConstruct25.CompareButton"
+							command="AESCConstruct25.CompareBodies"
+							label="Compare" size="large"/>
+					<button id="AESCConstruct25.FrameExport"
+						label="Export"
+						size="large"
+						autoExpandOnClick="true"
+						style="imageandtext">
+						<container id="AESCConstruct25.ExportContainer"
+								   layoutOrientation="horizontal"
+								   itemSpacing="6"
+								   isGroup="false">
+							<button id="AESCConstruct25.ExportExcelBtn"
+									command="AESCConstruct25.ExportExcel"
+									label="Excel"
+									size="large"
+									style="imageandtext"/>
+							<button id="AESCConstruct25.ExportBOMBtn"
+									command="AESCConstruct25.ExportBOM"
+									label="BOM"
+									size="large"
+									style="imageandtext"/>
+							<button id="AESCConstruct25.ExportSTEPBtn"
+									command="AESCConstruct25.ExportSTEP"
+									label="STEP"
+									size="large"
+									style="imageandtext"/>
+						</container>
+					</button>
+					<button id="AESCConstruct25.UpdateBOM"
+							command="AESCConstruct25.UpdateBOM"
+							label="Update BOM"
+							size="large"
+							showLabel="true"
+							showImage="false"/>
+				</group>
+
+				<group id="AESCConstruct25.ToolGroup" label="Tools">
+					<button id="AESCConstruct25.RotateCCButton"
+							command="AESCConstruct25.RotateCC"
+							label="Rotate Counterclockwise"
+							size="large"
+							showLabel="true"
+							showImage="false"/>
+					<button id="AESCConstruct25.RotateCButton"
+							command="AESCConstruct25.RotateC"
+							label="Rotate Clockwise"
+							size="large"
+							showLabel="true"
+							showImage="false"/>
+				</group>
+
+				<group id="AESCConstruct25.ToolGroup" label="Settings">
+					<button id="AESCConstruct25.SettingsSidebarBtn"
+						command="AESCConstruct25.SettingsSidebar"
+						label="Settings"
+						size="large"/>
+				</group>
+			</tab>
+		</tabs>
+	</ribbon>
+</customUI>

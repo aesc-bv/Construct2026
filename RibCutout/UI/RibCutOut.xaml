@@ -1,0 +1,66 @@
+﻿<UserControl x:Class="AESCConstruct25.UI.RibCutOut"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="400" Background="White">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/AESCConstruct25;component/UIMain/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Cutout params -->
+            <RowDefinition Height="Auto"/>
+            <!-- Weld-round params -->
+            <RowDefinition Height="Auto"/>
+            <!-- Create button -->
+        </Grid.RowDefinitions>
+
+        <!-- 1) Cutout parameters -->
+        <GroupBox Header="Cutout" Grid.Row="0" >
+            <StackPanel Margin="10">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Tolerance" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox Width="60" Text="{Binding Tolerance}" />
+                </StackPanel>
+                <CheckBox Content="Reverse direction"
+                  IsChecked="{Binding ReverseDirection}"
+                  Margin="0,5,0,0"/>
+                <CheckBox Content="Middle Tolerance"
+                  IsChecked="{Binding MiddleTolerance}"
+                  Margin="0,5,0,0"/>
+                <CheckBox Content="Perpendicular Cut"
+                  IsChecked="{Binding PerpendicularCut}"
+                  Margin="0,5,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- 2) Weld-round parameters -->
+        <GroupBox Header="Weld Round" Grid.Row="1" Margin="0,10,0,0" >
+            <StackPanel Margin="10">
+                <CheckBox Content="Add Weld Round"
+                  IsChecked="{Binding AddWeldRound}"/>
+                <StackPanel Orientation="Horizontal" Margin="20,5,0,0">
+                    <TextBlock Text="Radius" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox Width="60" Text="{Binding WeldRoundRadius}"/>
+                </StackPanel>
+                <CheckBox Content="Reverse direction"
+                  IsChecked="{Binding WeldRoundReverse}"
+                  Margin="20,5,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- 3) Create button -->
+        <Button Grid.Row="2"
+            Content="Create"
+            Style="{StaticResource FooterButtonStyle}"
+            Width="100"
+            HorizontalAlignment="Center"
+            Margin="0,10,0,0"
+            Click="CreateButton_Click"/>
+    </Grid>
+</UserControl>

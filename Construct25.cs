@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using AESCConstruct25.Commands;
-using AESCConstruct25.Modules;
-using AESCConstruct25.UI;
-using AESCConstruct25.Utilities;
-using AESCConstruct25.Resources;
+using AESCConstruct25.FrameGenerator.Commands;
+using AESCConstruct25.FrameGenerator.Modules;
+using AESCConstruct25.FrameGenerator.UI;
+using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V251;
 using SpaceClaim.Api.V251.Extensibility;
 using SpaceClaim.Api.V251.Geometry;
@@ -30,7 +30,7 @@ namespace AESCConstruct25
         {
             try
             {
-                //Logger.Log("AESCConstruct25: Connect() started");
+                //Logger.Log("AESCConstruct25-org: Connect() started");
 
                 Api.Initialize();
 
@@ -50,31 +50,41 @@ namespace AESCConstruct25
                     //Logger.Log("AESCConstruct25: Registering Commands...");
 
                     // Extrude Profile
-                    var createProfileCmd = Command.Create(ExtrudeProfileCommand.CommandName);
+                    var createProfileCmd = Command.Create("AESCConstruct25.Profile_Executing");
                     createProfileCmd.Text = "Extrude Profile";
                     createProfileCmd.Hint = "Extrudes a selected profile along a selected line.";
                     createProfileCmd.Executing += Profile_Executing;
+                    //Logger.Log("AESCConstruct25: 1");
 
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
                     exportExcel.Text = "Export to Excel";
                     exportExcel.Hint = "Export frame data to an Excel file.";
-                    exportExcel.Image = loadImg(Resources.Resources.ExcelLogo);
+                    exportExcel.Image = loadImg(UIMain.Resources.ExcelLogo);
                     exportExcel.Executing += (s, e) => ExportCommands.ExportExcel(Window.ActiveWindow);
+                    //Logger.Log("AESCConstruct25: 2");
 
                     // Export BOM
                     var exportBOM = Command.Create("AESCConstruct25.ExportBOM");
                     exportBOM.Text = "Export BOM";
                     exportBOM.Hint = "Create a bill-of-materials.";
-                    exportBOM.Image = loadImg(Resources.Resources.BOMLogo);
-                    exportBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow);
+                    exportBOM.Image = loadImg(UIMain.Resources.BOMLogo);
+                    exportBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, false);
+                    //Logger.Log("AESCConstruct25: 3");
+
+
+                    var updateBOM = Command.Create("AESCConstruct25.UpdateBOM");
+                    updateBOM.Text = "Update BOM";
+                    updateBOM.Hint = "Update an existing bill-of-materials.";
+                    updateBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
 
                     // Export STEP
                     var exportSTEP = Command.Create("AESCConstruct25.ExportSTEP");
                     exportSTEP.Text = "Export STEP";
                     exportSTEP.Hint = "Export frame as a STEP file.";
-                    exportSTEP.Image = loadImg(Resources.Resources.StepLogo);
+                    exportSTEP.Image = loadImg(UIMain.Resources.StepLogo);
                     exportSTEP.Executing += (s, e) => ExportCommands.ExportSTEP(Window.ActiveWindow);
+                    //Logger.Log("AESCConstruct25: 4");
 
                     //
                     // ─── NEW DXF COMMANDS ────────────────────────────────────────────────────────
@@ -85,31 +95,36 @@ namespace AESCConstruct25
                     importDxfContours.Text = "Import DXF Contours";
                     importDxfContours.Hint = "Load DXF contours into the active document.";
                     importDxfContours.Executing += ImportDXFContours_Execute;
+                    //Logger.Log("AESCConstruct25: 5");
 
                     // 2) Convert (open) DXF → Profile
                     var dxfToProfile = Command.Create("AESCConstruct25.DXFToProfile");
                     dxfToProfile.Text = "DXF → Profile";
                     dxfToProfile.Hint = "Convert an open DXF window into a profile string and preview image.";
                     dxfToProfile.Executing += DXFtoProfile_Execute;
+                    //Logger.Log("AESCConstruct25: 6");
 
                     // 3) Save DXFProfile list to CSV
                     var saveDxfCsv = Command.Create("AESCConstruct25.SaveDXFProfileCsv");
                     saveDxfCsv.Text = "Save DXFProfile CSV";
                     saveDxfCsv.Hint = "Save all collected DXFProfile objects to a CSV file.";
                     saveDxfCsv.Executing += SaveDXFProfiles_Execute;
+                    //Logger.Log("AESCConstruct25: 7");
 
                     // 4) Load DXFProfile list from CSV
                     var loadDxfCsv = Command.Create("AESCConstruct25.LoadDXFProfileCsv");
                     loadDxfCsv.Text = "Load DXFProfile CSV";
                     loadDxfCsv.Hint = "Load DXFProfile objects from a CSV file.";
                     loadDxfCsv.Executing += LoadDXFProfiles_Execute;
-                    
+                    //Logger.Log("AESCConstruct25: 8");
+
                     // 5)Compare bodies in document
                     var CompareCmd = Command.Create("AESCConstruct25.CompareBodies");
                     CompareCmd.Text = "Compare";
                     CompareCmd.Hint = "Compare bodies to look for duplicates";
                     CompareCmd.Executing += (s,e) => 
                         CompareCommand.CompareSimple();
+                    //Logger.Log("AESCConstruct25: 9");
 
                     //
                     // ─── LEGACY / OTHER COMMANDS ─────────────────────────────────────────────────
@@ -120,7 +135,7 @@ namespace AESCConstruct25
                     jointCmd.Text = "Execute Joint (Legacy)";
                     jointCmd.Hint = "Applies a joint between selected components.";
                     jointCmd.Executing += (s, e) =>
-                        ExecuteJointCommand.ExecuteJoint(Window.ActiveWindow, 0.0, "Miter");
+                        ExecuteJointCommand.ExecuteJoint(Window.ActiveWindow, 0.0, "Miter", false);
 
                     // Rotate CCW
                     var rotateCC = Command.Create("AESCConstruct25.RotateCC");
@@ -171,7 +186,7 @@ namespace AESCConstruct25
         {
             try
             {
-                string resourceName = "AESCConstruct25.Resources.Ribbon.xml";
+                string resourceName = "AESCConstruct25.UIMain.Ribbon.xml";
                 //Logger.Log($"AESCConstruct25: Loading Ribbon UI from {resourceName}");
 
                 using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))

@@ -1,0 +1,112 @@
+﻿<UserControl x:Class="AESCConstruct25.UI.EngravingControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="400" Background="White">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/AESCConstruct25;component/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <!-- main section -->
+            <RowDefinition Height="Auto"/>
+            <!-- bottom buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Main options -->
+        <GroupBox Header="Engraving" Grid.Row="0" >
+            <StackPanel Margin="10" >
+
+                <!-- Add Note -->
+                <Button x:Name="AddNoteButton"
+                Style="{StaticResource FooterButtonStyle}"
+                Content="Add Note"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,10"
+                Click="AddNoteButton_Click"/>
+
+                <!-- Radio choices -->
+                <StackPanel>
+                    <RadioButton x:Name="RadioComponentName"
+                       Content="Component Name"
+                       GroupName="NoteSource"
+                       IsChecked="{Binding UseComponentName}"
+                       Margin="0,0,0,4"/>
+                    <RadioButton x:Name="RadioBodyName"
+                       Content="Body Name"
+                       GroupName="NoteSource"
+                       IsChecked="{Binding UseBodyName}"
+                       Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="RadioCustom"
+                         Content="Custom"
+                         GroupName="NoteSource"
+                         IsChecked="{Binding UseCustomText}"/>
+                        <TextBox x:Name="CustomTextBox"
+                     Text="{Binding CustomText}"
+                     Width="120"
+                     Margin="5,0,0,0"
+                     IsEnabled="{Binding IsChecked, ElementName=RadioCustom}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Engraving / CutOut -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <CheckBox x:Name="EngravingCheckBox"
+                    Content="Engraving"
+                    IsChecked="{Binding Engraving}"
+                    Margin="0,0,10,0"/>
+                    <CheckBox x:Name="CutOutCheckBox"
+                    Content="CutOut"
+                    IsChecked="{Binding CutOut}"/>
+                </StackPanel>
+
+                <!-- Font selector -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock Text="Font" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox x:Name="FontComboBox"
+                    Width="180"
+                    ItemsSource="{Binding FontOptions}"
+                    SelectedItem="{Binding SelectedFont}"/>
+                </StackPanel>
+
+                <!-- Size -->
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="Size" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="SizeTextBox"
+                   Width="50"
+                   Text="{Binding Size}"/>
+                </StackPanel>
+
+                <!-- Center -->
+                <CheckBox x:Name="CenterCheckBox"
+                  Content="Center"
+                  IsChecked="{Binding Center}"
+                  Margin="0,5,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Bottom buttons -->
+        <StackPanel Grid.Row="1" Margin="0,10,0,0">
+            <Button x:Name="ImprintBodyButton"
+              Style="{StaticResource FooterButtonStyle}"
+              Content="Imprint Body"
+              Click="ImprintBodyButton_Click"
+              Margin="0,0,0,5"/>
+            <Button x:Name="ImprintLinesButton"
+              Style="{StaticResource FooterButtonStyle}"
+              Content="Imprint Lines"
+              Click="ImprintLinesButton_Click"
+              Margin="0,0,0,5"/>
+            <Button x:Name="ImprintToEngravingButton"
+              Style="{StaticResource FooterButtonStyle}"
+              Content="Imprint to Engraving"
+              Click="ImprintToEngravingButton_Click"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

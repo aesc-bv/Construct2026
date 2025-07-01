@@ -1,0 +1,355 @@
+﻿////using System;
+////using System.Collections.Generic;
+////using System.Linq;
+////using AESCConstruct25.FrameGenerator.Modules;
+////using AESCConstruct25.FrameGenerator.Utilities;
+////using SpaceClaim.Api.V251;
+////using SpaceClaim.Api.V251.Geometry;
+////using SpaceClaim.Api.V251.Modeler;
+
+////namespace AESCConstruct25.Commands
+////{
+////    public static class RotateComponentCommand
+////    {
+////        public static void Execute(Window window, double rotationAngleDegrees)
+////        {
+////            if (window == null) return;
+
+////            List<Component> components = JointSelectionHelper.GetSelectedComponents(window);
+////            ApplyRotation(window, components, rotationAngleDegrees);
+////        }
+
+////        public static void ApplyStoredRotation(Window window, List<Component> components)
+////        {
+////            if (window == null || components == null) return;
+
+////            foreach (Component comp in components)
+////            {
+////                double storedRotation = 0;
+////                if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out CustomPartProperty prop))
+////                {
+////                    double.TryParse(prop.Value.ToString(), out storedRotation);
+////                }
+
+////                ApplyRotation(window, new List<Component> { comp }, storedRotation, storeProperty: false);
+////            }
+////        }
+
+////        private static void ApplyRotation(Window window, List<Component> components, double angleDegrees, bool storeProperty = true)
+////        {
+////            double angleRadians = angleDegrees * Math.PI / 180.0;
+
+////            foreach (Component comp in components)
+////            {
+////                DesignCurve axisCurve = comp.Template.Curves.FirstOrDefault() as DesignCurve;
+////                DesignBody body = comp.Template.Bodies.FirstOrDefault() as DesignBody;
+
+////                if (axisCurve == null || body == null) continue;
+
+////                CurveSegment segment = axisCurve.Shape as CurveSegment;
+////                if (segment == null) continue;
+
+////                Line axis = Line.Create(segment.StartPoint, (segment.EndPoint - segment.StartPoint).Direction);
+////                Matrix rotation = Matrix.CreateRotation(axis, angleRadians);
+////                body.Shape.Transform(rotation);
+
+////                if (storeProperty)
+////                {
+////                    double existingRotation = 0.0;
+
+////                    if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out CustomPartProperty existingProp))
+////                    {
+////                        double.TryParse(existingProp.Value.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out existingRotation);
+////                    }
+
+////                    double totalRotation = existingRotation + angleDegrees;
+////                    string angleText = totalRotation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+////                    if (comp.Template.CustomProperties.ContainsKey("RotationAngle"))
+////                    {
+////                        comp.Template.CustomProperties["RotationAngle"].Value = angleText;
+////                    }
+////                    else
+////                    {
+////                        CustomPartProperty.Create(comp.Template, "RotationAngle", angleText);
+////                    }
+
+////                    //Logger.Log($"Updated RotationAngle = {angleText} (was {existingRotation}) for {comp.Name}");
+////                }
+
+////            }
+////        }
+////    }
+////}
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using AESCConstruct25.FrameGenerator.Modules;
+//using AESCConstruct25.FrameGenerator.Utilities;
+//using SpaceClaim.Api.V251;
+//using SpaceClaim.Api.V251.Geometry;
+
+//namespace AESCConstruct25.Commands
+//{
+//    public static class RotateComponentCommand
+//    {
+//        public static void Execute(Window window, double rotationAngleDegrees)
+//        {
+//            if (window == null) return;
+
+//            List<Component> components = JointSelectionHelper.GetSelectedComponents(window);
+//            ApplyRotation(window, components, rotationAngleDegrees);
+//        }
+
+//        public static void ApplyStoredRotation(Window window, List<Component> components)
+//        {
+//            if (window == null || components == null) return;
+
+//            foreach (Component comp in components)
+//            {
+//                double storedRotation = 0;
+//                if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out CustomPartProperty prop))
+//                {
+//                    double.TryParse(prop.Value.ToString(), out storedRotation);
+//                }
+
+//                ApplyRotation(window, new List<Component> { comp }, storedRotation, storeProperty: false);
+//            }
+//        }
+
+//        private static void ApplyRotation(Window window, List<Component> components, double angleDegrees, bool storeProperty = true)
+//        {
+//            double angleRadians = angleDegrees * Math.PI / 180.0;
+
+//            foreach (Component comp in components)
+//            {
+//                // Find (template) axis‐curve only for its direction; we will ignore its origin.
+//                DesignCurve axisCurve = comp.Template.Curves.FirstOrDefault() as DesignCurve;
+//                DesignBody body = comp.Template.Bodies.FirstOrDefault() as DesignBody;
+
+//                if (axisCurve == null || body == null)
+//                    continue;
+
+//                // Get the direction of the “axisCurve” without using its start‐point.
+//                var segment = axisCurve.Shape as CurveSegment;
+//                if (segment == null)
+//                    continue;
+
+//                // Calculate the geometric center of this body (in local coordinates)
+//                // We get the bounding‐box in local space (Matrix.Identity) and take its center:
+//                var bb = body.Shape.GetBoundingBox(Matrix.Identity, tight: true);
+//                Point center = bb.Center;
+
+//                // The rotation axis is now a line through 'center' in the same direction as the original segment:
+//                Direction axisDir = (segment.EndPoint - segment.StartPoint).Direction;
+//                Line rotationAxis = Line.Create(center, axisDir);
+
+//                // Build a rotation matrix around that “center‐axis”:
+//                Matrix rotation = Matrix.CreateRotation(rotationAxis, angleRadians);
+
+//                // Apply the rotation to the body’s geometry:
+//                body.Shape.Transform(rotation);
+
+//                if (storeProperty)
+//                {
+//                    double existingRotation = 0.0;
+//                    if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out CustomPartProperty existingProp))
+//                    {
+//                        double.TryParse(
+//                            existingProp.Value.ToString(),
+//                            System.Globalization.NumberStyles.Float,
+//                            System.Globalization.CultureInfo.InvariantCulture,
+//                            out existingRotation
+//                        );
+//                    }
+
+//                    double totalRotation = existingRotation + angleDegrees;
+//                    string angleText = totalRotation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+//                    if (comp.Template.CustomProperties.ContainsKey("RotationAngle"))
+//                    {
+//                        comp.Template.CustomProperties["RotationAngle"].Value = angleText;
+//                    }
+//                    else
+//                    {
+//                        CustomPartProperty.Create(comp.Template, "RotationAngle", angleText);
+//                    }
+
+//                    //Logger.Log($"Updated RotationAngle = {angleText} (was {existingRotation}) for {comp.Name}");
+//                }
+//            }
+//        }
+//    }
+//}
+// ^^^ rotation around local axis instead of component axis
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using AESCConstruct25.FrameGenerator.Modules;
+using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V251;
+using SpaceClaim.Api.V251.Geometry;
+using SpaceClaim.Api.V251.Modeler;
+
+namespace AESCConstruct25.FrameGenerator.Commands
+{
+    public static class RotateComponentCommand
+    {
+        public static void Execute(Window window, double rotationAngleDegrees)
+        {
+            if (window == null) return;
+
+            List<Component> components = JointSelectionHelper.GetSelectedComponents(window);
+            ApplyRotation(window, components, rotationAngleDegrees);
+        }
+
+        private static void ApplyRotation(
+            Window window,
+            List<Component> components,
+            double angleDegrees,
+            bool storeProperty = true
+        )
+        {
+            if (window == null || components == null) return;
+            double angleRad = angleDegrees * Math.PI / 180.0;
+
+            foreach (var comp in components)
+            {
+                // 1) find the axis‐curve in local space
+                var dc = comp.Template.Curves.OfType<DesignCurve>().FirstOrDefault();
+                if (dc?.Shape is not CurveSegment seg)
+                    continue;
+
+                // 2) build the world‐axis
+                var midLocal = Point.Create(
+                    0.5 * (seg.StartPoint.X + seg.EndPoint.X),
+                    0.5 * (seg.StartPoint.Y + seg.EndPoint.Y),
+                    0.5 * (seg.StartPoint.Z + seg.EndPoint.Z)
+                );
+                var place = comp.Placement;
+                var midWorld = place * midLocal;
+                var dirWorld = (place * seg.EndPoint - place * seg.StartPoint).Direction;
+                var axisWorld = Line.Create(midWorld, dirWorld);
+
+                // 3) rotate the component placement
+                var rot = Matrix.CreateRotation(axisWorld, angleRad);
+                comp.Placement = rot * comp.Placement;
+
+                // 4) now “bake” that same rotation into each DesignCurve in the template
+                var invNew = comp.Placement.Inverse;
+                var part = comp.Template;
+                // take a snapshot since we'll be deleting from the collection
+                foreach (var curve in part.Curves.OfType<DesignCurve>().ToList())
+                {
+                    if (curve.Shape is not CurveSegment oldSeg)
+                        continue;
+
+                    // compute the new local endpoints
+                    // a) local → world (before rotation)
+                    var w0 = place * oldSeg.StartPoint;
+                    var w1 = place * oldSeg.EndPoint;
+                    // b) apply rotation in world
+                    var w0r = rot * w0;
+                    var w1r = rot * w1;
+                    // c) back into local (after rotation)
+                    var nl0 = invNew * w0r;
+                    var nl1 = invNew * w1r;
+
+                    // remember its name, visibility and color (optional)
+                    var name = curve.Name;
+                    //bool vis = curve.GetVisibility(null);
+                    var color = curve.GetColor(null);
+
+                    // delete the old curve…
+                    curve.Delete();
+                    // …and recreate it with the rotated segment
+                    var newSeg = CurveSegment.Create(nl0, nl1);
+                    var newDc = DesignCurve.Create(part, newSeg);
+                    newDc.Name = name;
+                    //newDc.SetVisibility(null, vis);
+                    newDc.SetColor(null, color);
+                }
+
+                // 5) store cumulative angle as before
+                if (storeProperty)
+                {
+                    double prev = 0;
+                    if (comp.Template.CustomProperties
+                             .TryGetValue("RotationAngle", out var p))
+                    {
+                        double.TryParse(p.Value.ToString(),
+                                        NumberStyles.Float,
+                                        CultureInfo.InvariantCulture,
+                                        out prev);
+                    }
+
+                    double total = prev + angleDegrees;
+                    string text = total.ToString(CultureInfo.InvariantCulture);
+
+                    if (comp.Template.CustomProperties.ContainsKey("RotationAngle"))
+                        comp.Template.CustomProperties["RotationAngle"].Value = text;
+                    else
+                        CustomPartProperty.Create(comp.Template, "RotationAngle", text);
+
+                    //Logger.Log($"Updated RotationAngle = {text} (was {prev}) for {comp.Name}");
+                }
+            }
+        }
+
+
+        public static void ApplyStoredRotation(
+            Window window,
+            List<Component> components
+        )
+        {
+            if (window == null || components == null) return;
+            foreach (var c in components)
+            {
+                if (!c.Template.CustomProperties.TryGetValue("RotationAngle", out var p)
+                 || !double.TryParse(p.Value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var a))
+                    continue;
+                // apply once, and do not re-store the property
+                ApplyRotation(window, new List<Component> { c }, a, storeProperty: false);
+            }
+        }
+
+        /// <summary>
+        /// If you do still need to rotate a *detached* Body (e.g. a cutter or a half you
+        /// copied out), this will re-apply exactly the component’s stored RotationAngle
+        /// to that body, so that it matches the component’s world orientation.
+        /// But *normal* joints no longer need this, because the component itself is rotated.
+        /// </summary>
+        public static Body ApplyStoredRotationOnBody(Component component, Body body)
+        {
+            if (component == null || body == null)
+                return body;
+
+            if (!component.Template.CustomProperties.TryGetValue("RotationAngle", out var p)
+             || !double.TryParse(p.Value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var angleDeg)
+             || Math.Abs(angleDeg) < 1e-6)
+                return body;
+
+            // same axis calc as above:
+            var dc = component.Template.Curves.OfType<DesignCurve>().FirstOrDefault();
+            if (dc?.Shape is not CurveSegment seg)
+                return body;
+
+            var midLocal = Point.Create(
+                0.5 * (seg.StartPoint.X + seg.EndPoint.X),
+                0.5 * (seg.StartPoint.Y + seg.EndPoint.Y),
+                0.5 * (seg.StartPoint.Z + seg.EndPoint.Z)
+            );
+            var place = component.Placement;
+            var midWorld = place * midLocal;
+            var dirWorld = (place * seg.EndPoint - place * seg.StartPoint).Direction;
+            var axisWorld = Line.Create(midWorld, dirWorld);
+
+            double angleRad = angleDeg * Math.PI / 180.0;
+            var rot = Matrix.CreateRotation(axisWorld, angleRad);
+            body.Transform(rot);
+            return body;
+        }
+    }
+}

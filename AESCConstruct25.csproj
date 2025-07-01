@@ -10,7 +10,7 @@
     <RootNamespace>AESCConstruct25</RootNamespace>
     <AssemblyName>AESCConstruct25</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <LangVersion>13.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -74,100 +74,136 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands\CompareCommand.cs" />
-    <Compile Include="Commands\ExecuteJointCommand.cs" />
-    <Compile Include="Commands\ExportCommands.cs" />
-    <Compile Include="Commands\ExtrudeProfileCommand.cs" />
-    <Compile Include="Commands\RotateComponentCommand.cs" />
+    <Compile Include="CustomComponent\UI\CustomComponentControl.xaml.cs">
+      <DependentUpon>CustomComponentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Fastener\UI\FastenersControl.xaml.cs">
+      <DependentUpon>FastenersControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="FrameGenerator\Commands\CompareCommand.cs" />
+    <Compile Include="FrameGenerator\Commands\ExecuteJointCommand.cs" />
+    <Compile Include="FrameGenerator\Commands\ExportCommands.cs" />
+    <Compile Include="FrameGenerator\Commands\ExtrudeProfileCommand.cs" />
+    <Compile Include="FrameGenerator\Commands\RotateComponentCommand.cs" />
     <Compile Include="Construct25.cs" />
-    <Compile Include="Modules\Joints\JointBase.cs" />
-    <Compile Include="Modules\Joints\MiterJoint.cs" />
-    <Compile Include="Modules\Joints\NoneJoint.cs" />
-    <Compile Include="Modules\Joints\TrimJoint.cs" />
-    <Compile Include="Modules\Joints\TJoint.cs" />
-    <Compile Include="Modules\Joints\StraightJoint2.cs" />
-    <Compile Include="Modules\Joints\StraightJoint.cs" />
-    <Compile Include="Modules\ProfileModule.cs" />
-    <Compile Include="Modules\Profiles\CSVProfile.cs" />
-    <Compile Include="Modules\Profiles\DXFProfile.cs" />
-    <Compile Include="Modules\Profiles\UProfile.cs" />
-    <Compile Include="Modules\Profiles\TProfile.cs" />
-    <Compile Include="Modules\Profiles\LProfile.cs" />
-    <Compile Include="Modules\Profiles\HProfile.cs" />
-    <Compile Include="Modules\Profiles\CircularProfile.cs" />
-    <Compile Include="Modules\Profiles\RectangularProfile.cs" />
-    <Compile Include="Modules\Profiles\ProfileBase.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\JointBase.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\MiterJoint.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\NoneJoint.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\TrimJoint.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\TJoint.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\StraightJoint2.cs" />
+    <Compile Include="FrameGenerator\Modules\Joints\StraightJoint.cs" />
+    <Compile Include="FrameGenerator\Modules\ProfileModule.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\CSVProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\DXFProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\UProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\TProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\LProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\HProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\CircularProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\RectangularProfile.cs" />
+    <Compile Include="FrameGenerator\Modules\Profiles\ProfileBase.cs" />
+    <Compile Include="Plates\UI\PlatesControl.xaml.cs">
+      <DependentUpon>PlatesControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="Resources\Resources.Designer.cs">
+    <Compile Include="FrameGenerator\UI\ProfileSelectionControl.xaml.cs">
+      <DependentUpon>ProfileSelectionControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="FrameGenerator\UI\JointSelectionControl.xaml.cs">
+      <DependentUpon>JointSelectionControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="FrameGenerator\UI\SettingsControl.xaml.cs">
+      <DependentUpon>SettingsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="FrameGenerator\UI\UIManager.cs" />
+    <Compile Include="FrameGenerator\Utilities\CompNameHelper.cs" />
+    <Compile Include="FrameGenerator\Utilities\DXFImportHelper.cs" />
+    <Compile Include="FrameGenerator\Modules\JointModule.cs" />
+    <Compile Include="FrameGenerator\Utilities\JointCurveHelper.cs" />
+    <Compile Include="FrameGenerator\Utilities\JointSelectionHelper.cs" />
+    <Compile Include="FrameGenerator\Utilities\Logger.cs" />
+    <Compile Include="FrameGenerator\Utilities\ProfileSelectionHelper.cs" />
+    <Compile Include="RibCutout\UI\RibCutOut.xaml.cs">
+      <DependentUpon>RibCutOut.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UIMain\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="UI\ProfileSelectionControl.xaml.cs" />
-    <Compile Include="UI\JointSelectionControl.xaml.cs" />
-    <Compile Include="UI\SettingsControl.xaml.cs">
-      <DependentUpon>SettingsControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="UI\UIManager.cs" />
-    <Compile Include="Utilities\DXFImportHelper.cs" />
-    <Compile Include="Modules\JointModule.cs" />
-    <Compile Include="Utilities\JointCurveHelper.cs" />
-    <Compile Include="Utilities\JointSelectionHelper.cs" />
-    <Compile Include="Utilities\Logger.cs" />
-    <Compile Include="Utilities\ProfileSelectionHelper.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Resources.resx">
+    <EmbeddedResource Include="UIMain\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\Ribbon.xml" />
+    <EmbeddedResource Include="UIMain\Ribbon.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_Rectangular.csv" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_Circular.csv" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_L.csv" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_U.csv" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_H.csv" />
-    <EmbeddedResource Include="Resources\Presets\Profiles_T.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_Rectangular.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_Circular.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_L.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_U.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_H.csv" />
+    <EmbeddedResource Include="FrameGenerator\Resources\Presets\Profiles_T.csv" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="UI\ProfileSelectionControl.xaml">
+    <Page Include="CustomComponent\UI\CustomComponentControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Fastener\UI\FastenersControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="FrameGenerator\UI\ProfileSelectionControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="UI\SettingsControl.xaml">
+    <Page Include="FrameGenerator\UI\SettingsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Resource Include="Resources\Styles.xaml">
+    <Page Include="Plates\UI\PlatesControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="RibCutout\UI\RibCutOut.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Resource Include="UIMain\Styles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
-    <Page Include="UI\JointSelectionControl.xaml">
+    <Page Include="FrameGenerator\UI\JointSelectionControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Images\squareGrid.jpg">
+    <EmbeddedResource Include="UIMain\Images\squareGrid.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Images\BOMLogo.png" />
-    <EmbeddedResource Include="Resources\Images\ExcelLogo.png" />
-    <EmbeddedResource Include="Resources\Images\StepLogo.png" />
+    <EmbeddedResource Include="UIMain\Images\BOMLogo.png" />
+    <EmbeddedResource Include="UIMain\Images\ExcelLogo.png" />
+    <EmbeddedResource Include="UIMain\Images\StepLogo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Engraving\UI\" />
   </ItemGroup>
 </Project>

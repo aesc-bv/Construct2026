@@ -4,17 +4,17 @@
 library
 C#
 .cs
-C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\
 AESCConstruct25
 none
 false
 DEBUG;TRACE
 
-318319527
+7-1434329153
 
-37-217675695
-20-1123432402
-UI\ProfileSelectionControl.xaml;UI\SettingsControl.xaml;UI\JointSelectionControl.xaml;
+42-1754888867
+23303128862
+CustomComponent\UI\CustomComponentControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;FrameGenerator\UI\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;FrameGenerator\UI\JointSelectionControl.xaml;
 
 True
 
