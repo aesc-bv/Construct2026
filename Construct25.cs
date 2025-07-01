@@ -8,7 +8,7 @@ using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.UI;
 using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.UIMain;
+//using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V251;
 using SpaceClaim.Api.V251.Extensibility;
 using SpaceClaim.Api.V251.Geometry;
@@ -158,7 +158,7 @@ namespace AESCConstruct25
                     //Logger.Log($"AESCConstruct25: Registered {ExtrudeProfileCommand.CommandName}");
 
                     // Sidebar commands
-                    UIManager.RegisterAll();
+                    UIMain.UIManager.RegisterAll();
 
                     isCommandRegistered = true;
                 }
@@ -174,7 +174,14 @@ namespace AESCConstruct25
 
         private Image loadImg(byte[] bytes)
         {
-            return new Bitmap(new MemoryStream(bytes));
+            try
+            {
+                return new Bitmap(new MemoryStream(bytes));
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public void Disconnect()

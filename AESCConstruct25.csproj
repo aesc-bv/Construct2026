@@ -121,7 +121,7 @@
     <Compile Include="FrameGenerator\UI\SettingsControl.xaml.cs">
       <DependentUpon>SettingsControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="FrameGenerator\UI\UIManager.cs" />
+    <Compile Include="UIMain\UIManager.cs" />
     <Compile Include="FrameGenerator\Utilities\CompNameHelper.cs" />
     <Compile Include="FrameGenerator\Utilities\DXFImportHelper.cs" />
     <Compile Include="FrameGenerator\Modules\JointModule.cs" />
