@@ -421,6 +421,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         }
                         else
                         {
+                            if(aStartConnected || aEndConnected)
                             // Non-T joints: ensure both halves exist
                             if (!halves.ContainsKey(compA))
                             {
