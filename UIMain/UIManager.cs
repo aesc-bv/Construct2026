@@ -46,6 +46,8 @@ namespace AESCConstruct25.UIMain
         static ElementHost _fastenerHost;
         static FastenersControl _fastenerControl;
 
+        public static bool IncludeMaterialInExcel { get; set; }
+        public static bool IncludeMaterialInBOM { get; set; }
 
         public static void RegisterAll()
 		{
@@ -73,6 +75,12 @@ namespace AESCConstruct25.UIMain
             fCmd.Text = "Fastener";
             fCmd.Hint = "Open the fastener insertion pane";
             fCmd.Executing += OnFastenerToggle;
+
+            //AddMaterialCheckboxExcel.Checked += (s, e) => UIManager.IncludeMaterialInExcel = true;
+            //AddMaterialCheckboxExcel.Unchecked += (s, e) => UIManager.IncludeMaterialInExcel = false;
+
+            //AddMaterialCheckboxBOM.Checked += (s, e) => UIManager.IncludeMaterialInBOM = true;
+            //AddMaterialCheckboxBOM.Unchecked += (s, e) => UIManager.IncludeMaterialInBOM = false;
         }
 
         static void OnSettingsToggle(object sender, EventArgs e)

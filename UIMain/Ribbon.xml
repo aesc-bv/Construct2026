@@ -44,17 +44,20 @@
 										size="large"
 										style="imageandtext"/>
 							</container>
-							<checkBox id="AddMaterialCheckboxExcel"
-								label="Add material to part name"
-								size="small"
-									  IsCheckable="True"/>
-							<checkBox id="AddMaterialCheckboxBOM"
-								label="Add material to part name"
-								size="small"
-									  StaysOpenOnClick="True"
-									  IsCheckable="True"/>
 						</container>
 					</button>
+					<container
+						layoutOrientation="vertical">
+						<checkBox id="AddMaterialCheckboxExcel"
+									label="Add material to part name"
+									size="small"
+										  IsCheckable="True"/>
+						<checkBox id="AddMaterialCheckboxBOM"
+							label="Add material to part name"
+							size="small"
+								  StaysOpenOnClick="True"
+								  IsCheckable="True"/>
+					</container>
 					<button id="AESCConstruct25.UpdateBOM"
 							command="AESCConstruct25.UpdateBOM"
 							label="Update BOM"
