@@ -1,20 +1,18 @@
-﻿using System;
+﻿using AESCConstruct25.FrameGenerator.Modules;
+using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Extensibility;
+using SpaceClaim.Api.V242.Geometry;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;            // MessageBox
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
-using AESCConstruct25.FrameGenerator.Modules;
-using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242.Extensibility;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
     class ExtrudeProfileCommand : CommandCapsule
     {
         public const string CommandName = "AESCConstruct25.ExtrudeProfile";
-        private static readonly string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AESCConstruct25_Log.txt");
 
         public ExtrudeProfileCommand()
             : base(CommandName, "Extrude Profile", null, "Extrudes a selected profile along selected lines or edges") { }
@@ -26,7 +24,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
             double offsetX,
             double offsetY,
             string dxfFilePath = "",
-            bool updateBOM = false
+            bool updateBOM = false,
+            string selectedProfileString = ""
         )
         {
             Logger.Log($"ExtrudeProfileCommand: {updateBOM}");
@@ -76,6 +75,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 // Built-in shape mode (Rectangular, Circular, etc.)
                 profileData = fields.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                Logger.Log($"profileData {profileData}");
             }
             else
             {
@@ -150,11 +150,44 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         localUp,
                         dxfFilePath,   // only non-empty if profileType == "DXF"
                         dxfContours,   // non-null if DXF or CSV
-                        reuseComponent: null
+                        reuseComponent: null,
+                        csvProfileString: selectedProfileString
                     );
+                    var selectedCurves = win.ActiveContext.Selection
+                        .OfType<DesignCurve>()
+                        .ToHashSet();
+
+                    var p1 = seg.StartPoint;
+                    var p2 = seg.EndPoint;
+
+                    var selectedDesignCurves = win.ActiveContext.Selection
+                    .OfType<DesignCurve>()
+                    .ToList();
+
+                    foreach (var dcurve in selectedDesignCurves)
+                    {
+                        dcurve.SetVisibility(null, false);
+                    }
+
+                    bool PointsEqual(Point a, Point b, double tolerance)
+                    {
+                        return (a - b).Magnitude < tolerance;
+                    }
+
+                    var match = selectedCurves.FirstOrDefault(dc =>
+                    {
+                        var line = dc.Shape.Geometry as Line;
+                        if (line == null) return false;
+
+                        var lsp = dc.Shape.StartPoint;
+                        var lep = dc.Shape.EndPoint;
+
+                        return (PointsEqual(p1, lsp, tol) && PointsEqual(p2, lep, tol)) ||
+                               (PointsEqual(p1, lep, tol) && PointsEqual(p2, lsp, tol));
+                    });
                 }
             }
-            if(updateBOM == true)
+            if (updateBOM == true)
                 //CompareCommand.CompareSimple();
                 ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
             else

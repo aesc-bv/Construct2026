@@ -1,17 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Drawing;
+﻿using AESCConstruct25.Commands;
 using AESCConstruct25.FrameGenerator.Modules.Profiles;
+using AESCConstruct25.FrameGenerator.UI;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
-using System.Windows.Media;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Body = SpaceClaim.Api.V242.Modeler.Body;
 using Color = System.Drawing.Color;
-using Point = SpaceClaim.Api.V242.Geometry.Point;
+using Document = SpaceClaim.Api.V242.Document;
+using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using Matrix = SpaceClaim.Api.V242.Geometry.Matrix;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
 
 namespace AESCConstruct25.FrameGenerator.Modules
 {
@@ -28,7 +33,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
             Vector localUp,
             string dxfFilePath = "",
             List<ITrimmedCurve> dxfContours = null,
-            Component reuseComponent = null
+            Component reuseComponent = null,
+            string csvProfileString = null
         )
         {
             //Logger.Log($"ExtrudeProfile started for {profileType}");
@@ -89,14 +95,20 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
             // 5) Build profile loops in that localPlane
             string[] args = GetArgs(profileType, profileData);
+
+            Logger.Log($"args {args}");
+            Logger.Log($"args length {args.Length}");
+            foreach (var arg in args)
+                Logger.Log($"arg {arg}");
             var profile = ProfileBase.CreateProfile(
                 profileType, args, isHollow,
                 offsetX, offsetY,
                 dxfFilePath, dxfContours
             );
+            Logger.Log($"profile{profile}");
             if (profile == null)
             {
-                //Logger.Log($"ERROR – CreateProfile returned null for {profileType}");
+                Logger.Log($"ERROR – CreateProfile returned null for {profileType}");
                 return;
             }
             var outerLoop = profile.GetProfileCurves(localPlane).ToList();
@@ -130,7 +142,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
                             offsetX,
                             offsetY,
                             dxfContours,
-                            dxfFilePath
+                            dxfFilePath,
+                            csvProfileString
                         );
 
             // 8) Wipe out any old "ExtrudedProfile" bodies
@@ -156,15 +169,15 @@ namespace AESCConstruct25.FrameGenerator.Modules
             var framesLayer = doc.GetLayer("Frames");
             var db = DesignBody.Create(comp.Template, "ExtrudedProfile", outerBody);
             db.Layer = framesLayer;
-
+            
             // 11) Log bounding-box center in local and world to verify
-            Point localCenter = BodyCenterLocal(outerBody);
+            //Point localCenter = BodyCenterLocal(outerBody);
             //Logger.Log($"Created ExtrudedProfile body: center local = {PointToString(localCenter)}, world = {PointToString(comp.Placement * localCenter)}");
 
             //Logger.Log($"Successfully extruded {profileType} at origin/+Z; " +
-                       //(reuseComponent == null
-                       //    ? "placed in world via Component.Placement."
-                       //    : "body remains in component’s existing local frame."));
+            //(reuseComponent == null
+            //    ? "placed in world via Component.Placement."
+            //    : "body remains in component’s existing local frame."));
         }
 
         private static string[] GetArgs(string profileType, Dictionary<string, string> pd)
@@ -182,6 +195,35 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 default: return pd?.Values.ToArray() ?? Array.Empty<string>();
             }
         }
+        private static string GetProfileName(Dictionary<string, string> profileData)
+        {
+            // 1) If we actually have a dictionary, log every entry
+            if (profileData != null)
+            {
+                foreach (var kv in profileData)
+                {
+                    Logger.Log($"[GetProfileName] profileData[\"{kv.Key}\"] = \"{kv.Value}\"");
+                }
+            }
+            else
+            {
+                Logger.Log("[GetProfileName] profileData is NULL");
+            }
+
+            // 2) Now try to grab the "Name" entry
+            if (profileData != null
+             && profileData.TryGetValue("Name", out var nm)
+             && !string.IsNullOrWhiteSpace(nm))
+            {
+                Logger.Log($"[GetProfileName] returning Name = \"{nm}\"");
+                return nm;
+            }
+            else
+            {
+                Logger.Log("[GetProfileName] no \"Name\" key found or value was empty");
+                return string.Empty;
+            }
+        }
 
 
         // --- your existing CreateComponent (unchanged) ---
@@ -195,25 +237,37 @@ namespace AESCConstruct25.FrameGenerator.Modules
             double offsetX,
             double offsetY,
             List<ITrimmedCurve> dxfContourVal,
-            string dxfFilePath)
+            string dxfFilePath,
+            string csvProfileString)
         {
             // clone so we don’t mutate caller’s dictionary
             profileData = profileData != null
                 ? new Dictionary<string, string>(profileData)
                 : new Dictionary<string, string>();
 
-            //// build unique part/component name
-            //string baseName = profileType;
-            //if (profileData.Count > 0)
-            //    baseName += "_" + string.Join("_", profileData.Values);
-            //baseName += "_" + ((int)(len * 1000)).ToString();
+            string dataString = string.Join("_",
+            profileData
+              .OrderBy(kv => kv.Key)
+              .Select(kv => $"{kv.Key}{kv.Value}"));
 
-            //string partName = baseName;
-            //int n = 1;
-            //while (doc.Parts.Any(p => p.Name == partName))
-            //    partName = baseName + "-" + (n++);
+            // 2) Express length in millimetres (integer)
+            string lengthMm = ((int)(len * 1000)).ToString();
 
-            Part part = Part.Create(doc, "Temp");
+            // 3) Base partName
+            string baseName = $"{profileType}_{dataString}_{lengthMm}";
+
+            // 4) Make sure it’s unique in this document
+            string partName = baseName;
+            int suffix = 1;
+            while (doc.MainPart
+                    .GetChildren<Part>()
+                    .Any(p => p.Name.Equals(partName, StringComparison.OrdinalIgnoreCase)))
+            {
+                partName = $"{baseName}_{suffix++}";
+            }
+
+            // 5) Finally create it
+            Part part = Part.Create(doc, partName);
             Component comp = Component.Create(doc.MainPart, part);
             CompNameHelper.SetNameAndLength(
                 comp,
@@ -230,13 +284,27 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 Color myCustomColor = ColorTranslator.FromHtml("#007AFF");
                 framesLayer = Layer.Create(doc, "Frames", myCustomColor);
             }
-
+            string rawName = GetProfileName(profileData) ?? "";
+            string profileName = Regex.Replace(rawName.Trim(), @"\s+", "_");
+            Logger.Log($"name prop = {profileName}");
             // store metadata
-            CustomPartProperty.Create(part, "Type", profileType);
-            CustomPartProperty.Create(part, "Hollow", isHollow.ToString().ToLower());
-            CustomPartProperty.Create(part, "offsetX", offsetX);
-            CustomPartProperty.Create(part, "offsetY", offsetY);
+            CreateCustomProperty(part, "Type", profileType);
+            CreateCustomProperty(part, "Hollow", isHollow.ToString().ToLower());
+            CreateCustomProperty(part, "offsetX", offsetX);
+            CreateCustomProperty(part, "offsetY", offsetY);
+            CreateCustomProperty(part, "Name", profileName);
+            //if (profileType.Equals("DXF", StringComparison.OrdinalIgnoreCase)
+            //    && !string.IsNullOrWhiteSpace(dxfFilePath))
+            //{
+            //    CreateCustomProperty(part, "DXFPath", dxfFilePath);
+            //}
 
+            //if (profileType.Equals("CSV", StringComparison.OrdinalIgnoreCase)
+            //    && !string.IsNullOrWhiteSpace(csvProfileString))
+            //{
+            //    // this is exactly the original data you parsed
+            //    CreateCustomProperty(part, "RawCSV", csvProfileString);
+            //}
             // helper to parse a numeric parameter
             double GetNum(string key)
             {
@@ -279,7 +347,11 @@ namespace AESCConstruct25.FrameGenerator.Modules
                     case "DXF":
                         var (widthMm, heightMm) = DXFImportHelper.GetDXFSize(dxfContourVal);
                         w = widthMm * 1000.0;
-                        CustomPartProperty.Create(part, "DXFPath", dxfFilePath);
+                        CreateCustomProperty(part, "DXFPath", dxfFilePath);
+                        break;
+                    case "CSV":
+                        Logger.Log(dxfContourVal.ToString());
+                        CreateCustomProperty(part, "RawCSV", csvProfileString);
                         break;
                     default:
                         // fallback: try any of the common keys
@@ -300,7 +372,10 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
             // write out all Construct_ properties
             foreach (var kv in profileData)
-                CustomPartProperty.Create(part, "Construct_" + kv.Key, kv.Value);
+            {
+                Logger.Log($"Construct_{kv.Key}, {kv.Value}");
+                CreateCustomProperty(part, "Construct_" + kv.Key, kv.Value);
+            }
 
             // record the construction line for joints
             if (pathCurve != null)
@@ -311,18 +386,44 @@ namespace AESCConstruct25.FrameGenerator.Modules
                     Point.Create(-offsetX, -offsetY, len)
                 );
                 var dc = DesignCurve.Create(part, flatSeg);
+                dc.SetVisibility(null, false);
                 dc.Name = "ConstructCurve";
-                dc.Layer = framesLayer;
-                dc.SetVisibility(null, true);
-            }
-
-            foreach (var dc in comp.Content.Curves.OfType<DesignCurve>())
-            {
-                //Logger.Log($"Adding layer to dc");
                 dc.Layer = framesLayer;
             }
 
             return comp;
+        }
+
+        private static void CreateCustomProperty(Part part, string key, object newValue)
+        {
+            // 1) Convert newValue to a string
+            string valueString;
+            switch (newValue)
+            {
+                case bool b:
+                    valueString = b.ToString().ToLowerInvariant();
+                    break;
+                case IFormattable formattable:
+                    valueString = formattable.ToString(null, CultureInfo.InvariantCulture);
+                    break;
+                default:
+                    valueString = newValue?.ToString() ?? string.Empty;
+                    break;
+            }
+
+            // 2) Look up the existing KV pair by its key
+            var existingKV = part.CustomProperties
+                .FirstOrDefault(kv => kv.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+            // 3) If found (i.e. Key != null), update; otherwise create
+            if (existingKV.Key != null)
+            {
+                existingKV.Value.Value = valueString;
+            }
+            else
+            {
+                CustomPartProperty.Create(part, key, valueString);
+            }
         }
 
         private static Point BodyCenterLocal(Body body)

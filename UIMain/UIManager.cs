@@ -1,350 +1,245 @@
-﻿using System;
-using System.Windows.Forms;
-using System.Windows.Forms.Integration;
-using AESCConstruct25.FrameGenerator.Utilities;   // for Logger
-using AESCConstruct25.FrameGenerator.UI;
-using SpaceClaim.Api.V242.Extensibility;
-using Panel = System.Windows.Forms.Panel;
-using SpaceClaim.Api.V242;
+﻿using AESCConstruct25.FrameGenerator.UI;
+using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.UI;
+using SpaceClaim.Api.V242;
+using System;
+using System.Drawing;
+using System.IO;
+using System.Windows.Forms;
+using System.Windows.Forms.Integration;       // for ElementHost
+using Image = System.Drawing.Image;
+using WinForms = System.Windows.Forms;        // alias WinForms namespace
 
 namespace AESCConstruct25.UIMain
 {
-	public static class UIManager
-	{
-		public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
-		public const string JointCommand = "AESCConstruct25.JointSidebar";
+    public static class UIManager
+    {
+
+        static PanelTab myPanelTab;
+        // Command names
+        public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
         public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
         public const string PlateCommand = "AESCConstruct25.Plate";
         public const string FastenerCommand = "AESCConstruct25.Fastener";
+        public const string RibCutOutCommand = "AESCConstruct25.RibCutOut";
+        public const string CustomPropertiesCommand = "AESCConstruct25.CustomProperties";
+        public const string EngravingCommand = "AESCConstruct25.EngravingControl";
 
-        // PROFILE
-        static PanelTab _profileTab;
-		static Panel _profilePanel;
-		static ElementHost _profileHost;
-		static ProfileSelectionControl _profileControl;
+        // Shared ElementHosts for WPF controls
+        private static ElementHost _profileHost, _settingsHost,
+                                  _plateHost, _fastenerHost, _ribCutOutHost, _customPropertiesHost, _engravingHost;
 
-        // JOINT
-        static PanelTab _jointTab;
-        static Panel _jointPanel;
-        static ElementHost _jointHost;
-        static JointSelectionControl _jointControl;
-
-        // SETTINGS
-        static PanelTab _settingsTab;
-        static Panel _settingsPanel;
-        static ElementHost _settingsHost;
-        static SettingsControl _settingsControl;
-
-        static PanelTab _plateTab;
-        static Panel _platePanel;
-        static ElementHost _plateHost;
-        static PlatesControl _plateControl;
-
-        static PanelTab _fastenerTab;
-        static Panel _fastenerPanel;
-        static ElementHost _fastenerHost;
-        static FastenersControl _fastenerControl;
-
+        // WPF controls (instances of UserControl)
+        private static ProfileSelectionControl _profileControl;
+        private static SettingsControl _settingsControl;
+        private static PlatesControl _plateControl;
+        private static FastenersControl _fastenerControl;
+        private static RibCutOutControl _ribCutOutControl;
+        private static CustomComponentControl _customPropertiesControl;
+        private static EngravingControl _engravingControl;
 
         public static void RegisterAll()
-		{
-			var pCmd = Command.Create(ProfileCommand);
-			pCmd.Text = "Profile Selector";
-			pCmd.Hint = "Open the profile selection sidebar";
-			pCmd.Executing += OnProfileToggle;
+        {
+            bool valid = DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
+            // Profile
+            var profileCmd = Command.Create(ProfileCommand);
+            profileCmd.Text = "Profile Selector";
+            profileCmd.Hint = "Open the profile selection sidebar";
+            profileCmd.Image = LoadImage(Resources.FrameGen);
+            profileCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
+            profileCmd.Executing += (s, e) => ShowProfile();
+            profileCmd.KeepAlive(true);
 
-			var jCmd = Command.Create(JointCommand);
-			jCmd.Text = "Joint Selector";
-			jCmd.Hint = "Open the joint selection sidebar";
-			jCmd.Executing += OnJointToggle;
+            // Settings
+            var settingsCmd = Command.Create(SettingsCommand);
+            settingsCmd.Text = "Settings";
+            settingsCmd.Hint = "Open the settings sidebar";
+            settingsCmd.Image = LoadImage(Resources.settings);
+            settingsCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
+            settingsCmd.Executing += (s, e) => ShowSettings();
+            settingsCmd.KeepAlive(true);
 
-            var sCmd = Command.Create(SettingsCommand);
-            sCmd.Text = "Settings";
-            sCmd.Hint = "Open the settings window";
-            sCmd.Executing += OnSettingsToggle;
+            // Plate
+            var plateCmd = Command.Create(PlateCommand);
+            plateCmd.Text = "Plate";
+            plateCmd.Hint = "Open the plate‐creation pane";
+            plateCmd.Image = LoadImage(Resources.InsertPlate);
+            plateCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
+            plateCmd.Executing += (s, e) => ShowPlate();
+            plateCmd.KeepAlive(true);
 
-            var plCmd = Command.Create(PlateCommand);
-            plCmd.Text = "Plate";
-            plCmd.Hint = "Open the plate‐creation pane";
-            plCmd.Executing += OnPlateToggle;
+            // Fastener
+            var fastenerCmd = Command.Create(FastenerCommand);
+            fastenerCmd.Text = "Fastener";
+            fastenerCmd.Hint = "Open the fastener insertion pane";
+            fastenerCmd.Image = LoadImage(Resources.Fasteners);
+            fastenerCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+            fastenerCmd.Executing += (s, e) => ShowFastener();
+            fastenerCmd.KeepAlive(true);
 
-            var fCmd = Command.Create(FastenerCommand);
-            fCmd.Text = "Fastener";
-            fCmd.Hint = "Open the fastener insertion pane";
-            fCmd.Executing += OnFastenerToggle;
+            // Rib CutOut
+            var ribCmd = Command.Create(RibCutOutCommand);
+            ribCmd.Text = "Rib Cutout";
+            ribCmd.Hint = "Open the rib cutout pane";
+            ribCmd.Image = LoadImage(Resources.ribCutout);
+            ribCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+            ribCmd.Executing += (s, e) => ShowRibCutOut();
+            ribCmd.KeepAlive(true);
 
-            //AddMaterialCheckboxExcel.Checked += (s, e) => UIManager.IncludeMaterialInExcel = true;
-            //AddMaterialCheckboxExcel.Unchecked += (s, e) => UIManager.IncludeMaterialInExcel = false;
+            var customPropCmd = Command.Create(CustomPropertiesCommand);
+            customPropCmd.Text = "Custom Properties";
+            customPropCmd.Hint = "Open the custom‐properties pane";
+            customPropCmd.Image = LoadImage(Resources.Custom_Properties);
+            customPropCmd.IsEnabled = valid;  // or LicenseSpot.Valid
+            customPropCmd.Executing += (s, e) => ShowCustomProperties();
+            customPropCmd.KeepAlive(true);
 
-            //AddMaterialCheckboxBOM.Checked += (s, e) => UIManager.IncludeMaterialInBOM = true;
-            //AddMaterialCheckboxBOM.Unchecked += (s, e) => UIManager.IncludeMaterialInBOM = false;
+            var engravingCmd = Command.Create(EngravingCommand);
+            engravingCmd.Text = "Engraving";
+            engravingCmd.Hint = "Open the engraving pane";
+            engravingCmd.Image = LoadImage(Resources.Engraving); // if you have an icon
+            engravingCmd.IsEnabled = valid;
+            engravingCmd.Executing += (s, e) => ShowEngraving();
+            engravingCmd.KeepAlive(true);
         }
 
-        static void OnSettingsToggle(object sender, EventArgs e)
+        private static void ShowEngraving()
         {
-            var cmd = (Command)sender;
-
-            // close any other pane
-            CloseProfile();
-            CloseJoint();
-
-            // if already open, just close it
-            if (_settingsTab != null)
+            Logger.Log("showengraving");
+            if (_engravingControl == null)
             {
-                CloseSettings();
-                return;
+                Logger.Log("showengraving null");
+                try
+                {
+                    _engravingControl = new EngravingControl();
+                    Logger.Log("EngravingControl ctor succeeded");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"EngravingControl ctor failed: {ex}");
+                    WinForms.MessageBox.Show(
+                        "Could not initialize the Engraving panel:\n" + ex.Message,
+                        "Engraving", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error
+                    );
+                    return;
+                }
+
+                _engravingHost = new ElementHost
+                {
+                    Dock = DockStyle.Fill,
+                    Child = _engravingControl
+                };
+                Logger.Log("_engravingHost created");
+            }
+            Logger.Log("showengraving2");
+
+            var cmd = Command.GetCommand(EngravingCommand);
+            Logger.Log("GetCommand");
+            SpaceClaim.Api.V242.Application.AddPanelContent(
+                cmd,
+                _engravingHost,
+                SpaceClaim.Api.V242.Panel.Options
+            );
+            Logger.Log("AddPanelContent");
+        }
+
+        private static void ShowCustomProperties()
+        {
+            if (_customPropertiesControl == null)
+            {
+                // your CustomPropertiesControl is a WPF UserControl
+                _customPropertiesControl = new CustomComponentControl();
+                _customPropertiesHost = new ElementHost
+                {
+                    Dock = DockStyle.Fill,
+                    Child = _customPropertiesControl
+                };
             }
 
-            // build/rebuild if needed
-            if (_settingsPanel == null || _settingsPanel.IsDisposed)
+            var cmd = Command.GetCommand(CustomPropertiesCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(
+                cmd,
+                _customPropertiesHost,
+                SpaceClaim.Api.V242.Panel.Options
+            );
+        }
+
+        private static void ShowProfile()
+        {
+            if (_profileControl == null)
+            {
+                _profileControl = new ProfileSelectionControl();
+                // No TopLevel on WPF UserControl :contentReference[oaicite:5]{index=5}
+                _profileHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _profileControl };  // host WPF :contentReference[oaicite:6]{index=6}
+            }
+            var cmd = Command.GetCommand(ProfileCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(   // fully qualified Application :contentReference[oaicite:7]{index=7}
+                cmd,
+                _profileHost,
+                SpaceClaim.Api.V242.Panel.Options             // fully qualified Panel enum :contentReference[oaicite:8]{index=8}
+            );
+        }
+
+        private static void ShowSettings()
+        {
+            if (_settingsControl == null)
             {
                 _settingsControl = new SettingsControl();
-                _settingsHost = new ElementHost
-                {
-                    Dock = DockStyle.Fill,
-                    Child = _settingsControl
-                };
-                _settingsPanel = new Panel { Dock = DockStyle.Fill };
-                _settingsPanel.Controls.Add(_settingsHost);
+                _settingsHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _settingsControl };
             }
-
-            // show it
-            _settingsTab = PanelTab.Create(cmd, _settingsPanel, DockLocation.Right, 500, false);
-            _settingsTab?.Activate();
+            var cmd = Command.GetCommand(SettingsCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _settingsHost, SpaceClaim.Api.V242.Panel.Options);
         }
 
-        public static void CloseSettings()
+        private static void ShowPlate()
         {
-            if (_settingsTab != null)
-            {
-                _settingsTab.Close();
-                _settingsTab = null;
-            }
-            if (_settingsPanel != null && !_settingsPanel.IsDisposed)
-                _settingsPanel.Dispose();
-
-            _settingsPanel = null;
-            _settingsHost = null;
-            _settingsControl = null;
-        }
-
-        static void OnProfileToggle(object sender, EventArgs e)
-		{
-			var cmd = (Command)sender;
-			// always close the other one first
-			CloseJoint();
-
-			// if it’s already open, just close it
-			if (_profileTab != null)
-			{
-				CloseProfile();
-				return;
-			}
-
-			// otherwise build/rebuild
-			if (_profilePanel == null || _profilePanel.IsDisposed)
-			{
-				_profileHost = null;
-				_profileControl = null;
-				_profilePanel = null;
-
-				_profileControl = new ProfileSelectionControl();
-				_profileHost = new ElementHost
-				{
-					Dock = DockStyle.Fill,
-					Child = _profileControl
-				};
-				_profilePanel = new Panel
-				{
-					Dock = DockStyle.Fill
-				};
-				_profilePanel.Controls.Add(_profileHost);
-			}
-
-			// show it
-			_profileTab = PanelTab.Create(cmd, _profilePanel, DockLocation.Right, 500, false);
-			_profileTab?.Activate();
-		}
-
-		static void OnJointToggle(object sender, EventArgs e)
-		{
-			var cmd = (Command)sender;
-			// always close the other one first
-			CloseProfile();
-
-			// if it’s already open, just close it
-			if (_jointTab != null)
-			{
-				CloseJoint();
-				return;
-			}
-
-			// otherwise build/rebuild
-			if (_jointPanel == null || _jointPanel.IsDisposed)
-			{
-				_jointHost = null;
-				_jointControl = null;
-				_jointPanel = null;
-
-				_jointControl = new JointSelectionControl();
-				_jointHost = new ElementHost
-				{
-					Dock = DockStyle.Fill,
-					Child = _jointControl
-				};
-				_jointPanel = new Panel
-				{
-					Dock = DockStyle.Fill
-				};
-				_jointPanel.Controls.Add(_jointHost);
-			}
-
-			// show it
-			_jointTab = PanelTab.Create(cmd, _jointPanel, DockLocation.Right, 500, false);
-			_jointTab?.Activate();
-		}
-
-        static void OnPlateToggle(object sender, EventArgs e)
-        {
-            var cmd = (Command)sender;
-
-            // 1) close anything else
-            CloseProfile();
-            CloseJoint();
-            CloseSettings();
-            CloseFastener();
-
-            // 2) if already open, just close it
-            if (_plateTab != null)
-            {
-                ClosePlate();
-                return;
-            }
-
-            // 3) otherwise (re)build the panel
-            if (_platePanel == null || _platePanel.IsDisposed)
+            if (_plateControl == null)
             {
                 _plateControl = new PlatesControl();
-                _plateHost = new ElementHost
-                {
-                    Dock = DockStyle.Fill,
-                    Child = _plateControl
-                };
-                _platePanel = new Panel
-                {
-                    Dock = DockStyle.Fill
-                };
-                _platePanel.Controls.Add(_plateHost);
+                _plateHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _plateControl };
             }
-
-            // 4) show it on the right
-            _plateTab = PanelTab.Create(cmd, _platePanel, DockLocation.Right, 500, false);
-            _plateTab?.Activate();
+            var cmd = Command.GetCommand(PlateCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _plateHost, SpaceClaim.Api.V242.Panel.Options);
         }
 
-        static void OnFastenerToggle(object sender, EventArgs e)
+        private static void ShowFastener()
         {
-            var cmd = (Command)sender;
-
-            // 1) close anything else
-            CloseProfile();
-            CloseJoint();
-            CloseSettings();
-            //CloseFastener();
-
-            // 2) if already open, just close it
-            if (_fastenerTab != null)
+            if (_fastenerControl == null)
             {
-                CloseFastener();
-                return;
-            }
-
-            // 3) otherwise (re)build the panel
-            if (_fastenerPanel == null || _fastenerPanel.IsDisposed)
-            {
-                _fastenerControl = new FastenersControl();
-                _fastenerHost = new ElementHost
+                try
                 {
-                    Dock = DockStyle.Fill,
-                    Child = _fastenerControl
-                };
-                _fastenerPanel = new Panel
+                    _fastenerControl = new FastenersControl();
+                }
+                catch (Exception ex)
                 {
-                    Dock = DockStyle.Fill
-                };
-                _fastenerPanel.Controls.Add(_fastenerHost);
+                    Logger.Log($"FastenersControl ctor failed: {ex}");
+                    WinForms.MessageBox.Show(
+                        "Could not initialize the Fastener panel:\n" + ex.Message,
+                        "Fastener", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error
+                    );
+                    return;
+                }
+                _fastenerHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _fastenerControl };
             }
-
-            // 4) show it on the right
-            _fastenerTab = PanelTab.Create(cmd, _fastenerPanel, DockLocation.Right, 500, false);
-            _fastenerTab?.Activate();
+            var cmd = Command.GetCommand(FastenerCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _fastenerHost, SpaceClaim.Api.V242.Panel.Options);
         }
 
-        public static void CloseFastener()
+        private static void ShowRibCutOut()
         {
-            if (_fastenerTab != null)
+            if (_ribCutOutControl == null)
             {
-                _fastenerTab.Close();
-                _fastenerTab = null;
+                _ribCutOutControl = new RibCutOutControl();
+                _ribCutOutHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _ribCutOutControl };
             }
-            if (_fastenerPanel != null && !_fastenerPanel.IsDisposed)
-                _fastenerPanel.Dispose();
-
-            _fastenerPanel = null;
-            _fastenerHost = null;
-            _fastenerControl = null;
+            var cmd = Command.GetCommand(RibCutOutCommand);
+            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _ribCutOutHost, SpaceClaim.Api.V242.Panel.Options);
         }
 
-
-        public static void ClosePlate()
+        private static Image LoadImage(byte[] bytes)
         {
-            if (_plateTab != null)
-            {
-                _plateTab.Close();
-                _plateTab = null;
-            }
-
-            if (_platePanel != null && !_platePanel.IsDisposed)
-                _platePanel.Dispose();
-
-            _platePanel = null;
-            _plateHost = null;
-            _plateControl = null;
+            try { return new Bitmap(new MemoryStream(bytes)); }
+            catch { return null; }
         }
-
-        /// <summary>
-        /// Close the Profile panel if it’s open.
-        /// </summary>
-        public static void CloseProfile()
-		{
-			if (_profileTab != null)
-			{
-				_profileTab.Close();
-				_profileTab = null;
-			}
-			if (_profilePanel != null && !_profilePanel.IsDisposed)
-				_profilePanel.Dispose();
-			_profilePanel = null;
-			_profileHost = null;
-			_profileControl = null;
-		}
-
-		/// <summary>
-		/// Close the Joint panel if it’s open.
-		/// </summary>
-		public static void CloseJoint()
-		{
-			if (_jointTab != null)
-			{
-				_jointTab.Close();
-				_jointTab = null;
-			}
-			if (_jointPanel != null && !_jointPanel.IsDisposed)
-				_jointPanel.Dispose();
-			_jointPanel = null;
-			_jointHost = null;
-			_jointControl = null;
-		}
-	}
+    }
 }

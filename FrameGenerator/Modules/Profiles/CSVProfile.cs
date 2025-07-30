@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using SpaceClaim.Api.V242.Geometry;
+﻿using SpaceClaim.Api.V242.Geometry;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {

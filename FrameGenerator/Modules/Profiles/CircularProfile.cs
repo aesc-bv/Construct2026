@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242.Geometry;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -12,7 +11,6 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
         private readonly bool isHollow;
         private readonly double offsetX;
         private readonly double offsetY;
-        private static string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AESCConstruct25_Log.txt");
 
         public CircularProfile(double diameter, double thickness, bool isHollow, double offsetX, double offsetY)
         {
@@ -22,7 +20,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            File.AppendAllText(logPath, $"AESCConstruct25: Generating Circular Profile with diameter {diameter}m and thickness {thickness}m, Hollow: {isHollow}\n");
+            Logger.Log($"AESCConstruct25: Generating Circular Profile with diameter {diameter}m and thickness {thickness}m, Hollow: {isHollow}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
@@ -35,7 +33,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             double innerDiameter = diameter - 2 * thickness;
             if (innerDiameter <= 0)
             {
-                File.AppendAllText(logPath, "AESCConstruct25: ERROR - Inner diameter too small, skipping hollow profile.\n");
+                Logger.Log("AESCConstruct25: ERROR - Inner diameter too small, skipping hollow profile.\n");
                 return new List<ITrimmedCurve>(); // No inner profile
             }
 

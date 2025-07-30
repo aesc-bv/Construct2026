@@ -12,7 +12,7 @@ namespace AESCConstruct25.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.11.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.13.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -44,6 +44,125 @@ namespace AESCConstruct25.Properties {
             }
             set {
                 this["TypeString"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.02")]
+        public double TableAnchorX {
+            get {
+                return ((double)(this["TableAnchorX"]));
+            }
+            set {
+                this["TableAnchorX"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.02")]
+        public double TableAnchorY {
+            get {
+                return ((double)(this["TableAnchorY"]));
+            }
+            set {
+                this["TableAnchorY"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("BottomRightCorner")]
+        public string TableLocationPoint {
+            get {
+                return ((string)(this["TableLocationPoint"]));
+            }
+            set {
+                this["TableLocationPoint"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MatInExcel {
+            get {
+                return ((bool)(this["MatInExcel"]));
+            }
+            set {
+                this["MatInExcel"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MatInBOM {
+            get {
+                return ((bool)(this["MatInBOM"]));
+            }
+            set {
+                this["MatInBOM"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MatInSTEP {
+            get {
+                return ((bool)(this["MatInSTEP"]));
+            }
+            set {
+                this["MatInSTEP"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("null")]
+        public string SerialNumber {
+            get {
+                return ((string)(this["SerialNumber"]));
+            }
+            set {
+                this["SerialNumber"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LicenseValid {
+            get {
+                return ((bool)(this["LicenseValid"]));
+            }
+            set {
+                this["LicenseValid"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("EN")]
+        public string Construct_Language {
+            get {
+                return ((string)(this["Construct_Language"]));
+            }
+            set {
+                this["Construct_Language"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.Collections.Specialized.StringCollection CSVFilePaths {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["CSVFilePaths"]));
+            }
+            set {
+                this["CSVFilePaths"] = value;
             }
         }
     }

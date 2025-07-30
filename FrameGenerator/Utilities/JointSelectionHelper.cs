@@ -1,10 +1,8 @@
-﻿using System;
+﻿using SpaceClaim.Api.V242;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Modeler;
 
 namespace AESCConstruct25.FrameGenerator.Utilities
 {

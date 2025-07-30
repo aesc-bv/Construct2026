@@ -1,15 +1,14 @@
-﻿using System;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Drawing;
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
-using AESCConstruct25.FrameGenerator.Utilities;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
-using System.Globalization;
 
 namespace AESCConstruct25.FrameGenerator.Utilities
 {
@@ -417,7 +416,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             double y = double.Parse(parts[1], CultureInfo.InvariantCulture) * 0.001;
             return Point.Create(x, y, 0);
         }
-       
+
         //
         // ─── 6) BUILD A PLANAR BODY FROM A PROFILE STRING ───────────────────────────────
         //

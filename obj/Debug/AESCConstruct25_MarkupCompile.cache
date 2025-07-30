@@ -10,11 +10,11 @@ none
 false
 DEBUG;TRACE
 
-7-1434329153
+7-1157475658
 
-48-998067300
-23-180996962
-CustomComponent\UI\CustomComponentControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;FrameGenerator\UI\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;FrameGenerator\UI\JointSelectionControl.xaml;
+542113727468
+24-1818332598
+CustomComponent\UI\CustomComponentControl.xaml;Engraving\UI\EngravingControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;UIMain\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;
 
 False
 

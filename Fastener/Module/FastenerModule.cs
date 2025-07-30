@@ -1,18 +1,17 @@
-﻿using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SpaceClaim.Api.V242.Modeler;
-using Document = SpaceClaim.Api.V242.Document;
 using System.Windows.Forms;
 using Application = SpaceClaim.Api.V242.Application;
-using DocumentFormat.OpenXml.Wordprocessing;
 using Body = SpaceClaim.Api.V242.Modeler.Body;
+using Document = SpaceClaim.Api.V242.Document;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
-using System.IO;
+using AESCConstruct25.FrameGenerator.Utilities;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
+using System.Runtime.Remoting.Messaging;
 
 namespace AESCConstruct25.Fastener.Module
 {
@@ -27,7 +26,7 @@ namespace AESCConstruct25.Fastener.Module
         {
             var basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "SpaceClaim", "Addins", "AESCConstruct", "Fasteners");
+               "AESCConstruct", "Fasteners");
 
             _bolts = File.ReadAllLines(Path.Combine(basePath, "Bolt.csv"))
                          .Skip(1).Select(Bolt.FromCsv).ToList();
@@ -88,34 +87,36 @@ namespace AESCConstruct25.Fastener.Module
         private bool _lockDistance;
         public void SetLockDistance(bool l) => _lockDistance = l;
 
-
-
-        private static Part GetWasherPart(Document doc, string name, Washer washer, out Component component)
+        private Part GetWasherPart(Document doc, string name, Washer washer, out Component component)
         {
-            // Try to find an existing “Fasteners” part
-            Part part = doc.Parts
-                .FirstOrDefault(p => p.DisplayName == name);
+            Logger.Log($"[GetWasherPart] START name={name}, d1={washer.d1}, d2={washer.d2}, s={washer.s}");
 
-            // Create Fasteners Part if not existing
+            // Always create new part
             Part fastenersPart = GetFastenersPart(doc);
-            if (part is null)
+            string uniqueName = $"{name}_{Guid.NewGuid():N}";
+            Logger.Log($"[GetWasherPart] Creating new Part '{uniqueName}' under 'Fasteners'");
+            Part part = Part.Create(doc, uniqueName);
+            component = Component.Create(fastenersPart, part);
+
+            // Create geometry
+            Body body;
+            try
             {
-
-                // if not found, create it and hook it up
-                part = Part.Create(doc, name);
-                component = Component.Create(fastenersPart, part);
-
-                // Create body
-                SpaceClaim.Api.V242.Modeler.Body body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
-
-                DesignBody dbBolt = DesignBody.Create(part, name, body);
-                CustomPartProperty.Create(part, "AESC_Construct", true);
+                body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
             }
-            else
+            catch (Exception ex)
             {
-                // Create a copy of the original component
-                component = Component.Create(fastenersPart, part);
+                Logger.Log($"[GetWasherPart] ERROR in createWasher: {ex}");
+                throw;
             }
+            Logger.Log($"[GetWasherPart] Body created; calling DesignBody.Create");
+
+            DesignBody db = DesignBody.Create(part, name, body);
+            db.IsLocked = _lockDistance;
+            Logger.Log($"[GetWasherPart] DesignBody created, attaching property");
+            CustomPartProperty.Create(part, "AESC_Construct", true);
+
+            Logger.Log($"[GetWasherPart] COMPLETE for '{uniqueName}'");
             return part;
         }
 
@@ -282,6 +283,10 @@ namespace AESCConstruct25.Fastener.Module
             ICollection<IDocObject> selection = win.ActiveContext.Selection;
             ICollection<IDocObject> secSelection = win.ActiveContext.SecondarySelection;
 
+            listBolt = _bolts.ToList();
+            listWasherTop = _washers.ToList();
+            listWasherBottom = _washers.ToList();
+            listNut = _nuts.ToList();
 
             if (selection.Count > 1 && secSelection.Count > 0)
             {
@@ -302,6 +307,9 @@ namespace AESCConstruct25.Fastener.Module
                 WriteBlock.ExecuteTask("AESCConstruct.FastenersCreate",
                 delegate
                 {
+                    Logger.Log($"[FastenerModule] CreateFasteners() starting; includeTop={includeWasherTop}, includeBottom={includeWasherBottom}, includeNut={includeNut}");
+                    Logger.Log($"[FastenerModule] boltType={boltType}, boltSize={boltSize}, washerTopType={washerTopType}, washerTopSize={washerTopSize}, washerBottomType={washerBottomType}, washerBottomSize={washerBottomSize}");
+
                     Bolt _bolt = listBolt.First();
 
                     foreach (Bolt bolt in listBolt)
@@ -358,7 +366,7 @@ namespace AESCConstruct25.Fastener.Module
                     ///// Create Geometry     
                     string boltName = boltType.Split(' ')[0] + " " + boltSize + " x " + (parBoltL).ToString();
                     string washerTopName = washerTopType.Split(' ')[0] + " " + washerTopSize;
-                    string washerBottomName = washerBottomType.Split(' ')[0] + " " + washerBottomType;
+                    string washerBottomName = washerBottomType.Split(' ')[0] + " " + washerBottomSize;
                     string nutName = nutType.Split(' ')[0] + " " + nutSize;
 
                     foreach (PlacementData PD in placementDatas)
@@ -371,18 +379,75 @@ namespace AESCConstruct25.Fastener.Module
 
                         if (this.includeWasherTop)
                         {
+                            Logger.Log($"[CreateFasteners] Inserting TOP washer 'name' at {PD.Origin} dir={PD.Direction}");
                             Part washerPart = GetWasherPart(doc, washerTopName, _washerTop, out Component componentWasherTop);
+                            Logger.Log($"[CreateFasteners] Transforming TOP washer component...");
                             matrixBolt = matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, _washerTop.s * 0.001));
+                            Logger.Log($"[CreateFasteners] Transform COMPLETE for TOP washer");
                             componentWasherTop.Transform(matrixMapping);
                         }
+                        if (useCustom && !string.IsNullOrEmpty(customFile))
+                        {
+                            Logger.Log($"[CreateFasteners] Inserting CUSTOM part: {customFile}");
+
+                            // 1) Build the full path
+                            string customDir = Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                                "AESCConstruct", "Fasteners", "Custom"
+                            );
+                            string path = Path.Combine(customDir, customFile);
+                            if (!File.Exists(path))
+                            {
+                                Application.ReportStatus($"Custom file not found: {path}",
+                                                         StatusMessageType.Warning, null);
+                                continue;
+                            }
+
+                            // 2) Branch on extension
+                            string ext = Path.GetExtension(path).ToLowerInvariant();
+                            Document customDoc;
+                            if (ext == ".scdoc" || ext == ".scdocx")
+                            {
+                                // Native SpaceClaim document
+                                Logger.Log($"[CreateFasteners] Loading SpaceClaim doc via Document.Load: {path}");
+                                customDoc = Document.Load(path);
+                            }
+                            else if (ext == ".stp" || ext == ".step")
+                            {
+                                // STEP import
+                                Logger.Log($"[CreateFasteners] Importing STEP via Document.Open + ImportOptions: {path}");
+                                var opts = ImportOptions.Create();
+                                customDoc = Document.Open(path, opts);
+                            }
+                            else
+                            {
+                                Application.ReportStatus($"Unsupported format: {ext}",
+                                                         StatusMessageType.Warning, null);
+                                continue;
+                            }
+
+                            // 3) Bring bodies into your Fasteners part
+                            Part fastenersPart = GetFastenersPart(doc);
+                            foreach (var db in customDoc.MainPart.GetDescendants<DesignBody>())
+                            {
+                                Component comp = Component.Create(fastenersPart, db.Parent as Part);
+                                comp.Transform(matrixBolt);
+                            }
+
+                            continue;
+                        }
+
                         componentBolt.Transform(matrixBolt);
                         double displacementZ = -PD.Depth;
 
                         if (this.includeWasherBottom)
                         {
+                            Logger.Log($"[CreateFasteners] Inserting BOTTOM washer 'name'");
                             Part washerPart = GetWasherPart(doc, washerBottomName, _washerBottom, out Component componentWasherBottom);
+                            Logger.Log($"[CreateFasteners] Transforming BOTTOM washer component...");
                             displacementZ += -0.001 * _washerBottom.s;
                             componentWasherBottom.Transform(matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ)));
+                            Logger.Log($"[CreateFasteners] Transform COMPLETE for BOTTOM washer");
                         }
 
                         if (this.includeNut)
@@ -400,7 +465,7 @@ namespace AESCConstruct25.Fastener.Module
             }
         }
 
-        private static Part GetFastenersPart(Document doc)
+        public static Part GetFastenersPart(Document doc)
         {
             // Try to find an existing “Fasteners” part
             var fastenersPart = doc.Parts
@@ -418,7 +483,7 @@ namespace AESCConstruct25.Fastener.Module
             return fastenersPart;
         }
 
-        private static Part GetBoltPart(Document doc, string name, string boltType, Bolt _bolt, double parBoltL, out Component component)
+        private Part GetBoltPart(Document doc, string name, string boltType, Bolt _bolt, double parBoltL, out Component component)
         {
             // Try to find an existing “Fasteners” part
             Part boltPart = doc.Parts
@@ -436,6 +501,7 @@ namespace AESCConstruct25.Fastener.Module
                 // Create body
                 Body bodyBolt = createFasteners.Create_Bolt(boltType, _bolt, parBoltL);
                 DesignBody dbBolt = DesignBody.Create(boltPart, name, bodyBolt);
+                dbBolt.IsLocked = _lockDistance;
                 CustomPartProperty.Create(boltPart, "AESC_Construct", true);
             }
             else
@@ -446,7 +512,7 @@ namespace AESCConstruct25.Fastener.Module
             return boltPart;
         }
 
-        private static Part GetNutPart(Document doc, string name, string type, Nut nut, out Component component)
+        private Part GetNutPart(Document doc, string name, string type, Nut nut, out Component component)
         {
             // Try to find an existing “Fasteners” part
             Part part = doc.Parts
@@ -464,6 +530,7 @@ namespace AESCConstruct25.Fastener.Module
                 // Create body
                 Body body = createFasteners.Create_Nut(boltType, nut);
                 DesignBody designBody = DesignBody.Create(part, name, body);
+                designBody.IsLocked = _lockDistance;
                 CustomPartProperty.Create(part, "AESC_Construct", true);
             }
             else
@@ -586,9 +653,7 @@ namespace AESCConstruct25.Fastener.Module
                 return;
 
             //// Apply filter to the Sizes of all comboboxes
-                         
+
         }
-
-
     }
 }

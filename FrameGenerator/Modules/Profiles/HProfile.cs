@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242.Geometry;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -15,7 +14,6 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
         private readonly double outerCornerRadius;
         private readonly double offsetX;
         private readonly double offsetY;
-        private static string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AESCConstruct25_Log.txt");
 
         public HProfile(double height, double width, double webThickness, double flangeThickness, double innerCornerRadius, double outerCornerRadius, double offsetX, double offsetY)
         {
@@ -28,13 +26,13 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            File.AppendAllText(logPath, $"AESCConstruct25: Generating H Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+            Logger.Log($"AESCConstruct25: Generating H Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
         {
             List<ITrimmedCurve> curves = new List<ITrimmedCurve>();
-            Frame frame = profilePlane.Frame; 
+            Frame frame = profilePlane.Frame;
             Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
 
@@ -80,30 +78,45 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Point m7 = center + (-webThickness / 2 - innerCornerRadius) * frame.DirX + (height / 2 - flangeThickness - innerCornerRadius) * frame.DirY;
             Point m8 = center + (-width / 2 + outerCornerRadius) * frame.DirX + (height / 2 - flangeThickness + outerCornerRadius) * frame.DirY;
 
-            // Ensure arcs are oriented correctly
-            Direction dirZArc = frame.DirZ;
+            if (innerCornerRadius > 0 || outerCornerRadius > 0)
+            {
+                // Ensure arcs are oriented correctly
+                Direction dirZArc = frame.DirZ;
 
-            // Create straight edges
-            curves.Add(CurveSegment.Create(p1, p2));
-            curves.Add(CurveSegment.Create(p2, p3));
-            curves.Add(CurveSegment.CreateArc(m1, p3, p4, -dirZArc));
-            curves.Add(CurveSegment.Create(p4, p5));
-            curves.Add(CurveSegment.CreateArc(m2, p5, p6, dirZArc));
-            curves.Add(CurveSegment.Create(p6, p7));
-            curves.Add(CurveSegment.CreateArc(m3, p7, p8, dirZArc));
-            curves.Add(CurveSegment.Create(p8, p9));
-            curves.Add(CurveSegment.CreateArc(m4, p9, p10, -dirZArc));
-            curves.Add(CurveSegment.Create(p10, p11));
-            curves.Add(CurveSegment.Create(p11, p12));
-            curves.Add(CurveSegment.Create(p12, p13));
-            curves.Add(CurveSegment.CreateArc(m5, p13, p14, -dirZArc));
-            curves.Add(CurveSegment.Create(p14, p15));
-            curves.Add(CurveSegment.CreateArc(m6, p15, p16, dirZArc));
-            curves.Add(CurveSegment.Create(p16, p17));
-            curves.Add(CurveSegment.CreateArc(m7, p17, p18, dirZArc));
-            curves.Add(CurveSegment.Create(p18, p19));
-            curves.Add(CurveSegment.CreateArc(m8, p19, p20, -dirZArc));
-            curves.Add(CurveSegment.Create(p20, p1));
+                // Create straight edges
+                curves.Add(CurveSegment.Create(p1, p2));
+                curves.Add(CurveSegment.Create(p2, p3));
+                curves.Add(CurveSegment.CreateArc(m1, p3, p4, -dirZArc));
+                curves.Add(CurveSegment.Create(p4, p5));
+                curves.Add(CurveSegment.CreateArc(m2, p5, p6, dirZArc));
+                curves.Add(CurveSegment.Create(p6, p7));
+                curves.Add(CurveSegment.CreateArc(m3, p7, p8, dirZArc));
+                curves.Add(CurveSegment.Create(p8, p9));
+                curves.Add(CurveSegment.CreateArc(m4, p9, p10, -dirZArc));
+                curves.Add(CurveSegment.Create(p10, p11));
+                curves.Add(CurveSegment.Create(p11, p12));
+                curves.Add(CurveSegment.Create(p12, p13));
+                curves.Add(CurveSegment.CreateArc(m5, p13, p14, -dirZArc));
+                curves.Add(CurveSegment.Create(p14, p15));
+                curves.Add(CurveSegment.CreateArc(m6, p15, p16, dirZArc));
+                curves.Add(CurveSegment.Create(p16, p17));
+                curves.Add(CurveSegment.CreateArc(m7, p17, p18, dirZArc));
+                curves.Add(CurveSegment.Create(p18, p19));
+                curves.Add(CurveSegment.CreateArc(m8, p19, p20, -dirZArc));
+                curves.Add(CurveSegment.Create(p20, p1));
+            }
+            //if (innerCornerRadius > 0 || outerCornerRadius > 0)
+            //{
+            //    Direction dirZArc = frame.DirZ;
+
+            //    curves.Add(CurveSegment.CreateArc(m1, p2, p3, -dirZArc));
+
+            //    // Bottom-right arc
+            //    curves.Add(CurveSegment.CreateArc(m2, p4, p5, dirZArc));
+
+            //    // Inner corner arc
+            //    curves.Add(CurveSegment.CreateArc(m3, p6, p7, -dirZArc));
+            //}
 
             return curves;
         }

@@ -1,20 +1,15 @@
-﻿using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SpaceClaim.Api.V242.Modeler;
-using System.Windows.Forms;
+using AESCConstruct25.FrameGenerator.Utilities;
 
 namespace AESCConstruct25.Plates.Modules
 {
     internal class PlatesModule
     {
-        /// <summary>
-        /// Public wrapper: call this from your UI, passing in everything from PlatesControl.
-        /// </summary>
         public static void CreatePlateFromUI(
             string type, string sizeName, double angleDeg,
             double L1, double L2, int count1,
@@ -22,20 +17,15 @@ namespace AESCConstruct25.Plates.Modules
             double thickness, double filletRadius, double holeDiameter,
             bool insertPlateMid = false)
         {
-            // you can store those parameters as fields if you want,
-            // or just call the old createPart workflow (that reads from selection)
-            // and then call a new internal method that actually builds the plate body.
-            //
-            // For example:
+            Logger.Log($"[CreatePlateFromUI] Enter: type={type}, sizeName={sizeName}, angleDeg={angleDeg}, " +
+                       $"L1={L1},L2={L2},count1={count1},B1={B1},B2={B2},count2={count2},thickness={thickness},filletRadius={filletRadius},holeDiameter={holeDiameter},insertPlateMid={insertPlateMid}");
             createPart(type, sizeName, angleDeg,
-                            L1, L2, count1,
-                            B1, B2, count2,
-                            thickness, filletRadius, holeDiameter,
-                            insertPlateMid);
+                       L1, L2, count1,
+                       B1, B2, count2,
+                       thickness, filletRadius, holeDiameter,
+                       insertPlateMid);
+            Logger.Log("[CreatePlateFromUI] Exit");
         }
-
-
-
 
         private static void createPart(
             string type, string name,
@@ -45,185 +35,263 @@ namespace AESCConstruct25.Plates.Modules
             double T, double Rad, double Diam,
             bool insertPlateMid)
         {
-            //// To do:
-            // - Names of the part
-            // - Placement when not adding to middle is not always correct
-            // - 
-            Window win = Window.ActiveWindow;
-            Document doc = win.Document;
-            Part mainPart = doc.MainPart;
+            Logger.Log($"[createPart] Enter: type={type}, name={name}");
+            var win = Window.ActiveWindow;
+            var doc = win.Document;
 
             var selection = win.ActiveContext.Selection;
-
+            Logger.Log($"[createPart] Selection count = {selection.Count}");
 
             foreach (var obj in selection)
             {
+                Logger.Log($"[createPart] Processing selection object of type {obj.GetType().Name}");
                 DesignFace df = obj as DesignFace;
-                Matrix matrix = Matrix.Identity;
-                //if (df != null)
-                //{
+                var matrix = Matrix.Identity;
 
-                //}
-
-                IDesignFace idf = obj as IDesignFace;
-                if (idf != null)
+                if (obj is IDesignFace idf)
                 {
                     df = idf.Master;
                     matrix = idf.TransformToMaster;
+                    Logger.Log("[createPart] Transformed IDesignFace to master");
+                }
+                if (df == null)
+                {
+                    Logger.Log("[createPart] Skipping: not a DesignFace");
+                    continue;
                 }
 
-                if (df == null)
-                    continue;
-
-                Plane plane = df.Shape.Geometry as Plane;
+                var plane = df.Shape.Geometry as Plane;
                 if (plane == null)
+                {
+                    Logger.Log("[createPart] Skipping: face geometry not Plane");
                     continue;
+                }
 
-                Point selPoint1 = (Point)win.ActiveContext.GetSelectionPoint(selection.First());
-                Point selPoint = plane.ProjectPoint(selPoint1).Point;
+                var rawPt = (Point)win.ActiveContext.GetSelectionPoint(selection.First());
+                var selPoint = plane.ProjectPoint(rawPt).Point;
+                Logger.Log($"[createPart] selPoint = {selPoint}");
 
-                Direction dirZ = df.Shape.IsReversed ? -df.Shape.ProjectPoint(selPoint).Normal : df.Shape.ProjectPoint(selPoint).Normal;
-
+                var dirZ = df.Shape.IsReversed
+                    ? -df.Shape.ProjectPoint(selPoint).Normal
+                    : df.Shape.ProjectPoint(selPoint).Normal;
 
                 if (insertPlateMid)
                 {
-                    Box bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
-                    var size = bb.Size;
+                    var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
                     selPoint = bb.Center;
+                    Logger.Log($"[createPart] insertPlateMid: selPoint set to bounding-box center {selPoint}");
                 }
-
                 if (!matrix.IsIdentity)
                 {
                     plane = plane.CreateTransformedCopy(matrix.Inverse);
                     dirZ = matrix.Inverse * dirZ;
+                    Logger.Log("[createPart] Applied inverse transform");
                 }
-
 
                 createPlate(selPoint, plane, dirZ,
-                            type, name, angleDeg,
-                            L1, L2, Lnr,
-                            B1, B2, Bnr,
-                            T, Rad, Diam,
-                            insertPlateMid);
-
+                    type, name, angleDeg,
+                    L1, L2, Lnr,
+                    B1, B2, Bnr,
+                    T, Rad, Diam,
+                    insertPlateMid);
             }
 
+            Logger.Log("[createPart] Exit");
         }
 
-        private static Part CheckIfPartExists(string type, double L1, double L2, int Lnr, double B1, double B2, int Bnr, double T, double Rad, double Diam)
+        private static Part CheckIfPartExists(
+            string type, double L1, double L2, int Lnr,
+            double B1, double B2, int Bnr,
+            double T, double Rad, double Diam)
         {
-            Window win = Window.ActiveWindow;
-            Document doc = win.Document;
-            Part mainPart = doc.MainPart;
-
-            foreach (Part p in doc.Parts)
-            {
+            Logger.Log($"[CheckIfPartExists] Enter: type={type}, L1={L1},L2={L2},Lnr={Lnr},B1={B1},B2={B2},Bnr={Bnr},T={T},Rad={Rad},Diam={Diam}");
+            var doc = Window.ActiveWindow.Document;
+            foreach (var p in doc.Parts)
                 if (CompareCustomProperties(p, type, L1, L2, Lnr, B1, B2, Bnr, T, Rad, Diam))
                 {
+                    Logger.Log($"[CheckIfPartExists] Found existing part: {p.DisplayName}");
                     return p;
                 }
-            }
+            Logger.Log("[CheckIfPartExists] No matching part found");
             return null;
         }
 
-        private static Body CreatePlateBody(string type, double L1, double L2, int Lnr, double B1, double B2, int Bnr, double T, double Rad, double Diam)
+        private static Body CreatePlateBody(
+    string type,
+    double L1, double L2, int Lnr,
+    double B1, double B2, int Bnr,
+    double T, double Rad, double Diam
+)
         {
-            Window win = Window.ActiveWindow;
-            Document doc = win.Document;
-            Part mainPart = doc.MainPart;
+            Logger.Log($"[CreatePlateBody] Enter: type={type}, L1={L1}, L2={L2}, Lnr={Lnr}, B1={B1}, B2={B2}, Bnr={Bnr}, T={T}, Rad={Rad}, Diam={Diam}");
 
-
-            Plane plane = Plane.PlaneXY;
-            Point point = Point.Origin;
-            Direction dirX = plane.Frame.DirX;
-            Direction dirY = plane.Frame.DirY;
-            Direction dirZ = plane.Frame.DirZ;
+            // base coordinate frame
+            var plane = Plane.PlaneXY;
+            var origin = Point.Origin;
+            var dirX = plane.Frame.DirX;
+            var dirY = plane.Frame.DirY;
+            var dirZ = plane.Frame.DirZ;
 
             Body body = null;
 
-            // Create Geometry
             if (type.Contains("support"))
             {
-                List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
-                Plane holePlane = plane.CreateTransformedCopy(Matrix.CreateTranslation(point - plane.Frame.Origin));
-
-                Point p0, p1, p2, p3, p4, p5;
-                Point point0 = point + 0.5 * T * dirY;
-
-                p0 = point0 - (0.5 * L1 - Rad) * dirX;
-                p1 = p0 + Rad * dirZ - Rad * dirX;
-                p2 = p1 + (B1 - Rad) * dirZ;
-                p3 = p2 + L1 * dirX;
-                p4 = p3 - (B1 - Rad) * dirZ;
-                p5 = p4 - Rad * dirZ - Rad * dirX;
-
-                boundary.Add(CurveSegment.Create(p0, p1));
-                boundary.Add(CurveSegment.Create(p1, p2));
-                boundary.Add(CurveSegment.Create(p2, p3));
-                boundary.Add(CurveSegment.Create(p3, p4));
-                boundary.Add(CurveSegment.Create(p4, p5));
-                boundary.Add(CurveSegment.Create(p5, p0));
-
-                body = Body.ExtrudeProfile(new Profile(Plane.Create(Frame.Create(point0, dirX, dirZ)), boundary), T);
-                if (!body.ContainsPoint(point))
-                    body.Transform(Matrix.CreateTranslation(T * -dirY));
+                Logger.Log("[CreatePlateBody] Branch: support");
+                // extract exactly 6 segments from the V18-style contour:
+                var segs = getBaseCapContour(origin, dirX, dirY, type, L1, B1, Rad);
+                if (segs.Count == 6 && T > 0)
+                {
+                    var supportPlane = Plane.Create(Frame.Create(origin + 0.5 * T * dirY, dirX, dirZ));
+                    body = Body.ExtrudeProfile(new Profile(supportPlane, segs), T);
+                    Logger.Log("[CreatePlateBody] support: extruded support profile");
+                }
+                else
+                    Logger.Log("[CreatePlateBody] support: invalid contour or thickness");
             }
             else if (type.Contains("flange"))
             {
+                Logger.Log("[CreatePlateBody] Branch: flange");
+                if (T <= 0)
+                {
+                    Logger.Log("[CreatePlateBody] flange: T<=0, abort");
+                    return null;
+                }
 
-                Plane holePlane = plane.CreateTransformedCopy(Matrix.CreateTranslation(point - plane.Frame.Origin));
-                body = Body.ExtrudeProfile(new CircleProfile(holePlane, 0.5 * L1), 1 * T);
+                // outer disk
+                var holePlane = plane.CreateTransformedCopy(Matrix.CreateTranslation(origin - plane.Frame.Origin));
+                body = Body.ExtrudeProfile(new CircleProfile(holePlane, 0.5 * L1), T);
+                Logger.Log("[CreatePlateBody] flange: extruded disk");
+
+                // flat‐flange inner cut
                 if (type == "Flat flange")
                 {
-                    Body cylinderCutOut = Body.ExtrudeProfile(new CircleProfile(holePlane, 0.5 * B1), 1.1 * T);
-                    body.Subtract(cylinderCutOut);
+                    if (B1 > 0)
+                    {
+                        var cut = Body.ExtrudeProfile(new CircleProfile(holePlane, 0.5 * B1), 1.1 * T);
+                        body.Subtract(cut);
+                        Logger.Log("[CreatePlateBody] flange: subtracted inner cut");
+                    }
+                    else
+                        Logger.Log("[CreatePlateBody] flange: B1<=0, skipped inner cut");
                 }
 
-                Body cylinderHole = Body.ExtrudeProfile(new CircleProfile(holePlane, 0.5 * Diam), 1.1 * T);
-                cylinderHole.Transform(Matrix.CreateTranslation(Vector.Create(L2 * 0.5, 0, 0)));
-                int nr = Convert.ToInt32(Lnr);
-                double angle = 2 * Math.PI / nr;
-
-                for (int i = 0; i < nr; i++)
+                // bolt holes
+                if (Diam > 0 && Lnr > 0)
                 {
-                    cylinderHole.Transform(Matrix.CreateRotation(Line.Create(point, dirZ), angle));
-                    body.Subtract(cylinderHole.Copy());
+                    Logger.Log("[CreatePlateBody] flange: creating holes");
+                    var circ = new FrameGenerator.Modules.Profiles.CircularProfile(Diam, 0.0, false, 0, 0);
+                    var loop = circ.GetProfileCurves(holePlane).ToList();
+                    Logger.Log($"[CreatePlateBody] flange: hole loop has {loop.Count} curves");
+                    var prof = new Profile(holePlane, loop);
+                    var cutter = Body.ExtrudeProfile(prof, 1.1 * T);
+                    double step = 2 * Math.PI / Lnr;
+                    for (int i = 0; i < Lnr; i++)
+                    {
+                        var copy = cutter.Copy();
+                        copy.Transform(Matrix.CreateRotation(Line.Create(origin, dirZ), step * i));
+                        body.Subtract(copy);
+                    }
+                    cutter.Dispose();
+                    Logger.Log("[CreatePlateBody] flange: all holes cut");
                 }
-
-
+                else
+                    Logger.Log("[CreatePlateBody] flange: no holes to cut");
             }
             else
             {
+                Logger.Log("[CreatePlateBody] Branch: rectangle");
                 body = createRoundedRectangle(L1, L2, Lnr, B1, B2, Bnr, T, Rad, Diam);
+                Logger.Log("[CreatePlateBody] rectangle: done");
             }
+
+            Logger.Log("[CreatePlateBody] Exit");
             return body;
         }
 
-        private static Body createRoundedRectangle(double length, double length2, int nrHolesLength, double width, double width2, int nrHolesWidth, double thickness, double radius, double holeDiameter)
+
+        //— V18 support contour helper —
+        private static List<ITrimmedCurve> getContourV18(
+            Point p, Direction dX, Direction dY,
+            string type, double L1, double B1, double R, double T)
         {
-            Window win = Window.ActiveWindow;
-            Document doc = win.Document;
-            Part mainPart = doc.MainPart;
+            var dZ = Direction.Cross(dX, dY);
+            var list = new List<ITrimmedCurve>();
+            if (type.Contains("support"))
+            {
+                var p1 = p + (-0.5 * L1 + R) * dX + (0.5 * T) * dY;
+                var p2 = p1 + (L1 - 2 * R) * dX;
+                var p5 = p1 - R * dX + R * dZ;
+                var p5a = p5 + (B1 - R) * dZ;
+                var p7 = p2 + R * dX + R * dZ;
+                var p7a = p7 + (B1 - R) * dZ;
+                list.Add(CurveSegment.Create(p1, p2));
+                list.Add(CurveSegment.Create(p2, p7));
+                list.Add(CurveSegment.Create(p7, p7a));
+                list.Add(CurveSegment.Create(p7a, p5a));
+                list.Add(CurveSegment.Create(p5a, p5));
+                list.Add(CurveSegment.Create(p5, p1));
+            }
+            return list;
+        }
 
+        //— base/cap/UNP contour helper —
+        /// <summary>
+        /// Returns exactly six trimmed‐curves for “support” / base / cap shapes,
+        /// ported from your V18 getContour logic (no rotation here).
+        /// </summary>
+        private static List<ITrimmedCurve> getBaseCapContour(
+            Point p,
+            Direction dX,
+            Direction dY,
+            string type,
+            double L1,
+            double B1,
+            double R
+        )
+        {
+            var dZ = Direction.Cross(dX, dY);
+            var list = new List<ITrimmedCurve>();
 
-            Plane plane = Plane.PlaneXY;
-            Point point = Point.Origin;
-            Direction dirX = plane.Frame.DirX;
-            Direction dirY = plane.Frame.DirY;
-            Direction dirZ = plane.Frame.DirZ;
+            if (type.Contains("support") || type.Contains("base") || type.Contains("cap") || type == "UNP")
+            {
+                // Re‐use exactly the six segments from your V18 code:
+                var p1 = p + (-0.5 * L1 + R) * dX + (0.5 * B1) * dY;
+                var p2 = p1 + (L1 - 2 * R) * dX;
+                var p5 = p1 - R * dX + R * dZ;
+                var p5a = p5 + (B1 - R) * dZ;
+                var p7 = p2 + R * dX + R * dZ;
+                var p7a = p7 + (B1 - R) * dZ;
 
-            List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
+                list.Add(CurveSegment.Create(p1, p2));
+                list.Add(CurveSegment.Create(p2, p7));
+                list.Add(CurveSegment.Create(p7, p7a));
+                list.Add(CurveSegment.Create(p7a, p5a));
+                list.Add(CurveSegment.Create(p5a, p5));
+                list.Add(CurveSegment.Create(p5, p1));
+            }
 
+            return list;
+        }
 
-            // Create base plate
-            Point p0, p1, p2, p3, p4, p5, p6, p7;
+        private static Body createRoundedRectangle(
+            double length, double length2, int nrL,
+            double width, double width2, int nrW,
+            double thickness, double radius, double holeDiam)
+        {
+            Logger.Log("[createRoundedRectangle] Enter");
+            var plane = Plane.PlaneXY;
+            var o = Point.Origin;
+            var dX = plane.Frame.DirX;
+            var dY = plane.Frame.DirY;
+            var dZ = plane.Frame.DirZ;
+            var boundary = new List<ITrimmedCurve>();
 
             if (radius <= 0)
             {
-                p0 = point - 0.5 * length * dirX - 0.5 * width * dirY;
-                p1 = p0 + width * dirY;
-                p2 = p1 + length * dirX;
-                p3 = p2 - width * dirY;
+                var p0 = o - 0.5 * length * dX - 0.5 * width * dY;
+                var p1 = p0 + width * dY;
+                var p2 = p1 + length * dX;
+                var p3 = p2 - width * dY;
                 boundary.Add(CurveSegment.Create(p0, p1));
                 boundary.Add(CurveSegment.Create(p1, p2));
                 boundary.Add(CurveSegment.Create(p2, p3));
@@ -231,142 +299,109 @@ namespace AESCConstruct25.Plates.Modules
             }
             else
             {
-                p0 = point - 0.5 * (length - 2 * radius) * dirX - 0.5 * (width) * dirY;
-                p1 = p0 + (length - 2 * radius) * dirX;
-                p2 = p1 + radius * dirX + radius * dirY;
-                ITrimmedCurve arc12 = CurveSegment.CreateArc(p1 + radius * dirY, p1, p2, dirZ);
-                p3 = p2 + (width - 2 * radius) * dirY;
-                p4 = p3 - radius * dirX + radius * dirY;
-                ITrimmedCurve arc34 = CurveSegment.CreateArc(p4 - radius * dirY, p3, p4, dirZ);
-                p5 = p4 - (length - 2 * radius) * dirX;
-                p6 = p5 - radius * dirX - radius * dirY;
-                ITrimmedCurve arc56 = CurveSegment.CreateArc(p6 + radius * dirX, p5, p6, dirZ);
-                p7 = p6 - (width - 2 * radius) * dirY;
-                ITrimmedCurve arc70 = CurveSegment.CreateArc(p0 + radius * dirY, p7, p0, dirZ);
-
+                var p0 = o - 0.5 * (length - 2 * radius) * dX - 0.5 * width * dY;
+                var p1 = p0 + (length - 2 * radius) * dX;
+                var p2 = p1 + radius * (dX.ToVector() + dY.ToVector());
+                var p3 = p2 + (width - 2 * radius) * dY;
+                var p4 = p3 - radius * (dX.ToVector() - radius * dY);
+                var p5 = p4 - (length - 2 * radius) * dX;
+                var p6 = p5 - radius * (dX.ToVector() + dY.ToVector());
+                var p7 = p6 - (width - 2 * radius) * dY;
                 boundary.Add(CurveSegment.Create(p0, p1));
-                boundary.Add(arc12);
+                boundary.Add(CurveSegment.CreateArc(p1 + radius * dY, p1, p2, dZ));
                 boundary.Add(CurveSegment.Create(p2, p3));
-                boundary.Add(arc34);
+                boundary.Add(CurveSegment.CreateArc(p3 - radius * dX, p3, p4, dZ));
                 boundary.Add(CurveSegment.Create(p4, p5));
-                boundary.Add(arc56);
+                boundary.Add(CurveSegment.CreateArc(p5 - radius * dY, p5, p6, dZ));
                 boundary.Add(CurveSegment.Create(p6, p7));
-                boundary.Add(arc70);
-
-
-
-
+                boundary.Add(CurveSegment.CreateArc(p7 + radius * dX, p7, p0, dZ));
             }
-            //foreach (ITrimmedCurve itc in boundary)
-            //{
-            //    DesignCurve.Create(mainPart, itc);
-            //}
 
-            Body body = Body.ExtrudeProfile(new Profile(plane, boundary), thickness);
+            var body = Body.ExtrudeProfile(new Profile(plane, boundary), thickness);
+            Logger.Log("[createRoundedRectangle] extruded plate");
 
-            // Create holes
-            Body cylinder = Body.ExtrudeProfile(new CircleProfile(plane, 0.5 * holeDiameter), 1.1 * thickness);
-            for (int i = 0; i < nrHolesLength; i++)
+            if (holeDiam > 0 && nrL > 0 && nrW > 0)
             {
-                double dX = -0.5 * length2 + (nrHolesLength > 1 ? i * length2 / (nrHolesLength - 1) : 0);
-                for (int j = 0; j < nrHolesWidth; j++)
-                {
-                    double dY = -0.5 * width2 + (nrHolesWidth > 1 ? j * width2 / (nrHolesWidth - 1) : 0);
-                    Body cylCopy = cylinder.Copy();
-                    cylCopy.Transform(Matrix.CreateTranslation(Vector.Create(dX, dY, 0)));
-                    try
+                var cut = Body.ExtrudeProfile(new CircleProfile(plane, 0.5 * holeDiam), 1.1 * thickness);
+                for (int i = 0; i < nrL; i++)
+                    for (int j = 0; j < nrW; j++)
                     {
-
-                        body.Subtract(cylCopy);
+                        double dx = -0.5 * length2 + (nrL > 1 ? i * (length2 / (nrL - 1)) : 0);
+                        double dy = -0.5 * width2 + (nrW > 1 ? j * (width2 / (nrW - 1)) : 0);
+                        var c = cut.Copy();
+                        c.Transform(Matrix.CreateTranslation(Vector.Create(dx, dy, 0)));
+                        try { body.Subtract(c); } catch { c.Dispose(); }
                     }
-                    catch
-                    {
-                        cylCopy.Dispose();
-                    }
-                }
-
+                cut.Dispose();
+                Logger.Log("[createRoundedRectangle] added holes");
             }
-            cylinder.Dispose();
 
-
-
-
+            Logger.Log("[createRoundedRectangle] Exit");
             return body;
         }
 
-        private static void createPlate(Point point, Plane plane, Direction dirZ,
-            string type, string name,
-            double angleDeg,
+        private static void createPlate(
+            Point p, Plane pl, Direction dZ,
+            string type, string name, double ang,
             double L1, double L2, int Lnr,
             double B1, double B2, int Bnr,
-            double T, double Rad, double Diam,
-            bool insertPlateMid)
+            double T, double R, double D,
+            bool insertMid)
         {
-            Window win = Window.ActiveWindow;
-            Document doc = win.Document;
-            Part mainPart = doc.MainPart;
+            Logger.Log($"[createPlate] Enter: placing '{type}_{name}'");
+            var doc = Window.ActiveWindow.Document;
+            var main = doc.MainPart;
+            var dX = pl.Frame.DirX;
+            var dY = pl.Frame.DirY;
+            var pn = $"{type}_{name}";
 
-            Direction dirX = plane.Frame.DirX;
-            Direction dirY = plane.Frame.DirY;
+            WriteBlock.ExecuteTask("Create part", () => {
+                var plates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates")
+                              ?? Part.Create(doc, "Plates")
+                                 .Also(pp => Component.Create(main, pp));
 
-            string partName = type + "_" + name; // TO DO
-
-            WriteBlock.ExecuteTask("Create part", () =>
-            {
-                // Create Plates part
-                Part partPlates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates");
-                if (partPlates == null)
+                var exist = CheckIfPartExists(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
+                Component comp;
+                if (exist != null)
                 {
-                    partPlates = Part.Create(doc, "Plates");
-                    Component compPlates = Component.Create(mainPart, partPlates);
-                }
-
-
-                Part part = CheckIfPartExists(type, L1, L2, Lnr, B1, B2, Bnr, T, Rad, Diam);
-                Component component = null;
-
-                if (part != null)
-                {
-                    // Create a copy of the original component
-                    component = Component.Create(partPlates, part);
-
+                    Logger.Log($"[createPlate] Reusing '{exist.DisplayName}'");
+                    comp = Component.Create(plates, exist);
                 }
                 else
                 {
-                    Body body = CreatePlateBody(type, L1, L2, Lnr, B1, B2, Bnr, T, Rad, Diam);
-
-                    if (body == null)
-                        return;
-
-
-                    Part partBody = Part.Create(doc, partName);
-                    DesignBody.Create(partBody, partName, body);
-                    component = Component.Create(partPlates, partBody);
-
-
-                    CreateCustomPartPropertiesPlate(partBody, type, L1, B1, T, L2, Lnr, B2, Bnr, Diam, Rad, angleDeg);
+                    Logger.Log("[createPlate] Building new plate body");
+                    var b = CreatePlateBody(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
+                    if (b == null) { Logger.Log("[createPlate] abort body==null"); return; }
+                    var pb = Part.Create(doc, pn);
+                    DesignBody.Create(pb, pn, b);
+                    comp = Component.Create(plates, pb);
+                    CreateCustomPartPropertiesPlate(pb, type, L1, B1, T, L2, Lnr, B2, Bnr, D, R, ang);
                 }
-                // Move component to correct position
-                Frame frame = Frame.Create(point, dirX, dirY);
-                if (frame.DirZ != dirZ)
-                    frame = Frame.Create(point, -dirX, dirY);
-                Matrix matrixMapping = Matrix.CreateMapping(frame);
-                component.Transform(matrixMapping);
 
-                if (angleDeg != 0)
+                var frame = Frame.Create(p, dX, dY);
+                if (frame.DirZ != dZ) frame = Frame.Create(p, -dX, dY);
+                comp.Transform(Matrix.CreateMapping(frame));
+                Logger.Log("[createPlate] moved into place");
+
+                if (ang != 0)
                 {
-                    double angleRad = angleDeg / 180 * Math.PI;
-                    component.Transform(Matrix.CreateRotation(Line.Create(point, dirZ), angleRad));
+                    comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), ang * Math.PI / 180));
+                    Logger.Log($"[createPlate] rotated {ang}°");
                 }
-
             });
+
+            Logger.Log("[createPlate] Exit");
         }
 
-
-        private static void CreateCustomPartPropertiesPlate(Part part, string type, double L1, double B1, double T, double L2, int Lnr, double B2, int Bnr, double Diam, double Rad, double Angle)
+        private static void CreateCustomPartPropertiesPlate(
+            Part part, string type,
+            double L1, double B1, double T,
+            double L2, int Lnr,
+            double B2, int Bnr,
+            double Diam, double Rad,
+            double Angle)
         {
-
-            // Add custom component properties
+            Logger.Log("[CreateCustomPartPropertiesPlate] start");
             CustomPartProperty.Create(part, "AESC_Construct", "Plates");
             CustomPartProperty.Create(part, "Type", type);
             CustomPartProperty.Create(part, "L1", L1);
@@ -379,35 +414,30 @@ namespace AESCConstruct25.Plates.Modules
             CustomPartProperty.Create(part, "Diam", Diam);
             CustomPartProperty.Create(part, "Rad", Rad);
             CustomPartProperty.Create(part, "Angle", Angle);
-
+            Logger.Log("[CreateCustomPartPropertiesPlate] done");
         }
+
         private static bool CompareCustomProperties(
-            Part part,
-            string type,
+            Part part, string type,
             double L1, double L2, int Lnr,
             double B1, double B2, int Bnr,
             double T, double Rad, double Diam)
         {
-            // Shorthand to the custom‐properties dictionary
+            Logger.Log($"[CompareCustomProperties] Checking '{part.DisplayName}'");
             var props = part.CustomProperties;
-            string name = part.DisplayName;
-
-            // 1) Marker must exist and must == "Plates"
-            if (!props.TryGetValue("AESC_Construct", out var markerProp) ||
-                markerProp.Value.ToString() != "Plates")
-                return false;
-
-            // 2) Type must exist and match
-            if (!props.TryGetValue("Type", out var typeProp) ||
-                typeProp.Value.ToString() != type)
-                return false;
-
-            // 3) Numeric values to check
-            var expected = new Dictionary<string, double>
+            if (!props.TryGetValue("AESC_Construct", out var m) || m.Value.ToString() != "Plates")
+            {
+                Logger.Log("[CompareCustomProperties] missing marker"); return false;
+            }
+            if (!props.TryGetValue("Type", out var tp) || tp.Value.ToString() != type)
+            {
+                Logger.Log($"[CompareCustomProperties] type mismatch '{type}'"); return false;
+            }
+            var exp = new Dictionary<string, double>
             {
                 ["L1"] = L1,
                 ["L2"] = L2,
-                ["Lnr"] = Lnr,      // integers treated as doubles
+                ["Lnr"] = Lnr,
                 ["B1"] = B1,
                 ["B2"] = B2,
                 ["Bnr"] = Bnr,
@@ -415,22 +445,20 @@ namespace AESCConstruct25.Plates.Modules
                 ["Diam"] = Diam,
                 ["Rad"] = Rad
             };
-
             const double tol = 1e-6;
-
-            // 4) Ensure each key exists, parses to double, and is within tolerance
-            bool allMatch = expected.All(kv =>
-            {
-                if (!props.TryGetValue(kv.Key, out var prop))
-                    return false;
-                if (!double.TryParse(prop.Value.ToString(), out var actual))
-                    return false;
-                return Math.Abs(actual - kv.Value) <= tol;
+            bool ok = exp.All(kv => {
+                if (!props.TryGetValue(kv.Key, out var pr)) { Logger.Log($"[Compare] missing {kv.Key}"); return false; }
+                if (!double.TryParse(pr.Value.ToString(), out var a)) { Logger.Log($"[Compare] parse fail {kv.Key}"); return false; }
+                if (Math.Abs(a - kv.Value) > tol) { Logger.Log($"[Compare] {kv.Key}:{a}≠{kv.Value}"); return false; }
+                return true;
             });
-
-            return allMatch;
+            Logger.Log($"[CompareCustomProperties] allMatch={ok}");
+            return ok;
         }
+    }
 
-
+    internal static class Extensions
+    {
+        public static T Also<T>(this T self, Action<T> act) { act(self); return self; }
     }
 }

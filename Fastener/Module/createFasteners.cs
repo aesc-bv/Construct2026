@@ -1,12 +1,13 @@
-﻿using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SpaceClaim.Api.V242.Modeler;
 using System.Diagnostics;
+using AESCConstruct25.FrameGenerator.Utilities;
+using DocumentFormat.OpenXml.Presentation;
+using SpaceClaim.Api.V242.Unsupported.RuledCutting;
+using DocumentFormat.OpenXml.Drawing.Charts;
 
 namespace AESCConstruct25.Fastener.Module
 {
@@ -357,27 +358,28 @@ CurveSegment.Create(p3, p0)
             double rad = is912 ? 0.001 * 0.5 : s / 4;
             listPoints.Add(point + k * dirZ + 0.5 * s * dirX);
             AddRounds(body, listPoints, rad);
-
             return body;
-
         }
         public static Body createWasher(double d1, double d2, double s)
         {
-            Point point = Point.Origin;
-            Direction dirX = Direction.DirX;
-            Direction dirY = Direction.DirY;
-            Direction dirZ = Direction.DirZ;
+            Body outer = Body.ExtrudeProfile(
+                new CircleProfile(Plane.PlaneXY, 0.5 * d2),
+                s
+            );
 
-            Body body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d2), s);
+            Body cutter = Body.ExtrudeProfile(
+                new CircleProfile(Plane.PlaneXY, 0.5 * d1),
+                s
+            );
 
-            Body cyl2 = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d1), s);
+            Body cutterTool = cutter.Copy();
 
-            body.Subtract(cyl2);
+            var doc = Window.ActiveWindow.Document;
+            var fasteners = FastenerModule.GetFastenersPart(doc);
+            outer.Subtract(new[] { cutterTool });
 
-            return body;
-
+            return outer;
         }
-
 
         public static Body createNut(double d, double s, double e, double h)
         {

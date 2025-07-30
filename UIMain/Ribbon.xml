@@ -1,105 +1,200 @@
-﻿<customUI xmlns="http://schemas.spaceclaim.com/customui">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<customUI
+  xmlns="http://schemas.spaceclaim.com/customui"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://schemas.spaceclaim.com/customui http://schemas.spaceclaim.com/customui/SpaceClaimCustomUI.V242.xsd">
 	<ribbon>
 		<tabs>
 			<tab id="AESCConstruct25.Tab" label="AESC Construct">
-				<group id="AESCConstruct25.Group" label="Frame Generator">
+				<!-- Frame Generator group -->
+				<group id="AESCConstruct25.Group" getLabel="GetRibbonLabel"><!--label="Frame Generator"-->
+
 					<button id="AESCConstruct25.ProfileSidebarBtn"
 							command="AESCConstruct25.ProfileSidebar"
-							label="Profiles" size="large"/>
-					<button id="AESCConstruct25.JointButton"
-							command="AESCConstruct25.JointSidebar"
-							label="Execute Joint" size="large"/>
-					<button id="AESCConstruct25.CompareButton"
-							command="AESCConstruct25.CompareBodies"
-							label="Compare" size="large"/>
-					<button id="AESCConstruct25.FrameExport"
-						label="Export"
-						size="large"
-						autoExpandOnClick="true"
-						style="imageandtext">
-						<!-- vertical stack: first row for buttons, then each checkbox below -->
-						<container id="AESCConstruct25.ExportContainer"
-							layoutOrientation="vertical"
-							itemSpacing="6"
-							isGroup="false">
+							getLabel="GetRibbonLabel"
+							size="large"
+							Enabled="False"/>
+					<!--label="Profiles"-->
 
-							<!-- Row of export buttons -->
-							<container id="AESCConstruct25.ExportButtonRow"
-									   layoutOrientation="horizontal"
+						<separator id="AESC.Construct.separator1"/>
+					<!-- sketch tools block -->
+					<container id="AESC.Construct.SketchToolGroupContainer"
+					   layoutOrientation="horizontal"
+					   isGroup="true"
+					   verticalAlign="middle">
+						<container id="AESC.Construct.sketchToolsContainer1"
+							isGroup="false"
+							verticalAlign="middle"
+							layoutOrientation="vertical" itemSpacing="1">
+							<button id="AESC.Construct.Line"
+									command="Line"/>
+							<button id="AESC.Construct.Rect"
+									command="Rect"/>
+							<button id="AESC.Construct.CurveOffset"
+									command="CurveOffset"/>
+						</container>
+					
+						<container id="AESC.Construct.sketchToolsContainer2"
+						   layoutOrientation="vertical" itemSpacing="1"
+						   verticalAlign="middle"
+						   isGroup="false">
+							<button id="AESC.Construct.SetModeSketch"
+									command="SetModeSketch"
+									size="small"
+									showLabel="false"
+									showImage="true"/>
+							<button id="AESC.Construct.FrameGen.SetModeSection"
+									command="SetModeSection"
+									size="small"
+									showLabel="false"
+									showImage="true"/>
+							<button id="AESC.Construct.FrameGen.FrameGen3DCmd"
+									command="AESC.Construct.FrameGen.FrameGen3DCmd"
+									size="small"
+									showLabel="false"
+									showImage="true"/>
+						</container>
+					</container>
+
+					<separator id="AESC.Construct.separator2"/>
+
+					<button id="AESC.Construct.CopyEdges"
+							command="CopyEdges"
+							size="large"
+							showImage="true"
+							showLabel="false"
+							style="imageOnly"/>
+
+
+					<button id="AESCConstruct25.ExportSTEPBtn"
+							command="AESCConstruct25.ExportSTEP"
+							getLabel="GetRibbonLabel"
+							size="large"
+							style="imageandtext"/>
+
+					<!--<container id="AESC.Construct.BOMContainer"
+					   layoutOrientation="vertical"
+					   isGroup="false">
+						<button id="AESCConstruct25.ExportBOMBtn"
+											command="AESCConstruct25.ExportBOM"
+											getLabel="GetRibbonLabel"
+											size="large"
+											style="imageandtext"
+											/>
+						<button id="AESCConstruct25.FrameExport"
+								getLabel="GetRibbonLabel"
+								size="small"
+								autoExpandOnClick="true"
+								style="imageandtext">
+							<container id="AESCConstruct25.ExportContainer"
+									   layoutOrientation="vertical"
 									   itemSpacing="6"
 									   isGroup="false">
-								<button id="AESCConstruct25.ExportExcelBtn"
-										command="AESCConstruct25.ExportExcel"
-										label="Excel"
-										size="large"
-										style="imageandtext"/>
-								<button id="AESCConstruct25.ExportBOMBtn"
-										command="AESCConstruct25.ExportBOM"
-										label="BOM"
-										size="large"
-										style="imageandtext"/>
-								<button id="AESCConstruct25.ExportSTEPBtn"
-										command="AESCConstruct25.ExportSTEP"
-										label="STEP"
-										size="large"
-										style="imageandtext"/>
+								<container id="AESCConstruct25.ExportButtonRow"
+										   layoutOrientation="horizontal"
+										   itemSpacing="6"
+										   isGroup="false">
+									<button id="AESCConstruct25.UpdateBOM"
+											command="AESCConstruct25.UpdateBOM"
+											getLabel="GetRibbonLabel"
+											size="large"
+											showLabel="true"/>
+									<button id="AESCConstruct25.ExportExcelBtn"
+											command="AESCConstruct25.ExportExcel"
+											getLabel="GetRibbonLabel"
+											size="large"
+											style="imageandtext"/>
+								</container>
 							</container>
-						</container>
-					</button>
-					<container
-						layoutOrientation="vertical">
-						<checkBox id="AddMaterialCheckboxExcel"
-									label="Add material to part name"
-									size="small"
-										  IsCheckable="True"/>
-						<checkBox id="AddMaterialCheckboxBOM"
-							label="Add material to part name"
-							size="small"
-								  StaysOpenOnClick="True"
-								  IsCheckable="True"/>
+						</button>-->
+					<container id="ExportControls"
+					   layoutOrientation="vertical"
+					   itemSpacing="2"
+					   isGroup="false"
+					   verticalAlign="middle">
+
+						<button id="AESCConstruct25.ExportBOMBtn"
+								command="AESCConstruct25.ExportBOM"
+								getLabel="GetRibbonLabel"
+								size="large"
+								style="imageandtext"/>
+
+						<button id="AESCConstruct25.FrameExport"
+								getLabel="GetRibbonLabel"
+								size="small"
+								autoExpandOnClick="true"
+								style="imageandtext">
+							<container id="AESCConstruct25.ExportContainer"
+									   layoutOrientation="vertical"
+									   itemSpacing="6"
+									   isGroup="false">
+								<container id="AESCConstruct25.ExportButtonRow"
+										   layoutOrientation="horizontal"
+										   itemSpacing="6"
+										   isGroup="false">
+									<button id="AESCConstruct25.UpdateBOM"
+											command="AESCConstruct25.UpdateBOM"
+											getLabel="GetRibbonLabel"
+											size="large"
+											showLabel="true"/>
+									<button id="AESCConstruct25.ExportExcelBtn"
+											command="AESCConstruct25.ExportExcel"
+											getLabel="GetRibbonLabel"
+											size="large"
+											style="imageandtext"/>
+								</container>
+							</container>
+						</button>
+
 					</container>
-					<button id="AESCConstruct25.UpdateBOM"
-							command="AESCConstruct25.UpdateBOM"
-							label="Update BOM"
-							size="large"
-							showLabel="true"
-							showImage="false"/>
+
+
+					<button id="AESCConstruct25.CompareButton"
+							command="AESCConstruct25.CompareBodies"
+							getLabel="GetRibbonLabel"
+							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.ToolGroup" label="Tools">
-					<button id="AESCConstruct25.RotateCCButton"
-							command="AESCConstruct25.RotateCC"
-							label="Rotate Counterclockwise"
-							size="large"
-							showLabel="true"
-							showImage="false"/>
-					<button id="AESCConstruct25.RotateCButton"
-							command="AESCConstruct25.RotateC"
-							label="Rotate Clockwise"
-							size="large"
-							showLabel="true"
-							showImage="false"/>
-				</group>
-
-				<group id="AESCConstruct25.ToolGroup" label="Settings">
-					<button id="AESCConstruct25.SettingsSidebarBtn"
-						command="AESCConstruct25.SettingsSidebar"
-						label="Settings"
-						size="large"/>
-
+				<group id="AESCConstruct25.PlateGroup" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.Plate"
-								command="AESCConstruct25.Plate"
-								label="Plate"
-								size="large"
-								showLabel="true"
-								showImage="false"/>
+							command="AESCConstruct25.Plate"
+							getLabel="GetRibbonLabel"
+							size="large"/>
+				</group>
 
+				<group id="AESCConstruct25.FastenerGroup" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.Fastener"
-								command="AESCConstruct25.Fastener"
-								label="Fastener"
-								size="large"
-								showLabel="true"
-								showImage="false"/>
+							command="AESCConstruct25.Fastener"
+							getLabel="GetRibbonLabel"
+							size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.RibCutOutGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.RibCutOut"
+							command="AESCConstruct25.RibCutOut"
+							getLabel="GetRibbonLabel"
+							size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.Engraving" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.EngravingBtn"
+							command="AESCConstruct25.EngravingControl"
+							getLabel="GetEngravingLabel"
+							size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.CustomProperties" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.CustomPropertiesBtn"
+							command="AESCConstruct25.CustomProperties"
+							getLabel="GetCustomPropertiesLabel"
+							size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.ToolGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.SettingsSidebarBtn"
+							command="AESCConstruct25.SettingsSidebar"
+							 getLabel="GetRibbonLabel"
+							size="large"/>
 				</group>
 			</tab>
 		</tabs>

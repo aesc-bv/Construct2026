@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242.Geometry;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -16,7 +15,6 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
         private readonly double flangeEndCornerRadius;
         private readonly double offsetX;
         private readonly double offsetY;
-        private static string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AESCConstruct25_Log.txt");
 
         public TProfile(double height, double width, double webThickness, double flangeThickness, double innerCornerRadius, double outerCornerRadius, double flangeEndCornerRadius, double offsetX, double offsetY)
         {
@@ -30,7 +28,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            File.AppendAllText(logPath, $"AESCConstruct25: Generating T Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}, FlangeEndRadius: {flangeEndCornerRadius}\n");
+            Logger.Log($"AESCConstruct25: Generating T Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}, FlangeEndRadius: {flangeEndCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
@@ -39,7 +37,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Frame frame = profilePlane.Frame;
             Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
-            File.AppendAllText(logPath, $"AESCConstruct25: OffsetT: {offsetX},  {offsetY}\n");
+            Logger.Log($"AESCConstruct25: OffsetT: {offsetX},  {offsetY}\n");
 
             // Define 14 key points
             Point p1 = center + (-width / 2) * frame.DirX + (height / 2) * frame.DirY;

@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -96,7 +94,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 string lengthString = length.ToString("F4", CultureInfo.InvariantCulture);
 
                 //Logger.Log($"bbox length = {length}");
-                
+
                 if (part.CustomProperties.ContainsKey("Construct_Tubelength"))
                     part.CustomProperties["Construct_Tubelength"].Value = lengthString;
                 else
@@ -114,7 +112,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var refinedPairs = new List<Tuple<IDesignBody, IDesignBody>>();
             int nrMatches = 0;
 
-            WriteBlock.ExecuteTask("CompareConstruct", () => {
+            WriteBlock.ExecuteTask("CompareConstruct", () =>
+            {
                 for (int i = 0; i < bodies.Count; i++)
                 {
                     var idb1 = bodies[i];

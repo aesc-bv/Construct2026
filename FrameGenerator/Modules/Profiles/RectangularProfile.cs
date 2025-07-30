@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242.Geometry;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -50,7 +51,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Frame frame = profilePlane.Frame;
             //Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
-
+            Logger.Log($"rect radius = ${radius}");
             // Define key points
             Point p1 = center + (-width / 2 + radius) * frame.DirX + (height / 2) * frame.DirY;
             Point p2 = center + (width / 2 - radius) * frame.DirX + (height / 2) * frame.DirY;
@@ -67,29 +68,21 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Point m3 = center + (width / 2 - radius) * frame.DirX + (-height / 2 + radius) * frame.DirY;
             Point m4 = center + (-width / 2 + radius) * frame.DirX + (-height / 2 + radius) * frame.DirY;
 
+            Direction dirZArc = frame.DirZ; // Default arc direction
+
             // Create straight edges
             curves.Add(CurveSegment.Create(p1, p2));
-            curves.Add(CurveSegment.Create(p3, p4));
-            curves.Add(CurveSegment.Create(p5, p6));
-            curves.Add(CurveSegment.Create(p7, p8));
-
-            // Ensure arcs are oriented correctly
             if (radius > 0)
-            {
-                Direction dirZArc = frame.DirZ; // Default arc direction
-
-                // Top-right arc
                 curves.Add(CurveSegment.CreateArc(m2, p2, p3, -dirZArc));
-
-                // Bottom-right arc
+            curves.Add(CurveSegment.Create(p3, p4));
+            if (radius > 0)
                 curves.Add(CurveSegment.CreateArc(m3, p4, p5, -dirZArc));
-
-                // Bottom-left arc
+            curves.Add(CurveSegment.Create(p5, p6));
+            if (radius > 0)
                 curves.Add(CurveSegment.CreateArc(m4, p6, p7, -dirZArc));
-
-                // Top-left arc
+            curves.Add(CurveSegment.Create(p7, p8));
+            if (radius > 0)
                 curves.Add(CurveSegment.CreateArc(m1, p8, p1, -dirZArc));
-            }
 
             return curves;
         }

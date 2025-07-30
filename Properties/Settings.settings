@@ -8,5 +8,35 @@
     <Setting Name="TypeString" Type="System.String" Scope="User">
       <Value Profile="(Default)">Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U</Value>
     </Setting>
+    <Setting Name="TableAnchorX" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.02</Value>
+    </Setting>
+    <Setting Name="TableAnchorY" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.02</Value>
+    </Setting>
+    <Setting Name="TableLocationPoint" Type="System.String" Scope="User">
+      <Value Profile="(Default)">BottomRightCorner</Value>
+    </Setting>
+    <Setting Name="MatInExcel" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="MatInBOM" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="MatInSTEP" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="SerialNumber" Type="System.String" Scope="User">
+      <Value Profile="(Default)">null</Value>
+    </Setting>
+    <Setting Name="LicenseValid" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="Construct_Language" Type="System.String" Scope="User">
+      <Value Profile="(Default)">EN</Value>
+    </Setting>
+    <Setting Name="CSVFilePaths" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

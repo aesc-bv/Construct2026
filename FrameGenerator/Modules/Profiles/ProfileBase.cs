@@ -1,7 +1,8 @@
-﻿using System;
+﻿using SpaceClaim.Api.V242.Geometry;
+using System;
 using System.Collections.Generic;
-using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242.Geometry;
+using System.Globalization;
+using System.Windows;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -28,7 +29,10 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
                 double[] convertedSizes = new double[sizeValues.Length];
                 for (int i = 0; i < sizeValues.Length; i++)
                 {
-                    convertedSizes[i] = double.Parse(sizeValues[i]) / 1000;
+                    var normalized = sizeValues[i].Replace(',', '.');
+                    convertedSizes[i] = double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+                        ? parsed / 1000.0
+                        : 0.0;
                 }
                 if (profileType == "DXF" && dxfContours != null)
                     return new DXFProfile(dxfFilePath, dxfContours, offsetX, offsetY);
@@ -54,7 +58,8 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             }
             catch (Exception ex)
             {
-                //Logger.Log($"ERROR - Invalid profile size format: {string.Join(",", sizeValues)} ({ex.Message})");
+                var msg = $"Invalid profile size format:\n  {string.Join(", ", sizeValues)}\n\n{ex.GetType().Name}: {ex.Message}";
+                MessageBox.Show(msg, "Profile generation error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             return null;

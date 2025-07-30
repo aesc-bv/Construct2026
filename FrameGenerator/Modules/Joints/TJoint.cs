@@ -1,8 +1,8 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct25.FrameGenerator.Commands;
+using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
-using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.FrameGenerator.Commands;
 using System.Linq;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;

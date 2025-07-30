@@ -26,6 +26,7 @@
                 <ComboBox x:Name="TemplateComboBox"
                   ItemsSource="{Binding TemplateOptions}"
                   SelectedItem="{Binding SelectedTemplate}"
+                          Style="{StaticResource ComboBoxFlatStyle}"
                   Width="250"/>
             </StackPanel>
         </GroupBox>

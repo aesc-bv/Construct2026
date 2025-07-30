@@ -1,10 +1,9 @@
-﻿using System;
-using System.Linq;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using System;
 using System.Drawing;
 using System.Globalization;
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
+using System.Linq;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
@@ -217,268 +216,26 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             Line outerLocal = Line.Create(baseLocal - perpLocal * shiftOuter, dirLocal);
 
             //12) debug‐draw(unchanged)
-            double dbgLen = 0.1;
-            {
-                var v = innerLocal.Direction.ToVector() * (dbgLen / 2);
-                CreateDebugCurve(part,
-                    innerLocal.Origin - v,
-                    innerLocal.Origin + v,
-                    Color.Red,
-                    "DEBUG_InnerOffset");
-            }
-            {
-                var v = outerLocal.Direction.ToVector() * (dbgLen / 2);
-                CreateDebugCurve(part,
-                    outerLocal.Origin - v,
-                    outerLocal.Origin + v,
-                    Color.Green,
-                    "DEBUG_OuterOffset");
-            }
+            //double dbgLen = 0.1;
+            //{
+            //    var v = innerLocal.Direction.ToVector() * (dbgLen / 2);
+            //    CreateDebugCurve(part,
+            //        innerLocal.Origin - v,
+            //        innerLocal.Origin + v,
+            //        Color.Red,
+            //        "DEBUG_InnerOffset");
+            //}
+            //{
+            //    var v = outerLocal.Direction.ToVector() * (dbgLen / 2);
+            //    CreateDebugCurve(part,
+            //        outerLocal.Origin - v,
+            //        outerLocal.Origin + v,
+            //        Color.Green,
+            //        "DEBUG_OuterOffset");
+            //}
 
             return (innerLocal, outerLocal, perpLocal);
         }
-
-        //public static Point? IntersectLines(
-        //    Component componentA,
-        //    Line localLineA,
-        //    Component componentB,
-        //    Line localLineB
-        //)
-        //{
-        //    // -- STEP 1: lift localLineA into worldA --
-        //    // take two local‐space points on lineA: its Origin, and Origin + Direction
-        //    Point localA_O = localLineA.Origin;
-        //    Vector localA_dirVec = localLineA.Direction.ToVector();
-        //    Point localA_P = localA_O + localA_dirVec;
-
-        //    // transform both to world via componentA.Placement
-        //    Point worldA_O = componentA.Placement * localA_O;
-        //    Point worldA_P = componentA.Placement * localA_P;
-
-        //    // recompute worldA direction
-        //    Vector worldA_dir = (worldA_P - worldA_O).Direction.ToVector();
-        //    Line worldLineA = Line.Create(worldA_O, worldA_dir.Direction);
-
-        //    // -- STEP 2: lift localLineB into worldB --
-        //    Point localB_O = localLineB.Origin;
-        //    Vector localB_dirVec = localLineB.Direction.ToVector();
-        //    Point localB_P = localB_O + localB_dirVec;
-
-        //    Point worldB_O = componentB.Placement * localB_O;
-        //    Point worldB_P = componentB.Placement * localB_P;
-
-        //    Vector worldB_dir = (worldB_P - worldB_O).Direction.ToVector();
-        //    Line worldLineB = Line.Create(worldB_O, worldB_dir.Direction);
-
-        //    // -- STEP 3: compute intersection of worldLineA and worldLineB in world coords --
-        //    Point p = worldLineA.Origin;
-        //    Vector d1 = worldLineA.Direction.ToVector();
-        //    Point q = worldLineB.Origin;
-        //    Vector d2 = worldLineB.Direction.ToVector();
-        //    Vector r = q - p;
-
-        //    double a = Vector.Dot(d1, d1);
-        //    double b = Vector.Dot(d1, d2);
-        //    double c = Vector.Dot(d2, d2);
-        //    double d = Vector.Dot(d1, r);
-        //    double e = Vector.Dot(d2, r);
-
-        //    double denom = a * c - b * b;
-        //    //Logger.Log($"IntersectLines: denom={denom:F6}, a={a:F6}, b={b:F6}, c={c:F6}");
-        //    if (Math.Abs(denom) < 1e-10)
-        //        return null;
-
-        //    double s = (d * c - b * e) / denom;
-        //    return p + d1 * s;
-        //}
-
-        //public static (Line inner, Line outer, Vector perp) GetOffsetEdges(
-        //    Component component,
-        //    CurveSegment localSeg,
-        //    Component otherComponent,
-        //    double width,    // full profile width
-        //    double offsetX   // unused
-        //)
-        //{
-        //    //var oldOri = Application.UserOptions.WorldOrientation;
-        //    //Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
-        //    //try
-        //    //{
-        //        const double tol = 1e-6;
-        //        const double tol90 = 1e-3;
-
-        //        // 0) log inputs
-        //        Logger.Log($"GetOffsetEdges START: comp='{component.Name}', other='{otherComponent.Name}', width={width:F4}, offsetX={offsetX:F4}");
-
-        //        var part = component.Template;
-
-        //        // clear old debug curves
-        //        foreach (var dc in part.Curves
-        //            .OfType<DesignCurve>()
-        //            .Where(dc => dc.Name == "DEBUG_InnerOffset" || dc.Name == "DEBUG_OuterOffset")
-        //            .ToList())
-        //            dc.Delete();
-
-        //        // 1) read optional offsetY (for future use)
-        //        double offsetY = 0;
-        //        if (part.CustomProperties.TryGetValue("offsetY", out var oy) &&
-        //            double.TryParse(oy.Value.ToString().Replace(',', '.'),
-        //                            NumberStyles.Any,
-        //                            CultureInfo.InvariantCulture,
-        //                            out offsetY))
-        //        {
-        //            Logger.Log($"  offsetY = {offsetY:F4}");
-        //        }
-
-        //        // 2) read RotationAngle
-        //        double angleDeg = 0;
-        //        if (part.CustomProperties.TryGetValue("RotationAngle", out var rp)
-        //         && double.TryParse(rp.Value.ToString().Replace(',', '.'),
-        //                            NumberStyles.Any,
-        //                            CultureInfo.InvariantCulture,
-        //                            out var a))
-        //        {
-        //            angleDeg = (a % 360 + 360) % 360;
-        //        }
-        //        Logger.Log($"  RotationAngle = {angleDeg:F1}°");
-
-        //        // 3) lift this segment to world and compute dA
-        //        var placementA = component.Placement;
-        //        Point wA0 = placementA * localSeg.StartPoint;
-        //        Point wA1 = placementA * localSeg.EndPoint;
-        //        Vector dA = (wA1 - wA0).Direction.ToVector();
-        //        Logger.Log(
-        //            $"  wA0 = ({wA0.X:F4},{wA0.Y:F4},{wA0.Z:F4}), " +
-        //            $"wA1 = ({wA1.X:F4},{wA1.Y:F4},{wA1.Z:F4}), " +
-        //            $"dA = ({dA.X:F4},{dA.Y:F4},{dA.Z:F4})"
-        //        );
-
-        //        // 4) lift the other component’s segment and compute dB
-        //        var otherDC = otherComponent.Template
-        //                           .Curves
-        //                           .OfType<DesignCurve>()
-        //                           .FirstOrDefault()?.Shape as CurveSegment
-        //                       ?? throw new ArgumentException("otherComponent must have a curve");
-        //        Point wB0 = otherComponent.Placement * otherDC.StartPoint;
-        //        Point wB1 = otherComponent.Placement * otherDC.EndPoint;
-        //        Vector dB = (wB1 - wB0).Direction.ToVector();
-        //        Logger.Log(
-        //            $"  wB0 = ({wB0.X:F4},{wB0.Y:F4},{wB0.Z:F4}), " +
-        //            $"wB1 = ({wB1.X:F4},{wB1.Y:F4},{wB1.Z:F4}), " +
-        //            $"dB = ({dB.X:F4},{dB.Y:F4},{dB.Z:F4})"
-        //        );
-
-        //        // 5) compute shared‐plane normal
-        //        Vector planeN = Vector.Cross(dA, dB);
-        //        if (planeN.Magnitude < tol)
-        //        {
-        //            planeN = Vector.Cross(dA, Vector.Create(0, 1, 0));
-        //            if (planeN.Magnitude < tol)
-        //                planeN = Vector.Cross(dA, Vector.Create(1, 0, 0));
-        //        }
-        //        planeN = planeN.Direction.ToVector();
-        //        if (planeN.Y < 0) planeN = -planeN;
-        //        Logger.Log($"  planeN = ({planeN.X:F4},{planeN.Y:F4},{planeN.Z:F4})");
-
-        //        // 6) find shared “corner” world‐point
-        //        var segA_w = CurveSegment.Create(wA0, wA1);
-        //        var segB_w = CurveSegment.Create(wB0, wB1);
-        //        Point corner = FindSharedPoint(segA_w, segB_w);
-        //        Logger.Log($"  corner = ({corner.X:F4},{corner.Y:F4},{corner.Z:F4})");
-
-        //        // 7) interior‐bisector
-        //        Point wAother = ((corner - wA0).Magnitude < tol) ? wA1 : wA0;
-        //        Point wBother = ((corner - wB0).Magnitude < tol) ? wB1 : wB0;
-        //        Vector vA = (wAother - corner).Direction.ToVector();
-        //        Vector vB = (wBother - corner).Direction.ToVector();
-        //        Vector bis = (vA + vB).Magnitude < tol
-        //                   ? Vector.Cross(planeN, dA).Direction.ToVector()
-        //                   : (vA + vB).Direction.ToVector();
-        //        Logger.Log($"  bisector = ({bis.X:F4},{bis.Y:F4},{bis.Z:F4})");
-
-        //        // 8) pick true perp in plane
-        //        Vector p1 = Vector.Cross(planeN, dA).Direction.ToVector();
-        //        Vector perpWorld = Vector.Dot(p1, bis) >= 0 ? p1 : -p1;
-        //        Logger.Log($"  raw perp candidate p1 = ({p1.X:F4},{p1.Y:F4},{p1.Z:F4})");
-        //        Logger.Log($"  chosen perpWorld = ({perpWorld.X:F4},{perpWorld.Y:F4},{perpWorld.Z:F4})");
-
-        //        // 9) map perp into local
-        //        var invA = placementA.Inverse;
-        //        Point Lc = invA * corner;
-        //        Point Lc2 = invA * Point.Create(
-        //            corner.X + perpWorld.X,
-        //            corner.Y + perpWorld.Y,
-        //            corner.Z + perpWorld.Z
-        //        );
-        //        Vector perpLocal = (Lc2 - Lc).Direction.ToVector();
-        //        Logger.Log($"  perpLocal = ({perpLocal.X:F4},{perpLocal.Y:F4},{perpLocal.Z:F4})");
-
-        //        // 10) pick half‐dim & local axis by rotation
-        //        double halfDim;
-        //        Vector axisLocal;
-        //        if (Math.Abs(angleDeg % 180) < tol90)
-        //        {
-        //            halfDim = width * 0.5;
-        //            axisLocal = Vector.Create(1, 0, 0);
-        //        }
-        //        else
-        //        {
-        //            double? h = GetCustomDimension(component, "Construct_h", width);
-        //            double? b = GetCustomDimension(component, "Construct_b", width);
-        //            double? D = GetCustomDimension(component, "Construct_D", width);
-        //            double chosenHeight = h ?? b ?? D ?? width;
-        //            halfDim = chosenHeight * 0.5;
-        //            axisLocal = Vector.Create(0, 1, 0);
-        //        }
-        //        Logger.Log($"  axisLocal = ({axisLocal.X:F4},{axisLocal.Y:F4},{axisLocal.Z:F4}), halfDim = {halfDim:F4}");
-
-        //        // 11) direction test and shift
-        //        double flip = Vector.Dot(perpLocal, axisLocal) >= 0 ? +1.0 : -1.0;
-        //        Vector shiftLocal = axisLocal * (halfDim * flip);
-        //        Logger.Log($"  flip = {flip:F1}, shiftLocal = ({shiftLocal.X:F4},{shiftLocal.Y:F4},{shiftLocal.Z:F4})");
-
-        //        // 12) build the two local‐space offset lines
-        //        var dirLocal = (localSeg.EndPoint - localSeg.StartPoint).Direction;
-        //        var innerOrigin = Point.Create(shiftLocal.X, shiftLocal.Y, shiftLocal.Z);
-        //        var outerOrigin = Point.Create(-shiftLocal.X, -shiftLocal.Y, -shiftLocal.Z);
-        //        var innerLocal = Line.Create(innerOrigin, dirLocal);
-        //        var outerLocal = Line.Create(outerOrigin, dirLocal);
-        //        Logger.Log(
-        //            $"  innerOrigin = ({innerOrigin.X:F4},{innerOrigin.Y:F4},{innerOrigin.Z:F4}), " +
-        //            $"innerDir = ({innerLocal.Direction.X:F4},{innerLocal.Direction.Y:F4},{innerLocal.Direction.Z:F4})"
-        //        );
-        //        Logger.Log(
-        //            $"  outerOrigin = ({outerOrigin.X:F4},{outerOrigin.Y:F4},{outerOrigin.Z:F4}), " +
-        //            $"outerDir = ({outerLocal.Direction.X:F4},{outerLocal.Direction.Y:F4},{outerLocal.Direction.Z:F4})"
-        //        );
-
-        //        double dbgLen = 0.1;
-        //        {
-        //            var v = innerLocal.Direction.ToVector() * (dbgLen / 2);
-        //            CreateDebugCurve(part,
-        //                innerLocal.Origin - v,
-        //                innerLocal.Origin + v,
-        //                Color.Red,
-        //                "DEBUG_InnerOffset");
-        //        }
-        //        {
-        //            var v = outerLocal.Direction.ToVector() * (dbgLen / 2);
-        //            CreateDebugCurve(part,
-        //                outerLocal.Origin - v,
-        //                outerLocal.Origin + v,
-        //                Color.Green,
-        //                "DEBUG_OuterOffset");
-        //        }
-
-        //        Logger.Log("GetOffsetEdges END");
-        //        return (innerLocal, outerLocal, axisLocal);
-        //    //}
-        //    //finally
-        //    //{
-        //    //    Application.UserOptions.WorldOrientation = oldOri;
-        //    //}
-        //}
-
 
         public static Point? IntersectLines(
             Component componentA,

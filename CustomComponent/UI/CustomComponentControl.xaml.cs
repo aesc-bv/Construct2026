@@ -1,8 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using SpaceClaim.Api.V242;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using SpaceClaim.Api.V242;
 using Application = SpaceClaim.Api.V242.Application;
 
 namespace AESCConstruct25.UI

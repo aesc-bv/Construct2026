@@ -5,7 +5,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 {
     public static class Logger
     {
-        private static readonly string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "AESCConstruct25_Log.txt");
+        private static readonly string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "AESCConstruct25_Log.txt");
 
         public static void Log(string message)
         {

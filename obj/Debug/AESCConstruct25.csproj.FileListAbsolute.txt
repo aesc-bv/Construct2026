@@ -1,5 +1,3 @@
-C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
-C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25_MarkupCompile.cache
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.g.resources
@@ -39,32 +37,6 @@ C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb
-C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll.config
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.cache
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.g.resources
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCCons.9867665C.Up2Date
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\SettingsControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\JointSelectionControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\SettingsControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\JointSelectionControl.g.cs
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.lref
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.baml
-C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.UIMain.Resources.resources
-C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\UIMain\Images\squareGrid.jpg
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.baml
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.baml
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.baml
@@ -86,3 +58,30 @@ C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\UIMain\Images\square
 C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.dll.config
 C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
 C:\Program Files\ANSYS Inc\v252\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll.config
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.dll
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.pdb
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Engraving\UI\EngravingControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\UIMain\SettingsControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\CustomComponent\UI\CustomComponentControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Engraving\UI\EngravingControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Fastener\UI\FastenersControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\FrameGenerator\UI\ProfileSelectionControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\UIMain\SettingsControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\RibCutout\UI\RibCutOut.g.cs
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.cache
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25_MarkupCompile.lref
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Plates\UI\PlatesControl.baml
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.g.resources
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.Resources.resources
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.GenerateResource.cache
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.CoreCompileInputs.cache
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCCons.9867665C.Up2Date
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
+C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb

@@ -1,15 +1,13 @@
-﻿using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
+﻿using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.Modules.Joints;
 using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.FrameGenerator.Modules;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System;
-using SpaceClaim.Geometry;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
 namespace AESCConstruct25.FrameGenerator.Commands
@@ -286,7 +284,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
             if (selectedComponents.Count < 1)
             {
-                MessageBox.Show("Select at least one component to apply a joint.", "Selection Error");
+                MessageBox.Show("Select at least two components to apply a joint.", "Selection Error");
                 return;
             }
 
@@ -596,12 +594,12 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     }
                 }
 
-                MessageBox.Show(
-                    "Joints restored: only the corner halves have been rebuilt (extended path).",
-                    "Restore Joint",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                //MessageBox.Show(
+                //    "Joints restored: only the corner halves have been rebuilt (extended path).",
+                //    "Restore Joint",
+                //    MessageBoxButtons.OK,
+                //    MessageBoxIcon.Information
+                //);
                 Logger.Log("RestoreJoint: complete");
             });
             Logger.Log("==== RestoreJoint END ====");

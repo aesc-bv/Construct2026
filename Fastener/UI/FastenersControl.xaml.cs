@@ -2,20 +2,32 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using AESCConstruct25.FrameGenerator.Utilities;
+using System.Windows.Forms;
+using UserControl = System.Windows.Controls.UserControl;
 
 namespace AESCConstruct25.UI
 {
     public partial class FastenersControl : UserControl, INotifyPropertyChanged
     {
         private readonly FastenerModule _module;
+        private string CustomFolderPath =>
+           Path.Combine(
+               Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+               "AESCConstruct",
+               "Fasteners",
+               "Custom"
+           );
 
         public FastenersControl()
         {
             InitializeComponent();
             DataContext = this;
+            Localization.Language.LocalizeFrameworkElement(this);
 
             // 1) load data once
             _module = new FastenerModule();
@@ -39,6 +51,85 @@ namespace AESCConstruct25.UI
             RefreshBoltSizes();
             RefreshWasherSizes();
             RefreshNutSizes();
+
+            LoadCustomFileList();
+        }
+
+        private void LoadCustomFileList()
+        {
+            Directory.CreateDirectory(CustomFolderPath);
+
+            var files = Directory
+                .EnumerateFiles(CustomFolderPath, "*.scdoc")
+                .Concat(Directory.EnumerateFiles(CustomFolderPath, "*.scdocx"))
+                .Concat(Directory.EnumerateFiles(CustomFolderPath, "*.stp"))
+                .Select(Path.GetFileName)
+                .OrderBy(n => n);
+
+            CustomFileOptions.Clear();
+            foreach (var name in files)
+                CustomFileOptions.Add(name);
+
+            // notify the list itself changed
+            OnPropertyChanged(nameof(CustomFileOptions));
+
+            // pick and notify the initial selection
+            SelectedCustomFile = CustomFileOptions.FirstOrDefault();
+        }
+
+        // Handles the Browse… button click
+        private void BrowseCustomButton_Click(object sender, RoutedEventArgs e)
+        {
+            string selectedPath;
+            using (var dlg = new OpenFileDialog
+            {
+                Title = "Select a Fastener Part to Import",
+                Filter = "SpaceClaim Docs (*.scdoc)|*.scdoc|STEP Files (*.stp)|*.stp|SpaceClaim Docs (*.scdocx)|*.scdocx"
+            })
+            {
+                if (dlg.ShowDialog() != DialogResult.OK)
+                    return;
+                selectedPath = dlg.FileName;
+            }
+
+            Logger.Log($"AESCConstruct25: Selected custom fastener file – {selectedPath}");
+
+            // Copy into the Custom folder
+            var customDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "AESCConstruct",
+                "Fasteners",
+                "Custom"
+            );
+            Directory.CreateDirectory(customDir);
+
+            var destPath = Path.Combine(customDir, Path.GetFileName(selectedPath));
+            try
+            {
+                File.Copy(selectedPath, destPath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    $"Failed to import custom fastener:\n{ex.Message}",
+                    "Import Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                return;
+            }
+
+            // Refresh the dropdown list and select the new file
+            LoadCustomFileList();                        // your existing method
+            SelectedCustomFile = Path.GetFileName(selectedPath);
+            OnPropertyChanged(nameof(SelectedCustomFile));
+
+            System.Windows.MessageBox.Show(
+                "Custom fastener imported successfully.",
+                "Import Complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
         }
 
         // INotifyPropertyChanged...
@@ -87,9 +178,33 @@ namespace AESCConstruct25.UI
         public string SelectedNutSize { get; set; }
 
         // --- Custom & insert ---
-        public bool UseCustomPart { get; set; }
+        private bool _useCustomPart;
+        public bool UseCustomPart
+        {
+            get => _useCustomPart;
+            set
+            {
+                if (_useCustomPart == value) return;
+                _useCustomPart = value;
+                OnPropertyChanged(nameof(UseCustomPart));
+
+                // When toggled on, refresh the list
+                if (_useCustomPart)
+                    LoadCustomFileList();
+            }
+        }
         public ObservableCollection<string> CustomFileOptions { get; } = new ObservableCollection<string>();
-        public string SelectedCustomFile { get; set; }
+        private string _selectedCustomFile;
+        public string SelectedCustomFile
+        {
+            get => _selectedCustomFile;
+            set
+            {
+                if (_selectedCustomFile == value) return;
+                _selectedCustomFile = value;
+                OnPropertyChanged(nameof(SelectedCustomFile));
+            }
+        }
 
         public int DistanceMm { get; set; } = 20;
         public bool LockDistance { get; set; }

@@ -1,27 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Windows;                             // for WPF Window, MessageBox, etc.
-using System.Windows.Controls;                    // for WPF UserControl, TextBox, RadioButton, etc.
+﻿using AESCConstruct25.Commands;
+using AESCConstruct25.FrameGenerator.Commands;
+using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Wordprocessing;
 using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
 using SpaceClaim.Api.V242.Geometry;               // for ITrimmedCurve, Point, etc.
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Windows;                             // for WPF Window, MessageBox, etc.
+using System.Windows.Controls;                    // for WPF UserControl, TextBox, RadioButton, etc.
+using System.Windows.Media;
 using System.Windows.Media.Imaging;               // if you ever need WPF BitmapImage
-using DXFProfile = AESCConstruct25.FrameGenerator.Utilities.DXFProfile;
-using UserControl = System.Windows.Controls.UserControl;
-using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
-using AESCConstruct25.FrameGenerator.Commands;
-using Orientation = System.Windows.Controls.Orientation;
 using Application = SpaceClaim.Api.V242.Application;
-using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
+using Document = SpaceClaim.Api.V242.Document;
+using DXFProfile = AESCConstruct25.FrameGenerator.Utilities.DXFProfile;
+using Image = System.Windows.Controls.Image;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using Orientation = System.Windows.Controls.Orientation;
+using Path = System.IO.Path;
+using UserControl = System.Windows.Controls.UserControl;
+using Window = SpaceClaim.Api.V242.Window;
 
 namespace AESCConstruct25.FrameGenerator.UI
 {
     public partial class ProfileSelectionControl : UserControl
     {
         private static string logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "AESCConstruct25_Log.txt"
         );
 
@@ -31,153 +39,332 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         private List<string> csvFieldNames = new List<string>();
         private List<string[]> csvDataRows = new List<string[]>();
+        private List<string> csvRowNames = new List<string>();
         private Dictionary<string, System.Windows.Controls.TextBox> inputFieldMap
             = new Dictionary<string, System.Windows.Controls.TextBox>();
         private string selectedDXFPath = "";
         private List<ITrimmedCurve> dxfContours = null;
 
+        public double rotationAngle = 0.0;
+
         public ProfileSelectionControl()
         {
             InitializeComponent();
-            RectangularProfileButton.IsChecked = true;
+            //RectangularProfileButton.IsChecked = true;
+            Localization.Language.Translate("ConstructGroup");
+            LocalizeUI();
             LoadUserProfiles();
+            WireProfileButtonHandlers();
+            WireJointButtonHandlers();
+            UpdateGenerateButtons();
         }
 
-        //private void ProfileButton_Checked(object sender, RoutedEventArgs e)
-        //{
-        //    if (sender is System.Windows.Controls.RadioButton rb && rb.Tag is string profileName)
-        //    {
-        //        selectedDXFPath = "";
-        //        dxfContours = null;
+        public double GetRotationAngle()
+        {
+            return rotationAngle;
+        }
 
-        //        selectedProfile = profileName;
-        //        File.AppendAllText(logPath, $"AESCConstruct25: Profile selected in UI: {selectedProfile}\n");
+        private void LocalizeUI()
+        {
+            Localization.Language.LocalizeFrameworkElement(this);
+        }
 
-        //        LoadPresetSizes(selectedProfile);
+        private void WireProfileButtonHandlers()
+        {
+            foreach (var rb in ProfileGroupContainer.Children.OfType<RadioButton>())
+            {
+                rb.Checked += (s, e) => UpdateGenerateButtons();
+                rb.Unchecked += (s, e) => UpdateGenerateButtons();
+            }
+        }
 
-        //        DynamicFieldsGrid.Visibility = Visibility.Visible;
-        //        SizeComboBox.Visibility = Visibility.Visible;
-        //        HollowCheckBox.Visibility = (selectedProfile == "Rectangular" || selectedProfile == "Circular")
-        //                                     ? Visibility.Visible
-        //                                     : Visibility.Collapsed;
+        private void WireJointButtonHandlers()
+        {
+            foreach (var rb in JointGroupContainer.Children.OfType<RadioButton>())
+            {
+                rb.Checked += (s, e) => UpdateGenerateButtons();
+                rb.Unchecked += (s, e) => UpdateGenerateButtons();
+            }
+        }
 
-        //        UpdateDynamicFields();
-        //    }
-        //}
+        private void UpdateGenerateButtons()
+        {
+            bool profileSelected =
+                 ProfileGroupContainer.Children.OfType<RadioButton>().Any(rb => rb.IsChecked == true) ||
+                 UserProfilesGrid.Children.OfType<Grid>()
+                     .SelectMany(g => g.Children.OfType<RadioButton>())
+                     .Any(rb => rb.IsChecked == true);
+
+            GenerateButton.IsEnabled = profileSelected;
+
+            Logger.Log($"[Profile] selected? {profileSelected}");
+
+            // Swap image
+            if (GenerateProfileButtonIcon != null)
+            {
+                var uriString = profileSelected
+                    ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
+                    : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
+
+                Logger.Log($"GenerateButton: setting image src to {uriString}");
+                GenerateProfileButtonIcon.Source =
+                    new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
+            }
+
+            // Update text style
+            if (GenerateProfileButtonText != null)
+            {
+                GenerateProfileButtonText.Foreground = profileSelected
+                    ? Brushes.White : (Brush)FindResource("TextDark");
+                GenerateProfileButtonText.FontWeight = FontWeights.Bold;
+                Logger.Log($"GenerateButton text updated: Foreground={GenerateProfileButtonText.Foreground}, Weight={GenerateProfileButtonText.FontWeight}");
+            }
+
+            // Joint logic
+            bool jointSelected = JointGroupContainer.Children.OfType<RadioButton>().Any(rb => rb.IsChecked == true);
+            GenerateJoint.IsEnabled = jointSelected;
+            Logger.Log($"[Joint] selected? {jointSelected}");
+
+            if (GenerateJointButtonIcon != null)
+            {
+                var uriString = jointSelected
+                    ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
+                    : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
+                GenerateJointButtonIcon.Source =
+                    new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
+                Logger.Log($"GenerateJoint: setting image src to {uriString}");
+            }
+
+            if (GenerateJointButtonText != null)
+            {
+                GenerateJointButtonText.Foreground = jointSelected
+                    ? Brushes.White : (Brush)FindResource("TextDark");
+                GenerateJointButtonText.FontWeight = FontWeights.Bold;
+                Logger.Log($"GenerateJoint text updated: Foreground={GenerateJointButtonText.Foreground}, Weight={GenerateJointButtonText.FontWeight}");
+            }
+        }
+
+
+        private static Image FindFirstImageChild(DependencyObject parent)
+        {
+            if (parent == null)
+                return null;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is Image img)
+                    return img;
+
+                var found = FindFirstImageChild(child);
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
         private void ProfileButton_Checked(object sender, RoutedEventArgs e)
         {
-            if (!(sender is RadioButton rb))
+            if (!(sender is RadioButton selectedRb))
                 return;
 
-            // clear any previous DXF selections
+            Logger.Log($"ProfileButton_Checked fired for {selectedRb.Name}");
+
+            var btn = GenerateButton;
+            btn.IsEnabled = true;
+
+            var imgb = FindFirstImageChild(btn);
+            if (imgb?.Source is BitmapImage bi)
+            {
+                var uri = bi.UriSource?.OriginalString;
+                if (string.IsNullOrEmpty(uri)) return;
+                string newUri = uri.EndsWith(".png") && !uri.Contains("_Active")
+                      ? uri.Replace(".png", "_Active.png") : uri;
+
+                imgb.Source = new BitmapImage(new Uri(newUri, UriKind.RelativeOrAbsolute));
+            }
+
+            foreach (var rb in ProfileGroupContainer.Children.OfType<RadioButton>())
+            {
+                Image img = FindFirstImageChild(rb);
+                Logger.Log($"  checking rb={rb.Name}, img null? {img == null}");
+                if (img == null) continue;
+
+                var uriStr = img.Source?.ToString();
+                Logger.Log($"    current uri: {uriStr}");
+                if (string.IsNullOrEmpty(uriStr))
+                    continue;
+
+                if (rb == selectedRb)
+                {
+                    Logger.Log("    is selected: applying active");
+                    if (uriStr.EndsWith(".png") && !uriStr.Contains("_Active"))
+                    {
+                        var activeUri = uriStr.Replace(".png", "_Active.png");
+                        Logger.Log($"      setting Source to {activeUri}");
+                        img.Source = new BitmapImage(new Uri(activeUri, UriKind.RelativeOrAbsolute));
+                    }
+                }
+                else
+                {
+                    Logger.Log("    is not selected: ensuring normal");
+                    if (uriStr.Contains("_Active.png"))
+                    {
+                        var normalUri = uriStr.Replace("_Active.png", ".png");
+                        Logger.Log($"      setting Source to {normalUri}");
+                        img.Source = new BitmapImage(new Uri(normalUri, UriKind.RelativeOrAbsolute));
+                    }
+                }
+            }
+
+            // then your existing UI logic:
             selectedDXFPath = "";
             dxfContours = null;
             selectedProfileString = "";
             selectedProfileImage = "";
+            ProfilePreviewImage.Visibility = Visibility.Collapsed;
 
-            // use the RadioButton’s Name to distinguish the “DXF” placeholder
-            bool isPlaceholder = rb.Name == "DXFProfileButton";
-            bool isUserProfile = rb.Tag is DXFProfile;
+            bool isPlaceholder = selectedRb.Name == "DXFProfileButton";
+            bool isUserProfile = selectedRb.Tag is DXFProfile;
             bool isBuiltIn = !isPlaceholder && !isUserProfile;
 
-            // 1) Built-in shapes: show SizeSelect + DynamicFieldsGrid, hide all DXF UI
             if (isBuiltIn)
             {
-                var builtInTag = (string)rb.Tag;
+                var builtInTag = (string)selectedRb.Tag;
                 selectedProfile = builtInTag;
-
                 SizeSelect.Visibility = Visibility.Visible;
                 DynamicFieldsGrid.Visibility = Visibility.Visible;
-
+                ProfilePreviewImage.Visibility = Visibility.Visible;
                 UserProfilesGridScrollView.Visibility = Visibility.Collapsed;
-                LoadDXFButton.Visibility = Visibility.Collapsed;
                 ConvertDXFButton.Visibility = Visibility.Collapsed;
 
-                HollowCheckBox.Visibility =
-                    (builtInTag == "Rectangular" || builtInTag == "Circular")
-                      ? Visibility.Visible
-                      : Visibility.Collapsed;
+                HollowCheckBox.Visibility = (builtInTag == "Rectangular" || builtInTag == "Circular")
+                                            ? Visibility.Visible : Visibility.Collapsed;
 
                 LoadPresetSizes(selectedProfile);
                 UpdateDynamicFields();
+
+                string imgKey = builtInTag switch
+                {
+                    "Rectangular" => "Rect",
+                    "Circular" => "Circular",
+                    "H" => "H",
+                    "L" => "L",
+                    "U" => "U",
+                    "T" => "T",
+                    _ => null
+                };
+                if (imgKey != null)
+                    ShowProfileImage(imgKey);
+                else
+                    ProfilePreviewImage.Visibility = Visibility.Collapsed;
             }
-            // 2) The “DXF” placeholder button: show the folder/grid of available DXF profiles
             else if (isPlaceholder)
             {
                 SizeSelect.Visibility = Visibility.Collapsed;
                 DynamicFieldsGrid.Visibility = Visibility.Collapsed;
-
                 UserProfilesGridScrollView.Visibility = Visibility.Visible;
-                LoadDXFButton.Visibility = Visibility.Visible;
                 ConvertDXFButton.Visibility = Visibility.Visible;
+                ProfilePreviewImage.Visibility = Visibility.Collapsed;
             }
-            //// 3) An actual user-loaded DXFProfile: hide the placeholder UI, show DynamicFieldsGrid
             else if (isUserProfile)
             {
-                var userProf = (DXFProfile)rb.Tag;
+                var userProf = (DXFProfile)selectedRb.Tag;
                 selectedProfile = userProf.Name;
                 selectedProfileString = userProf.ProfileString;
                 selectedProfileImage = userProf.ImgString;
+                ProfilePreviewImage.Visibility = Visibility.Collapsed;
             }
         }
 
+
         private void LoadPresetSizes(string profileType)
         {
-            string resourceName = $"AESCConstruct25.FrameGenerator.Resources.Presets.Profiles_{profileType}.csv";
+            // construct the full path under ProgramData
+            string filePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "AESCConstruct",
+                "Profiles",
+                $"Profiles_{profileType}.csv"
+            );
+
+            // reset
+            csvRowNames.Clear();
             SizeComboBox.Items.Clear();
             csvFieldNames.Clear();
             csvDataRows.Clear();
 
+            if (!File.Exists(filePath))
+            {
+                File.AppendAllText(logPath,
+                    $"AESCConstruct25: ERROR - CSV file not found: {filePath}\n");
+                return;
+            }
+
             try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                using (StreamReader reader = new StreamReader(stream))
+                using (var reader = new StreamReader(filePath))
                 {
-                    string headerLine = reader.ReadLine();
+                    // read header line exactly as before
+                    var headerLine = reader.ReadLine();
                     if (!string.IsNullOrEmpty(headerLine))
                     {
-                        csvFieldNames = headerLine.Split(';')
-                                                 .Skip(1)
-                                                 .Select(f => f.Trim().Replace(" ", ""))
-                                                 .ToList();
-                        File.AppendAllText(logPath, $"AESCConstruct25: Loaded CSV fields: {string.Join(", ", csvFieldNames)}\n");
+                        csvFieldNames = headerLine
+                            .Split(';')
+                            .Skip(1)
+                            .Select(f => f.Trim().Replace(" ", ""))
+                            .ToList();
+
+                        Logger.Log(
+                            $"AESCConstruct25: Loaded CSV fields: {string.Join(", ", csvFieldNames)}\n");
                     }
 
+                    // now read each data row
                     while (!reader.EndOfStream)
                     {
                         var line = reader.ReadLine();
-                        if (!string.IsNullOrEmpty(line))
+                        if (string.IsNullOrEmpty(line))
+                            continue;
+
+                        var values = line
+                            .Split(';')
+                            .Select(v => v.Trim())
+                            .ToArray();
+
+                        // must have exactly (1 name + N fields)
+                        if (values.Length == csvFieldNames.Count + 1)
                         {
-                            string[] values = line.Split(';').Select(v => v.Trim()).ToArray();
-                            if (values.Length == csvFieldNames.Count + 1)
-                            {
-                                csvDataRows.Add(values.Skip(1).ToArray());
-                                SizeComboBox.Items.Add(values[0]);
-                            }
-                            else
-                            {
-                                File.AppendAllText(logPath, $"AESCConstruct25: WARNING - Mismatched CSV row: {line}\n");
-                            }
+                            // **capture the name** for this row
+                            csvRowNames.Add(values[0]);
+
+                            // then the rest of your logic…
+                            csvDataRows.Add(values.Skip(1).ToArray());
+                            SizeComboBox.Items.Add(values[0]);
+                        }
+                        else
+                        {
+                            File.AppendAllText(logPath,
+                                $"AESCConstruct25: WARNING - Mismatched CSV row: {line}\n");
                         }
                     }
-                }
 
-                if (SizeComboBox.Items.Count > 0)
-                    SizeComboBox.SelectedIndex = 0;
+                    if (SizeComboBox.Items.Count > 0)
+                        SizeComboBox.SelectedIndex = 0;
+                }
             }
             catch (Exception ex)
             {
-                File.AppendAllText(logPath, $"AESCConstruct25: ERROR - Failed to load CSV: {resourceName} ({ex.Message})\n");
+                File.AppendAllText(logPath,
+                    $"AESCConstruct25: ERROR - Failed to load CSV: {filePath} ({ex.Message})\n");
             }
         }
+
 
         private void SizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (SizeComboBox.SelectedIndex >= 0 && SizeComboBox.SelectedIndex < csvDataRows.Count)
             {
                 string[] selectedValues = csvDataRows[SizeComboBox.SelectedIndex];
-                File.AppendAllText(logPath, $"AESCConstruct25: Loading Size Values: {string.Join(", ", selectedValues)}\n");
+                Logger.Log($"AESCConstruct25: Loading Size Values: {string.Join(", ", selectedValues)}\n");
 
                 for (int i = 0; i < csvFieldNames.Count; i++)
                 {
@@ -198,85 +385,88 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             if (csvFieldNames.Count == 0)
             {
-                File.AppendAllText(logPath, $"AESCConstruct25: ERROR - No valid fields found for {selectedProfile}!\n");
+                Logger.Log($"AESCConstruct25: ERROR - No valid fields found for {selectedProfile}!\n");
                 return;
             }
 
+            // make two equal‐width columns
             DynamicFieldsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             DynamicFieldsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             int rowIndex = 0;
             for (int i = 0; i < csvFieldNames.Count; i++)
             {
+                // add a new row for every two fields
                 if (i % 2 == 0)
                     DynamicFieldsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
                 int columnIndex = i % 2;
 
+                // create sub‐grid for one label+input pair
+                var cellGrid = new Grid();
+                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(25) });                  // fixed 30px for label
+                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) }); // rest
+
+                // the small “one-letter” label
                 var label = new TextBlock
                 {
-                    Text = $"{csvFieldNames[i]}:",
-                    Margin = new Thickness(5)
+                    Text = $"{csvFieldNames[i]}:", // e.g. "w:"
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center
                 };
-                Grid.SetRow(label, rowIndex);
-                Grid.SetColumn(label, columnIndex);
+                Grid.SetColumn(label, 0);
 
-                var input = new System.Windows.Controls.TextBox
+                // the input fills remaining space
+                var input = new TextBox
                 {
                     Name = $"{csvFieldNames[i]}Input",
-                    Margin = new Thickness(5)
+                    Margin = new Thickness(5, 0, 5, 0),
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
                 };
-                Grid.SetRow(input, rowIndex);
-                Grid.SetColumn(input, columnIndex);
+                Grid.SetColumn(input, 1);
 
+                // assemble
+                cellGrid.Children.Add(label);
+                cellGrid.Children.Add(input);
+
+                // map for later reads
                 inputFieldMap[csvFieldNames[i]] = input;
-                DynamicFieldsGrid.Children.Add(label);
-                DynamicFieldsGrid.Children.Add(input);
+
+                // place sub-grid into the parent
+                Grid.SetRow(cellGrid, rowIndex);
+                Grid.SetColumn(cellGrid, columnIndex);
+                DynamicFieldsGrid.Children.Add(cellGrid);
 
                 if (i % 2 != 0)
                     rowIndex++;
             }
 
+            // trigger default selection logic
             SizeComboBox_SelectionChanged(null, null);
         }
 
-        private void LoadDXFButton_Click(object sender, RoutedEventArgs e)
+        private void EditProfileSizes_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new OpenFileDialog
-            {
-                Filter = "DXF Files (*.dxf)|*.dxf",
-                Title = "Select a DXF File"
-            };
+            bool currentlyVisible = ProfileSizeEditFields.Visibility == Visibility.Visible;
+            ProfileSizeEditFields.Visibility = currentlyVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
 
-            bool? result = dlg.ShowDialog();
-            if (result != true)
+            UpdateDynamicFields();
+        }
+        void ShowProfileImage(string imgKey)
+        {
+            if (string.IsNullOrEmpty(imgKey))
+            {
+                ProfilePreviewImage.Visibility = Visibility.Collapsed;
                 return;
-
-            selectedDXFPath = dlg.FileName;
-            File.AppendAllText(logPath, $"AESCConstruct25: Selected DXF File - {selectedDXFPath}\n");
-
-            if (!DXFImportHelper.ImportDXFContours(selectedDXFPath, out dxfContours))
-            {
-                System.Windows.MessageBox.Show(
-                    "Failed to load DXF contours.",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                selectedDXFPath = "";
             }
-            else
-            {
-                System.Windows.MessageBox.Show(
-                    "DXF file loaded successfully. Click 'Generate' to process.",
-                    "DXF Loaded",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+            var uri = new Uri($"/AESCConstruct25;component/FrameGenerator/UI/Images/Img_Measures_Frame_{imgKey}.png", UriKind.Relative);
+            ProfilePreviewImage.Source = new BitmapImage(uri);
+            ProfilePreviewImage.Visibility = Visibility.Visible;
 
-                DynamicFieldsGrid.Visibility = Visibility.Collapsed;
-                SizeComboBox.Visibility = Visibility.Collapsed;
-                PlacementGrid.Visibility = Visibility.Visible;
-                GenerateButton.Visibility = Visibility.Visible;
-            }
+            var uri2 = new Uri($"/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_{imgKey}_BG.png", UriKind.Relative);
+            PlacementFrame.Source = new BitmapImage(uri2);
         }
 
         private void ConvertDXFButton_Click(object sender, RoutedEventArgs e)
@@ -295,10 +485,20 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             WriteBlock.ExecuteTask("Convert DXF Profile", () =>
             {
+
+                Window currentWindow = Window.ActiveWindow;
+                Document doc = currentWindow.Document;
+                Part mainPart = doc.MainPart;
+                Window winDXF;
+                Document docDXF;
+                Part mainPartDXF;
                 // 2) Open the DXF in SpaceClaim so that Window.ActiveWindow is valid
                 try
                 {
-                    SpaceClaim.Api.V242.Document.Open(dxfPath, null);
+                    Document.Open(dxfPath, null);
+                    winDXF = Window.ActiveWindow;
+                    docDXF = winDXF.Document;
+                    mainPartDXF = docDXF.MainPart;
                 }
                 catch (Exception ex)
                 {
@@ -314,7 +514,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 DXFProfile profile = DXFImportHelper.DXFtoProfile();
 
                 // 4) Close that DXF window
-                SpaceClaim.Api.V242.Window.ActiveWindow?.Close();
+                //SpaceClaim.Api.V242.Window.ActiveWindow?.Close();
 
                 if (profile == null)
                 {
@@ -337,7 +537,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 //
                 string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
                 // CommonApplicationData typically resolves to "C:\ProgramData"
-                string userFolder = Path.Combine(programData, "AESC_Construct", "UserDXFProfiles");
+                string userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
 
                 try
                 {
@@ -357,12 +557,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // 8) Decode Base64 preview and save it as a PNG in that folder
                 //
                 // Sanitize profile.Name for a valid filename
-                string safeName = string.Join("_",
-                    profile.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)
-                                .Select(tok => tok.Trim()));
-                // Append a timestamp so multiple exports don’t collide
+                string safeName = string.Concat(profile.Name
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c)))
+                .Replace(' ', '_');
+
+                // Append timestamp and ensure extension is correct
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string imageFileName = $"{safeName}_{timestamp}.png";
+                Logger.Log($"imagefilename: {imageFileName}");
                 string imageFullPath = Path.Combine(userFolder, imageFileName);
 
                 try
@@ -382,7 +584,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
 
                 //
-                // 9) Append (or create) “profiles.csv” in C:\ProgramData\AESC_Construct\UserDXFProfiles
+                // 9) Append (or create) “profiles.csv” in C:\ProgramData\AESCConstruct\UserDXFProfiles
                 //
                 string csvPath = Path.Combine(userFolder, "profiles.csv");
                 bool writeHeader = !File.Exists(csvPath);
@@ -405,15 +607,15 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                     //System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     //{
-                        // Re-populate all user profiles from the updated CSV
-                        LoadUserProfiles();
+                    // Re-populate all user profiles from the updated CSV
+                    LoadUserProfiles();
 
-                        // Auto-check the newest one (so ProfileButton_Checked fires immediately)
-                        var newestRb = UserProfilesGrid.Children
-                                         .OfType<System.Windows.Controls.RadioButton>()
-                                         .LastOrDefault();
-                        if (newestRb != null)
-                            newestRb.IsChecked = true;
+                    // Auto-check the newest one (so ProfileButton_Checked fires immediately)
+                    var newestRb = UserProfilesGrid.Children
+                                     .OfType<System.Windows.Controls.RadioButton>()
+                                     .LastOrDefault();
+                    if (newestRb != null)
+                        newestRb.IsChecked = true;
                     //});
                 }
                 catch (Exception ex)
@@ -465,19 +667,17 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             try
             {
-                // 1) Find folder & CSV
                 var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                var userFolder = Path.Combine(programData, "AESC_Construct", "UserDXFProfiles");
+                var userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
                 var csvPath = Path.Combine(userFolder, "profiles.csv");
                 if (!File.Exists(csvPath))
                     return;
 
-                // 2) Read lines, skip header
-                var lines = File.ReadAllLines(csvPath).Skip(1);
-                foreach (var line in lines)
+                foreach (var line in File.ReadAllLines(csvPath).Skip(1))
                 {
                     var raw = line.Split(';');
                     if (raw.Length < 3) continue;
+
                     var prof = new DXFProfile
                     {
                         Name = raw[0],
@@ -485,11 +685,27 @@ namespace AESCConstruct25.FrameGenerator.UI
                         ImgString = raw[2]
                     };
 
-                    // 3) Build the standard radio-content StackPanel
+                    var container = new Grid
+                    {
+                        Width = 230,
+                        Height = 70,
+                        Margin = new Thickness(0)
+                    };
+
+                    // Create RadioButton with stackpanel content
                     var contentStack = new StackPanel
                     {
-                        Orientation = Orientation.Vertical,
-                        HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+                        Orientation = Orientation.Horizontal,
+                        VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Left
+                    };
+
+                    // Image
+                    var imageControl = new Image
+                    {
+                        Width = 60,
+                        Height = 60,
+                        Margin = new Thickness(5, 0, 10, 0)
                     };
 
                     if (!string.IsNullOrEmpty(prof.ImgString))
@@ -497,124 +713,151 @@ namespace AESCConstruct25.FrameGenerator.UI
                         var imgPath = Path.Combine(userFolder, prof.ImgString);
                         if (File.Exists(imgPath))
                         {
-                            var bmp = new BitmapImage(new Uri(imgPath));
-                            contentStack.Children.Add(new System.Windows.Controls.Image
+                            try
                             {
-                                Source = bmp,
-                                Width = 50,
-                                Height = 50,
-                                Margin = new Thickness(2)
-                            });
+                                var bitmap = new BitmapImage();
+                                bitmap.BeginInit();
+                                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                                bitmap.UriSource = new Uri(imgPath, UriKind.Absolute);
+                                bitmap.EndInit();
+                                bitmap.Freeze();
+                                imageControl.Source = bitmap;
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log($"Failed to load image: {ex.Message}");
+                            }
                         }
                     }
 
-                    contentStack.Children.Add(new TextBlock
+                    // Text label
+                    var label = new TextBlock
                     {
                         Text = prof.Name,
+                        FontSize = 12,
+                        Width = 130,
+                        TextAlignment = System.Windows.TextAlignment.Center,
+                        VerticalAlignment = System.Windows.VerticalAlignment.Center,
                         HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                        Margin = new Thickness(0, 2, 0, 0)
-                    });
-
-                    // 4) Declare the container Grid first so the delete handler can reference it
-                    var container = new Grid
-                    {
-                        Width = 100,
-                        Height = 100
+                        TextWrapping = TextWrapping.Wrap
                     };
-                    container.ColumnDefinitions.Add(new ColumnDefinition());
-                    container.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                    // 5) Create the RadioButton as before
-                    var userRb = new RadioButton
+                    contentStack.Children.Add(imageControl);
+                    contentStack.Children.Add(label);
+
+                    var radioButton = new RadioButton
                     {
                         GroupName = "ProfileGroup",
                         Tag = prof,
+                        Width = 230,
+                        Height = 70,
+                        Margin = new Thickness(0, 0, 0, 0),
                         Content = contentStack,
-                        Width = 100,
-                        Height = 100,
-                        Margin = new Thickness(5)
+                        VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Left
                     };
-                    userRb.Checked += ProfileButton_Checked;
-                    Grid.SetColumn(userRb, 0);
-                    container.Children.Add(userRb);
+                    radioButton.Checked += ProfileButton_Checked;
 
-                    // 6) Create the delete “X” button
+                    // Delete button (✕)
                     var delBtn = new Button
                     {
-                        Content = "✕",
                         Width = 16,
                         Height = 16,
-                        FontSize = 10,
+                        BorderThickness = new Thickness(0),
                         VerticalAlignment = System.Windows.VerticalAlignment.Top,
                         HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-                        Margin = new Thickness(0, 4, 4, 0),
-                        BorderThickness = new Thickness(0),
+                        Margin = new Thickness(0, 2, 12, 0),
                         ToolTip = "Remove this profile"
                     };
+
+                    // Load the image
+                    var img = new Image
+                    {
+                        Width = 12,
+                        Height = 12,
+                        Source = new BitmapImage(new Uri("/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Delete.png", UriKind.Relative))
+                    };
+
+                    // Set image as content
+                    delBtn.Content = img;
                     delBtn.Click += (s, e) =>
                     {
-                        // remove from CSV
+                        var confirm = MessageBox.Show(
+                            $"Are you sure you want to delete the custom profile \"{prof.Name}\"?",
+                            "Confirm Deletion",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Warning
+                        );
+
+                        if (confirm != MessageBoxResult.Yes)
+                            return;
+
+                        // Remove the CSV row
                         var updated = File.ReadAllLines(csvPath)
                                           .Where(l => !l.StartsWith(prof.Name + ";"))
                                           .ToArray();
                         File.WriteAllLines(csvPath, updated);
 
-                        // remove from UI
-                        UserProfilesGrid.Children.Remove(container);
+                        // Delete associated PNG if it exists
+                        if (!string.IsNullOrEmpty(prof.ImgString))
+                        {
+                            string imgPath = Path.Combine(userFolder, prof.ImgString);
+                            if (File.Exists(imgPath))
+                            {
+                                try
+                                {
+                                    File.Delete(imgPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log($"WARNING: Failed to delete image for profile \"{prof.Name}\": {ex.Message}");
+                                }
+                            }
+                        }
 
-                        // clear if it was selected
+                        LoadUserProfiles();
+
                         if (selectedProfileString == prof.ProfileString)
                             selectedProfileString = "";
                     };
-                    Grid.SetColumn(delBtn, 1);
+
+                    container.Children.Add(radioButton);
                     container.Children.Add(delBtn);
 
-                    // 7) Add the container to your UniformGrid
                     UserProfilesGrid.Children.Add(container);
                 }
             }
             catch (Exception ex)
             {
-                File.AppendAllText(logPath, $"Error in LoadUserProfiles(): {ex}\n");
+                Logger.Log($"Error in LoadUserProfiles(): {ex}\n");
             }
         }
 
-
-
-        /// <summary>
-        /// Called when one of the “user‐profile” buttons is clicked:
-        /// stores its ProfileString + ImgString, hides the numeric sliders,
-        /// and shows the placement & generate buttons.
-        /// </summary>
-        private void UserProfileButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is System.Windows.Controls.Button btn
-                && btn.Tag is DXFProfile prof)
-            {
-                // Clear any DXFContours (we’re using the baked profile string)
-                selectedDXFPath = "";
-                dxfContours = null;
-
-                // Store the chosen profile‐string + image
-                selectedProfileString = prof.ProfileString;
-                selectedProfileImage = prof.ImgString;
-                selectedProfile = prof.Name;
-
-                File.AppendAllText(logPath, $"User profile clicked: {prof.Name}\n");
-
-                // Hide the CSV / numeric fields entirely:
-                DynamicFieldsGrid.Visibility = Visibility.Collapsed;
-                SizeComboBox.Visibility = Visibility.Collapsed;
-                HollowCheckBox.Visibility = Visibility.Collapsed;
-
-                // Show the placement grid + Generate button:
-                PlacementGrid.Visibility = Visibility.Visible;
-                GenerateButton.Visibility = Visibility.Visible;
-            }
-        }
 
         private void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
+            var win = Window.ActiveWindow;
+            if (win == null)
+                return;
+
+            //var existingNames = win.Document.MainPart
+            //              .GetChildren<Component>()
+            //              .Select(c => c.Name)
+            //              .ToHashSet();
+            var existingComps = win.Document.MainPart
+              .GetChildren<Component>()
+              .ToHashSet();
+
+
+
+            double.TryParse(
+                RotationAngleTextBox.Text,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out rotationAngle
+            );
+            Logger.Log($"anglerot{rotationAngle}");
+
             var oldOri = Application.UserOptions.WorldOrientation;
             Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
             try
@@ -635,13 +878,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                 bool isHollow = HollowCheckBox.IsChecked == false;
                 bool updateBOM = UpdateBOM.IsChecked == true;
                 Logger.Log($"updateBOM {updateBOM}");
-                File.AppendAllText(logPath, $"AESCConstruct25: Generate Button Clicked.\n");
+                Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
 
                 //
                 // ─── 1) USER‐SAVED PROFILE (selectedProfileString != "") ───────────────────────────────
                 //
                 // Log exactly the raw string (with no trailing “.”):
-                File.AppendAllText(logPath, $"AESCConstruct25 custom: {selectedProfileString}\n");
+                Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
                 if (!string.IsNullOrEmpty(selectedProfileString))
                 {
                     // ─── 1a) SPLIT INTO INDIVIDUAL CURVE STRINGS ───────────────────────────────────────
@@ -715,11 +958,11 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
 
                     var firstSeg = (CurveSegment)curves[0];
-                    File.AppendAllText(logPath, $"firstseg {firstSeg.StartPoint}, {firstSeg.EndPoint}\n");
+                    Logger.Log($"firstseg {firstSeg.StartPoint}, {firstSeg.EndPoint}\n");
                     var lastSeg = (CurveSegment)curves[curves.Count - 1];
-                    File.AppendAllText(logPath, $"lastSeg {lastSeg.StartPoint}, {lastSeg.EndPoint}\n");
+                    Logger.Log($"lastSeg {lastSeg.StartPoint}, {lastSeg.EndPoint}\n");
                     var diff = (firstSeg.StartPoint - lastSeg.EndPoint).Magnitude;
-                    File.AppendAllText(logPath, $"  Loop closure gap = {diff:0.########} m\n");
+                    Logger.Log($"  Loop closure gap = {diff:0.########} m\n");
 
                     File.AppendAllText(logPath,
                         $"AESCConstruct25: Total curves parsed = {curves.Count}\n");
@@ -772,6 +1015,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     {
                         WriteBlock.ExecuteTask("Generate Profile (user-saved)", () =>
                         {
+
                             ExtrudeProfileCommand.ExecuteExtrusion(
                                 "CSV",      // e.g. “square”
                                 curves,            // List<ITrimmedCurve>
@@ -779,7 +1023,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 offsetX,
                                 offsetY,
                                 "",       // no DXF file path in this branch
-                                updateBOM
+                                updateBOM,
+                                selectedProfileString
                             );
                         });
                     }
@@ -788,7 +1033,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                         File.AppendAllText(logPath,
                             $"AESCConstruct25 ERROR extruding user-saved “{selectedProfile}”: {ex}\n");
                         System.Windows.MessageBox.Show(
-                            "An error occurred while extruding the user-saved profile.\nSee log on desktop for details.",
+                            "An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.",
                             "Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
@@ -831,7 +1076,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 offsetX,
                                 offsetY,
                                 selectedDXFPath,    // pass the original .dxf path
-                                updateBOM
+                                updateBOM,
+                                ""
                             );
                         });
                     }
@@ -840,7 +1086,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                         File.AppendAllText(logPath,
                             $"AESCConstruct25 ERROR extruding DXF contours: {exDxf}\n");
                         System.Windows.MessageBox.Show(
-                            "An error occurred while extruding the DXF contours.\nSee log on desktop for details.",
+                            "An error occurred while extruding the DXF contours.\nSee log in addin folder for details.",
                             "Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
@@ -854,18 +1100,28 @@ namespace AESCConstruct25.FrameGenerator.UI
                 double wBuilt = 0, hBuilt = 0;
                 if (selectedProfile == "Circular")
                 {
-                    wBuilt = inputFieldMap.ContainsKey("D") ? double.Parse(inputFieldMap["D"].Text) / 1000 : 0.0;
+                    wBuilt = inputFieldMap.ContainsKey("D")
+                        ? double.Parse(inputFieldMap["D"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                        : 0.0;
                     hBuilt = wBuilt;
                 }
                 else if (selectedProfile == "L")
                 {
-                    wBuilt = inputFieldMap.ContainsKey("b") ? double.Parse(inputFieldMap["b"].Text) / 1000 : 0.0;
-                    hBuilt = inputFieldMap.ContainsKey("a") ? double.Parse(inputFieldMap["a"].Text) / 1000 : 0.0;
+                    wBuilt = inputFieldMap.ContainsKey("b")
+                        ? double.Parse(inputFieldMap["b"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                        : 0.0;
+                    hBuilt = inputFieldMap.ContainsKey("a")
+                        ? double.Parse(inputFieldMap["a"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                        : 0.0;
                 }
                 else
                 {
-                    wBuilt = inputFieldMap.ContainsKey("w") ? double.Parse(inputFieldMap["w"].Text) / 1000 : 0.0;
-                    hBuilt = inputFieldMap.ContainsKey("h") ? double.Parse(inputFieldMap["h"].Text) / 1000 : 0.0;
+                    wBuilt = inputFieldMap.ContainsKey("w")
+                        ? double.Parse(inputFieldMap["w"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                        : 0.0;
+                    hBuilt = inputFieldMap.ContainsKey("h")
+                        ? double.Parse(inputFieldMap["h"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                        : 0.0;
                 }
 
                 double offsetXB = 0, offsetYB = 0;
@@ -890,9 +1146,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                         kvp => kvp.Key,                // e.g. "w", "h", "t", etc.
                         kvp => kvp.Value.Text.Trim()   // the string value the user typed
                     );
-                
+
+                    dataDict["Name"] = csvRowNames[SizeComboBox.SelectedIndex];
+
                     WriteBlock.ExecuteTask("Generate Profile (built-in)", () =>
                     {
+                        Logger.Log($"profile{dataDict}");
                         ExtrudeProfileCommand.ExecuteExtrusion(
                             selectedProfile,  // e.g. "Rectangular", "H", etc.
                             dataDict,    // numeric‐based sizes
@@ -900,7 +1159,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                             offsetXB,
                             offsetYB,
                             "",
-                            updateBOM
+                            updateBOM,
+                            ""
                         );
                     });
                 }
@@ -909,7 +1169,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     File.AppendAllText(logPath,
                         $"AESCConstruct25 ERROR extruding built‐in “{selectedProfile}”: {exBuiltIn}\n");
                     System.Windows.MessageBox.Show(
-                        "An error occurred while extruding the built‐in profile.\nSee log on desktop for details.",
+                        "An error occurred while extruding the built‐in profile.\nSee log file in addin folder for details.",
                         "Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -917,6 +1177,29 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             finally
             {
+                //var newComps = win.Document.MainPart
+                //        .GetChildren<Component>()
+                //        .Where(c => !existingNames.Contains(c.Name))
+                //        .ToList();
+                var currentComps = win.Document.MainPart
+                      .GetChildren<Component>()
+                      .ToList();
+
+                var newComps = currentComps
+                      .Where(c => !existingComps.Contains(c))
+                      .ToList();
+
+                // 3) if we have an angle and new components, rotate them
+                //if (rotationAngle != 0.0 && newComps.Count > 0)
+                //    RotateComponentCommand.ApplyRotation(win, newComps, rotationAngle);
+                if (rotationAngle != 0.0 && newComps.Count > 0)
+                {
+                    WriteBlock.ExecuteTask("Rotate Profile", () =>
+                    {
+                        RotateComponentCommand.ApplyRotation(win, newComps, rotationAngle);
+                    });
+                }
+
                 // restore whatever the user had selected
                 Application.UserOptions.WorldOrientation = oldOri;
             }
@@ -925,6 +1208,181 @@ namespace AESCConstruct25.FrameGenerator.UI
         private void HollowCheckBox_Checked(object sender, RoutedEventArgs e)
         {
 
+        }
+
+
+        ////////////// joint 
+
+        private void GenerateJoint_Click(object sender, RoutedEventArgs e)
+        {
+            var oldOri = Application.UserOptions.WorldOrientation;
+            Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
+            try
+            {
+                var window = Window.ActiveWindow;
+                if (window == null)
+                    return;
+
+                // parse gap (mm → m)
+                double spacing = 0;
+                if (double.TryParse(Gap.Text, out var mm))
+                    spacing = mm / 1000.0;
+
+                // pick joint type
+                string jointType =
+                    MiterJoint.IsChecked == true ? "Miter" :
+                    StraightJoint.IsChecked == true ? "Straight" :
+                    StraightJoint2.IsChecked == true ? "Straight2" :
+                    TJoint.IsChecked == true ? "T" :
+                    CutOut.IsChecked == true ? "CutOut" :
+                    Trim.IsChecked == true ? "Trim" :
+                    "None"
+                ;
+
+                bool updateBOM = UpdateBOMJoint.IsChecked == true;
+
+                // do it inside a write‐block
+                WriteBlock.ExecuteTask("Execute Joint", () =>
+                {
+                    ExecuteJointCommand.ExecuteJoint(window, spacing, jointType, updateBOM);
+                });
+
+                // close the sidebar
+                //JointSidebar.CloseSidebar();
+            }
+            finally
+            {
+                Application.UserOptions.WorldOrientation = oldOri;
+            }
+        }
+
+        private void RestoreGeometry_Click(object sender, RoutedEventArgs e)
+        {
+            var oldOri = Application.UserOptions.WorldOrientation;
+            Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
+            try
+            {
+                var window = Window.ActiveWindow;
+                if (window == null)
+                    return;
+
+                WriteBlock.ExecuteTask("Restore Geometry", () =>
+                {
+                    ExecuteJointCommand.RestoreGeometry(window);
+                });
+            }
+            finally
+            {
+                Application.UserOptions.WorldOrientation = oldOri;
+            }
+        }
+
+        private void RestoreJoint_Click(object sender, RoutedEventArgs e)
+        {
+            var oldOri = Application.UserOptions.WorldOrientation;
+            Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
+            try
+            {
+                var window = Window.ActiveWindow;
+                if (window == null)
+                    return;
+
+                WriteBlock.ExecuteTask("Restore Joint", () =>
+                {
+                    ExecuteJointCommand.RestoreJoint(window);
+                });
+            }
+            finally
+            {
+                Application.UserOptions.WorldOrientation = oldOri;
+            }
+        }
+
+        private void PlacementRadio_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is RadioButton selectedRb))
+                return;
+
+            foreach (var rb in PlacementGrid.Children.OfType<RadioButton>())
+            {
+                var img = FindDescendant<Image>(rb);
+                Logger.Log($"img null? {img == null}");
+                if (img == null) continue;
+                Logger.Log($"img null? false");
+                Logger.Log($"img null? {img.Source}");
+
+                var uri = img.Source.ToString();
+                Logger.Log($"rb uri {uri}");
+                if (rb == selectedRb)
+                {
+                    Logger.Log("rb == selectedRb = true");
+                    if (uri.EndsWith(".png") && !uri.Contains("_Active.png"))
+                    {
+                        var active = uri.Replace(".png", "_Active.png");
+                        Logger.Log(active);
+                        img.Source = new BitmapImage(new Uri(active));
+                    }
+                }
+                else
+                {
+                    if (uri.Contains("_Active.png"))
+                    {
+                        var normal = uri.Replace("_Active.png", ".png");
+                        Logger.Log(normal);
+                        img.Source = new BitmapImage(new Uri(normal));
+                    }
+                }
+            }
+        }
+
+        // Visual tree helper function to find a descendant of type T
+        private static T FindDescendant<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) return t;
+                var found = FindDescendant<T>(child);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private void ProfileSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var filter = ProfileSearchBox.Text.Trim();
+            if (string.IsNullOrEmpty(filter))
+            {
+                // show all
+                foreach (UIElement child in UserProfilesGrid.Children)
+                    child.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                var lower = filter.ToLowerInvariant();
+                foreach (UIElement child in UserProfilesGrid.Children)
+                {
+                    // Each child is a Container Grid, whose first child is the RadioButton
+                    if (child is Grid container && container.Children.OfType<RadioButton>().FirstOrDefault() is RadioButton rb)
+                    {
+                        // Tag is a DXFProfile for user-loaded profiles
+                        if (rb.Tag is DXFProfile prof)
+                        {
+                            container.Visibility = prof.Name
+                                                     .ToLowerInvariant()
+                                                     .Contains(lower)
+                                ? Visibility.Visible
+                                : Visibility.Collapsed;
+                        }
+                        else
+                        {
+                            // if somehow other kinds of buttons got in here, leave them visible
+                            container.Visibility = Visibility.Visible;
+                        }
+                    }
+                }
+            }
         }
     }
 }

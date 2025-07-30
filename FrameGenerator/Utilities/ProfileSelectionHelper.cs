@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using AESCConstruct25.FrameGenerator.Modules.Profiles;
-using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242;
+﻿using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Utilities
 {

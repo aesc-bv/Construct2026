@@ -1,7 +1,9 @@
-﻿<UserControl x:Class="AESCConstruct25.UI.RibCutOut"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="400" Background="White">
+﻿<UserControl
+            x:Class="AESCConstruct25.UI.RibCutOutControl"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            Width="400"
+            Background="White">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -10,52 +12,98 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="35,10,35,10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Cutout params -->
-            <RowDefinition Height="Auto"/>
-            <!-- Weld-round params -->
-            <RowDefinition Height="Auto"/>
-            <!-- Create button -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 1) Cutout parameters -->
-        <GroupBox Header="Cutout" Grid.Row="0" >
-            <StackPanel Margin="10">
+            <TextBlock Grid.Row="0"
+                       Style="{StaticResource TitleTextStyle}"
+                       Tag="RibCutoutText"
+                       Text="Cutout"
+                       Width="230"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,0" />
+        
+            <StackPanel Margin="10"
+                        Grid.Row="1">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Tolerance" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBox Width="60" Text="{Binding Tolerance}" />
+                    <TextBlock Tag="ToleranceLabel" Text="Tolerance" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox Tag="ToleranceInput" Width="60" Text="{Binding Tolerance}" />
                 </StackPanel>
-                <CheckBox Content="Reverse direction"
-                  IsChecked="{Binding ReverseDirection}"
-                  Margin="0,5,0,0"/>
-                <CheckBox Content="Middle Tolerance"
-                  IsChecked="{Binding MiddleTolerance}"
-                  Margin="0,5,0,0"/>
-                <CheckBox Content="Perpendicular Cut"
-                  IsChecked="{Binding PerpendicularCut}"
+                <CheckBox Tag="ReverseDirectionText" Content="Reverse direction"
+                          IsChecked="{Binding ReverseDirection}"
+                          Margin="0,5,0,0"/>
+                <CheckBox Tag="MiddleToleranceText" Content="Middle Tolerance"
+                          IsChecked="{Binding MiddleTolerance}"
+                          Margin="0,5,0,0"/>
+                <CheckBox x:Name="PerpendicularCut"
+                  Tag="PerpendicularCutText"
+                  Content="Perpendicular Cut"
                   Margin="0,5,0,0"/>
             </StackPanel>
-        </GroupBox>
+
+            <Separator Grid.Row="2"
+                       Margin="0,10,0,0" />
 
         <!-- 2) Weld-round parameters -->
-        <GroupBox Header="Weld Round" Grid.Row="1" Margin="0,10,0,0" >
-            <StackPanel Margin="10">
-                <CheckBox Content="Add Weld Round"
-                  IsChecked="{Binding AddWeldRound}"/>
-                <StackPanel Orientation="Horizontal" Margin="20,5,0,0">
-                    <TextBlock Text="Radius" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBox Width="60" Text="{Binding WeldRoundRadius}"/>
-                </StackPanel>
-                <CheckBox Content="Reverse direction"
-                  IsChecked="{Binding WeldRoundReverse}"
-                  Margin="20,5,0,0"/>
+        <TextBlock Grid.Row="3"
+                   Style="{StaticResource TitleTextStyle}"
+                   Tag="WeldRoundText"
+                   Text="Weld Round"
+                   Width="230"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,0" />
+        
+        <Grid Margin="0,10,0,10" Grid.Row="4">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="70" />
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Tag="AddWeldRoundText"
+                      Content="Add Weld Round"
+                      IsChecked="{Binding AddWeldRound}"
+                      Grid.Row="0"
+                      Grid.Column="0"
+                      Margin="0,0,0,0"
+                      VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal"
+                        Margin="0,0,0,0"
+                        Grid.Row="0"
+                        Grid.Column="1">
+                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
+                       Width="25"
+                       Height="25"
+                       Margin="0,0,5,0"/>
+                <TextBox Tag="RadiusInput"
+                         Width="40"
+                         Text="{Binding WeldRoundRadius}"
+                         Margin="0,0,0,0"/>
             </StackPanel>
-        </GroupBox>
+            <CheckBox Tag="WeldRoundReverseText"
+                      Content="Reverse direction"
+                      IsChecked="{Binding WeldRoundReverse}"
+                      Margin="0,0,0,0"
+                      Grid.Row="1"
+                      Grid.Column="0"/>
+        </Grid>
 
         <!-- 3) Create button -->
-        <Button Grid.Row="2"
+        <Button x:Name="CreateButton"
+            Tag="CreateText"
+            Grid.Row="5"
             Content="Create"
             Style="{StaticResource FooterButtonStyle}"
             Width="100"

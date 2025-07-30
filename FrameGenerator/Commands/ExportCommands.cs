@@ -1,22 +1,22 @@
-﻿using System;
-using System.IO;
-using System.Diagnostics;
-using System.Linq;
-using System.ComponentModel;
-using System.Windows.Forms;
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
-using Component = SpaceClaim.Api.V242.Component;
-using Body = SpaceClaim.Api.V242.Modeler.Body;
-using Table = SpaceClaim.Api.V242.Table;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.Properties;     // for Settings.Default
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
-using WK.Libraries.BetterFolderBrowserNS;
-using AESCConstruct25.FrameGenerator.Utilities;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using WK.Libraries.BetterFolderBrowserNS;
+using Body = SpaceClaim.Api.V242.Modeler.Body;
+using Component = SpaceClaim.Api.V242.Component;
+using Table = SpaceClaim.Api.V242.Table;
 //using Component = SpaceClaim.Api.V242.Component;
 
 namespace AESCConstruct25.FrameGenerator.Commands
@@ -32,8 +32,9 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 return;
             }
 
+            bool matBOM = Settings.Default.MatInBOM;
+
             DrawingSheet sheet = doc.DrawingSheets.FirstOrDefault();
-            // if we're updating, delete any old BOM tables first
             if (update)
             {
                 if (sheet == null)
@@ -58,10 +59,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 }
             }
 
-            // normalize duplicate names & ensure Construct_Tubelength is set
             CompareCommand.CompareSimple();
 
-            // 1) Gather all components with bodies
             var comps = doc.MainPart
                            .GetChildren<SpaceClaim.Api.V242.Component>()
                            .Where(c => c.Template.Bodies.Any())
@@ -72,53 +71,67 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 return;
             }
 
-            // 2) Group into BOM rows by cleaned name, grabbing tube length from the first in each group
+            // 2) Group into BOM rows
             var bomRows = comps
-            .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
-            .Select(g => {
-                var first = g.First();
-                // tube length is as before…
-                string length = "N/A";
-                if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p))
-                    length = p.Value.ToString();
-
-                // now defensively compute cut-angles:
-                string cuts;
-                try
+                .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
+                .Select(g =>
                 {
-                    cuts = GetCutString(first);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
-                    cuts = "N/A";
-                }
+                    var first = g.First();
+                    string length = "N/A";
+                    if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p))
+                        length = p.Value.ToString();
 
-                return new
-                {
-                    Part = g.Key,
-                    Qty = g.Count(),
-                    TubeLength = length,
-                    CutAngles = cuts
-                };
-            })
-            .OrderBy(x => x.Part)
-            .ToList();
+                    string material = "N/A";
+                    if (matBOM && first.Template.Material != null)
+                        material = first.Template.Material.Name;
 
-            // 3) Build tab-delimited string with three columns
+                    string cuts;
+                    try { cuts = GetCutString(first); }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
+                        cuts = "N/A";
+                    }
+
+                    return new
+                    {
+                        Part = g.Key,
+                        Qty = g.Count(),
+                        TubeLength = length,
+                        CutAngles = cuts,
+                        Material = material
+                    };
+                })
+                .OrderBy(x => x.Part)
+                .ToList();
+
+            // 3) Build tab-delimited payload
+            int baseCols = 4;
+            int cols = matBOM ? baseCols + 1 : baseCols;
             var sb = new StringBuilder();
+
+            // Header row
             sb.Append("Part Name").Append('\t')
               .Append("Qty").Append('\t')
               .Append("Tube Length").Append('\t')
-              .Append("Cut Angles").Append("\r\n");
+              .Append("Cut Angles");
+            if (matBOM)
+                sb.Append('\t').Append("Material");
+            sb.Append("\r\n");
+
+            // Data rows
             foreach (var row in bomRows)
             {
-                Logger.Log($"Export row: {row.Part} → cuts={row.CutAngles}");
+                Logger.Log($"Export row: {row.Part} → material={row.Material}");
                 sb.Append(row.Part).Append('\t')
                   .Append(row.Qty).Append('\t')
                   .Append(row.TubeLength).Append('\t')
-                  .Append(row.CutAngles).Append("\r\n");
+                  .Append(row.CutAngles);
+                if (matBOM)
+                    sb.Append('\t').Append(row.Material);
+                sb.Append("\r\n");
             }
+
             var payload = sb.ToString();
 
             // 4) Copy to clipboard
@@ -129,7 +142,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 return;
             }
 
-            // 5) Paste into active drawing sheet
+            // 5) Paste into drawing sheet
             try
             {
                 if (sheet == null)
@@ -143,50 +156,60 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     return;
                 }
 
-                int rows = bomRows.Count + 1, cols = 4;
+                int rows = bomRows.Count + 1;
                 var contents = new string[rows, cols];
+
+                // Header
                 contents[0, 0] = "Part Name";
                 contents[0, 1] = "Qty";
                 contents[0, 2] = "Tube Length";
                 contents[0, 3] = "Cut Angles";
+                if (matBOM)
+                    contents[0, 4] = "Material";
+
+                // Data
                 for (int i = 0; i < bomRows.Count; i++)
                 {
                     contents[i + 1, 0] = bomRows[i].Part;
                     contents[i + 1, 1] = bomRows[i].Qty.ToString();
                     contents[i + 1, 2] = bomRows[i].TubeLength;
                     contents[i + 1, 3] = bomRows[i].CutAngles;
+                    if (matBOM)
+                        contents[i + 1, 4] = bomRows[i].Material;
                 }
 
-
-                // margins (in model units)
                 double margin = 0.02;
                 double rowHeight = 0.008;
-                double width = 0.30;            // total table width
+                double width = 0.30;
                 double columnWidth = width / cols;
                 double fontSize = rowHeight * 0.4;
 
-                // 1) Compute the anchor UV so that the table’s bottom-right corner sits
-                //    margin units in from the sheet’s right edge and margin units up from bottom
-                double anchorX = sheet.Width - margin;
-                double anchorY = margin * 4.5;
+                double anchorX = Settings.Default.TableAnchorX;
+                double anchorY = Settings.Default.TableAnchorY;
                 var anchorUV = new PointUV(anchorX, anchorY);
 
-                // 2) Create the table with BottomRightCorner as the alignment point
+                var corner = (LocationPoint)Enum.Parse(
+                    typeof(LocationPoint),
+                    Settings.Default.TableLocationPoint
+                );
+
                 var table = Table.Create(
                     sheet,
                     anchorUV,
-                    LocationPoint.BottomRightCorner,
+                    corner,  //LocationPoint.BottomRightCorner,
                     rowHeight,
                     columnWidth,
                     fontSize,
                     contents
                 );
 
-                // 3) Tag it for future updates
                 table.SetTextAttribute("IsExportedBOM", "true");
 
-                // 4) Adjust column widths as before
-                double[] columnWidths = { 0.06, 0.01, 0.03, 0.04 };
+                // Adjust column widths dynamically
+                double[] columnWidths = matBOM
+                    ? new[] { 0.06, 0.015, 0.03, 0.04, 0.08 }
+                    : new[] { 0.06, 0.015, 0.03, 0.04 };
+
                 for (int colIndex = 0; colIndex < columnWidths.Length && colIndex < table.Columns.Count; colIndex++)
                     table.Columns[colIndex].Width = columnWidths[colIndex];
 
@@ -203,6 +226,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+
         public static void ExportExcel(Window window)
         {
             var doc = window?.Document;
@@ -211,6 +235,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 MessageBox.Show("No active document.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            bool matExcel = Settings.Default.MatInExcel;
 
             // normalize duplicate names & ensure Construct_Tubelength is set
             CompareCommand.CompareSimple();
@@ -226,17 +252,21 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 return;
             }
 
-            // group by cleaned name and pull tube length
+            // group by cleaned name and pull tube length + material if requested
             var bomRows = comps
               .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
-              .Select(g => {
+              .Select(g =>
+              {
                   var first = g.First();
-                  // tube length is as before…
+
                   string length = "N/A";
                   if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p))
                       length = p.Value.ToString();
 
-                  // now defensively compute cut-angles:
+                  string material = "N/A";
+                  if (matExcel && first.Template.Material != null)
+                      material = first.Template.Material.Name;
+
                   string cuts;
                   try
                   {
@@ -253,7 +283,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                       Part = g.Key,
                       Qty = g.Count(),
                       TubeLength = length,
-                      CutAngles = cuts
+                      CutAngles = cuts,
+                      Material = material
                   };
               })
               .OrderBy(x => x.Part)
@@ -282,13 +313,15 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     sheetPart.Worksheet = new Worksheet(sheetData);
 
                     // header row
-                    var header = new Row();
+                    var header = new Row { RowIndex = 1 };
                     header.Append(
                         MakeTextCell("A", 1, "Part Name"),
                         MakeTextCell("B", 1, "Quantity"),
                         MakeTextCell("C", 1, "Tube Length"),
                         MakeTextCell("D", 1, "Cut Angles")
                     );
+                    if (matExcel)
+                        header.Append(MakeTextCell("E", 1, "Material"));
                     sheetData.Append(header);
 
                     // data rows
@@ -302,6 +335,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                             MakeTextCell("C", rowIndex, bomRows[i].TubeLength),
                             MakeTextCell("D", rowIndex, bomRows[i].CutAngles)
                         );
+                        if (matExcel)
+                            row.Append(MakeTextCell("E", rowIndex, bomRows[i].Material));
                         sheetData.Append(row);
                     }
 
@@ -322,6 +357,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 MessageBox.Show($"Failed to export to Excel:\n{ex.Message}", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         public static void ExportSTEP(Window window)
         {
             var doc = window?.Document;
@@ -331,6 +367,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            bool matSTEP = Settings.Default.MatInSTEP;
 
             // 1) Gather all parts (excluding the main assembly) that have at least one body
             var partsToExport = doc.Parts
@@ -347,19 +385,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
             string folderPath;
             using (var bfb = new BetterFolderBrowser(new Container()))
             {
-                // 1) Seed the initial path
-                bfb.RootFolder = Environment.GetFolderPath(
-                    Environment.SpecialFolder.MyDocuments
-                );
-
-                // 2) Set your title
+                bfb.RootFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 bfb.Title = "Select folder to export STEP files";
-
-                // 3) Show it
                 if (bfb.ShowDialog() != DialogResult.OK)
                     return;
-
-                // 4) Read back the picked folder
                 folderPath = bfb.SelectedFolder;
             }
 
@@ -368,7 +397,16 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 // 3) Loop through each part and export to a uniquely named .stp
                 foreach (var part in partsToExport)
                 {
+                    // base name from display name
                     var name = part.DisplayName;
+
+                    // if checkbox set, append material (underscored, no spaces)
+                    if (matSTEP && part.Material != null)
+                    {
+                        var mat = part.Material.Name.Replace(" ", "_");
+                        name = $"{name}_{mat}";
+                    }
+
                     var baseFileName = $"{name}.stp";
                     var dest = Path.Combine(folderPath, baseFileName);
 
@@ -415,7 +453,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
-
         // Helper: create a text cell
         static Cell MakeTextCell(string col, uint rowIndex, string text)
         {
@@ -438,9 +475,74 @@ namespace AESCConstruct25.FrameGenerator.Commands
             };
         }
 
-        public static (double aStart, double aEnd) GetProfileCutAngles(Component comp)
+        //public static (double aStart, double aEnd) GetProfileCutAngles(Component comp)
+        //{
+        //    // — 1) Extract the local sweep direction from the design curve —
+        //    var dc = comp.Template.Curves
+        //                 .OfType<DesignCurve>()
+        //                 .FirstOrDefault()
+        //             ?? throw new InvalidOperationException("No construction curve");
+        //    var seg = (CurveSegment)dc.Shape;
+        //    Vector sweepLocal = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
+
+        //    // — 2) Pull out only the planar faces of the extruded profile body —
+        //    var body = comp.Template.Bodies
+        //                  .FirstOrDefault(b => b.Name == "ExtrudedProfile")
+        //              ?? throw new InvalidOperationException("No ExtrudedProfile");
+        //    var profileBody = (Body)body.Shape;
+
+        //    const double tol = 1e-6;
+        //    var endCaps = profileBody.Faces
+        //      .Select(f => f.Geometry as Plane)               // cast to Plane
+        //      .Where(pl => pl != null)
+        //      .Select(pl => pl.Frame.DirZ.ToVector())         // face normal in local
+        //      .Where(n => Math.Abs(Vector.Dot(n, sweepLocal)) > tol)
+        //      .ToList();
+
+        //    if (endCaps.Count != 2)
+        //        throw new InvalidOperationException(
+        //          $"Expected 2 end-cap faces but found {endCaps.Count}"
+        //        );
+
+        //    // — 3) Identify start vs end by alignment with ±sweepLocal —
+        //    var n0 = endCaps.OrderByDescending(n => Vector.Dot(n, -sweepLocal)).First();
+        //    var n1 = endCaps.OrderByDescending(n => Vector.Dot(n, sweepLocal)).First();
+
+        //    // — 4) “Up” axis in local (Z)
+        //    Vector localUp = Vector.Create(0, 0, 1);
+
+        //    // — 5) Measure deviation from 90°, **round to 0.1°** —
+        //    double Clamp01(double x) => Math.Max(-1.0, Math.Min(1.0, x));
+        //    double Measure(Vector normal)
+        //    {
+        //        // normal·up = cos(deviation), 1→0°, 0→90°
+        //        var d = Clamp01(Vector.Dot(normal, localUp));
+        //        double angle = Math.Acos(d) * 180.0 / Math.PI;
+        //        return Math.Round(angle, 1);     // <-- 0.1° precision
+        //    }
+
+        //    return (Measure(n0), Measure(n1));
+        //}
+
+        //public static string GetCutString(Component comp)
+        //{
+        //    try
+        //    {
+        //        var (a0, a1) = GetProfileCutAngles(comp);
+        //        return $"{a0:F1}/{a1:F1}";
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
+        //        return "ERR";
+        //    }
+        //}
+        public static (double xStart, double zStart, double xEnd, double zEnd) GetProfileCutAngles(Component comp)
         {
-            // — 1) Extract the local sweep direction from the design curve —
+            const double tol = 1e-6;
+            Logger.Log($"GetProfileCutAngles: component='{comp.Name}'");
+
+            // — 1) Extract sweep direction and end-cap normals —
             var dc = comp.Template.Curves
                          .OfType<DesignCurve>()
                          .FirstOrDefault()
@@ -448,51 +550,65 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var seg = (CurveSegment)dc.Shape;
             Vector sweepLocal = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
 
-            // — 2) Pull out only the planar faces of the extruded profile body —
             var body = comp.Template.Bodies
                           .FirstOrDefault(b => b.Name == "ExtrudedProfile")
                       ?? throw new InvalidOperationException("No ExtrudedProfile");
             var profileBody = (Body)body.Shape;
 
-            const double tol = 1e-6;
             var endCaps = profileBody.Faces
-              .Select(f => f.Geometry as Plane)               // cast to Plane
-              .Where(pl => pl != null)
-              .Select(pl => pl.Frame.DirZ.ToVector())         // face normal in local
-              .Where(n => Math.Abs(Vector.Dot(n, sweepLocal)) > tol)
-              .ToList();
+                .Select(f => f.Geometry as Plane)
+                .Where(pl => pl != null)
+                .Select(pl => pl.Frame.DirZ.ToVector())
+                .Where(n => Math.Abs(Vector.Dot(n, sweepLocal)) > tol)
+                .ToList();
 
             if (endCaps.Count != 2)
-                throw new InvalidOperationException(
-                  $"Expected 2 end-cap faces but found {endCaps.Count}"
-                );
+                throw new InvalidOperationException($"Expected 2 end-cap faces but found {endCaps.Count}");
 
-            // — 3) Identify start vs end by alignment with ±sweepLocal —
             var n0 = endCaps.OrderByDescending(n => Vector.Dot(n, -sweepLocal)).First();
             var n1 = endCaps.OrderByDescending(n => Vector.Dot(n, sweepLocal)).First();
 
-            // — 4) “Up” axis in local (Z)
-            Vector localUp = Vector.Create(0, 0, 1);
+            Logger.Log($"  normals: n0=({n0.X:F3},{n0.Y:F3},{n0.Z:F3}), n1=({n1.X:F3},{n1.Y:F3},{n1.Z:F3})");
 
-            // — 5) Measure deviation from 90°, **round to 0.1°** —
-            double Clamp01(double x) => Math.Max(-1.0, Math.Min(1.0, x));
-            double Measure(Vector normal)
+            // — 2) Compute signed X-cut: 90°–|clocking|, with sign of clocking ▷ in [–90,90]
+            double ComputeXcut(Vector n)
             {
-                // normal·up = cos(deviation), 1→0°, 0→90°
-                var d = Clamp01(Vector.Dot(normal, localUp));
-                double angle = Math.Acos(d) * 180.0 / Math.PI;
-                return Math.Round(angle, 1);     // <-- 0.1° precision
+                double ang = Math.Atan2(n.Y, n.X) * 180.0 / Math.PI;
+                if (ang > 90.0) ang -= 180.0;
+                if (ang < -90.0) ang += 180.0;
+                if (Math.Abs(ang) < tol)
+                    return 0.0;
+                double cut = (Math.Abs(ang) % 90);
+                double signedCut = cut * Math.Sign(ang);
+                return Math.Round(signedCut, 1);
             }
 
-            return (Measure(n0), Measure(n1));
+            // — 3) Compute signed Z-cut: 90°–bevel, preserving sign (bevel>0 if normal tilted up, <0 if down)
+            double ComputeZcut(Vector n)
+            {
+                double raw = Math.Acos(Math.Max(-1.0, Math.Min(1.0, n.Z))) * 180.0 / Math.PI;
+                double cut = Math.Abs(raw) % 90;
+                if (Math.Abs(n.Z - 1.0) < tol || Math.Abs(n.Z + 1.0) < tol)
+                    cut = 0.0;
+                return Math.Round(cut, 1);
+            }
+
+            double x0 = ComputeXcut(n0), z0 = ComputeZcut(n0);
+            Logger.Log($"  start cut X={x0:F1}, Z={z0:F1}");
+            double x1 = ComputeXcut(n1), z1 = ComputeZcut(n1);
+            Logger.Log($"  end   cut X={x1:F1}, Z={z1:F1}");
+
+            return (x0, z0, x1, z1);
         }
 
         public static string GetCutString(Component comp)
         {
             try
             {
-                var (a0, a1) = GetProfileCutAngles(comp);
-                return $"{a0:F1}/{a1:F1}";
+                var (x0, z0, x1, z1) = GetProfileCutAngles(comp);
+                string result = $"X: {x0:F1}/Z: {z0:F1}, X: {x1:F1}/Z: {z1:F1}";
+                Logger.Log($"GetCutString: {result}");
+                return result;
             }
             catch (Exception ex)
             {

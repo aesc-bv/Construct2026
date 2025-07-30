@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace AESCConstruct25.Fastener.Module
 {
@@ -20,18 +17,21 @@ namespace AESCConstruct25.Fastener.Module
         public static Nut FromCsv(string csvLine)
         {
             string[] values = csvLine.Split(';');
-            Nut profile = new Nut();
+            for (int i = 0; i < values.Length; i++)
+                values[i] = values[i].Trim();
 
-            profile.type = !string.IsNullOrEmpty(values[0]) ? Convert.ToString(values[0]) : string.Empty;
-            profile.size = !string.IsNullOrEmpty(values[1]) ? Convert.ToString(values[1]) : string.Empty;
-
-            profile.d = !string.IsNullOrEmpty(values[2]) ? Convert.ToDouble(values[2]) : 0;
-            profile.s = !string.IsNullOrEmpty(values[3]) ? Convert.ToDouble(values[3]) : 0;
-            profile.e = !string.IsNullOrEmpty(values[4]) ? Convert.ToDouble(values[4]) : 0;
-            profile.h = !string.IsNullOrEmpty(values[5]) ? Convert.ToDouble(values[5]) : 0;
-            profile.k = !string.IsNullOrEmpty(values[6]) ? Convert.ToDouble(values[6]) : 0;
+            Nut profile = new Nut
+            {
+                type = values.Length > 0 ? values[0] : string.Empty,
+                size = values.Length > 1 ? values[1] : string.Empty,
+                d = values.Length > 2 && double.TryParse(values[2], NumberStyles.Any, CultureInfo.InvariantCulture, out double dVal) ? dVal : 0,
+                s = values.Length > 3 && double.TryParse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double sVal) ? sVal : 0,
+                e = values.Length > 4 && double.TryParse(values[4], NumberStyles.Any, CultureInfo.InvariantCulture, out double eVal) ? eVal : 0,
+                h = values.Length > 5 && double.TryParse(values[5], NumberStyles.Any, CultureInfo.InvariantCulture, out double hVal) ? hVal : 0
+            };
 
             return profile;
         }
+
     }
 }
