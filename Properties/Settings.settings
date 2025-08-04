@@ -35,8 +35,44 @@
     <Setting Name="Construct_Language" Type="System.String" Scope="User">
       <Value Profile="(Default)">EN</Value>
     </Setting>
-    <Setting Name="CSVFilePaths" Type="System.Collections.Specialized.StringCollection" Scope="User">
-      <Value Profile="(Default)" />
+    <Setting Name="ConnectorProperties" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Connectors\ConnectorProperties.csv</Value>
+    </Setting>
+    <Setting Name="CompProperties" Type="System.String" Scope="User">
+      <Value Profile="(Default)">CustomProperty\CompProperties.csv</Value>
+    </Setting>
+    <Setting Name="Bolt" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Fasteners\Bolt.csv</Value>
+    </Setting>
+    <Setting Name="Nut" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Fasteners\Nut.csv</Value>
+    </Setting>
+    <Setting Name="Washer" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Fasteners\Washer.csv</Value>
+    </Setting>
+    <Setting Name="PlatesProperties" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Plates\PlatesProperties.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_Circular" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_Circular.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_H" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_H.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_L" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_L.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_Rectangular" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_Rectangular.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_T" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_T.csv</Value>
+    </Setting>
+    <Setting Name="Profiles_U" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Profiles\Profiles_U.csv</Value>
+    </Setting>
+    <Setting Name="profiles" Type="System.String" Scope="User">
+      <Value Profile="(Default)">UserDXFProfiles\profiles.csv</Value>
     </Setting>
   </Settings>
 </SettingsFile>

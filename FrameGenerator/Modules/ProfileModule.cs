@@ -54,6 +54,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // 1) Compute world-space start/end and sweep direction
             Point worldStart = selectedCurve.EndPoint;
             Point worldEnd = selectedCurve.StartPoint;
+
             double length = (worldEnd - worldStart).Magnitude;
             Direction sweepZ = (worldEnd - worldStart).Direction;
 
@@ -281,7 +282,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // …if it wasn’t there, create it
             if (framesLayer == null)
             {
-                Color myCustomColor = ColorTranslator.FromHtml("#007AFF");
+                Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
                 framesLayer = Layer.Create(doc, "Frames", myCustomColor);
             }
             string rawName = GetProfileName(profileData) ?? "";

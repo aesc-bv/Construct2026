@@ -23,6 +23,8 @@ using Orientation = System.Windows.Controls.Orientation;
 using Path = System.IO.Path;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
+using AESCConstruct25.Properties;
+using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.FrameGenerator.UI
 {
@@ -275,17 +277,61 @@ namespace AESCConstruct25.FrameGenerator.UI
                 ProfilePreviewImage.Visibility = Visibility.Collapsed;
             }
         }
+        private string GetProfileCsvPathFromSettings(string profileType)
+        {
+            string relPath = null;
 
+            switch (profileType)
+            {
+                case "Circular":
+                    relPath = Settings.Default.Profiles_Circular;
+                    break;
+                case "H":
+                    relPath = Settings.Default.Profiles_H;
+                    break;
+                case "L":
+                    relPath = Settings.Default.Profiles_L;
+                    break;
+                case "Rectangular":
+                    relPath = Settings.Default.Profiles_Rectangular;
+                    break;
+                case "T":
+                    relPath = Settings.Default.Profiles_T;
+                    break;
+                case "U":
+                    relPath = Settings.Default.Profiles_U;
+                    break;
+                default:
+                    return null; // unknown profile
+            }
+
+            if (string.IsNullOrWhiteSpace(relPath))
+                return null;
+
+            return Path.IsPathRooted(relPath)
+                ? relPath
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "AESCConstruct",
+                    relPath
+                );
+        }
 
         private void LoadPresetSizes(string profileType)
         {
             // construct the full path under ProgramData
-            string filePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "AESCConstruct",
-                "Profiles",
-                $"Profiles_{profileType}.csv"
-            );
+            //string filePath = Path.Combine(
+            //    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            //    "AESCConstruct",
+            //    "Profiles",
+            //    $"Profiles_{profileType}.csv"
+            //);
+            string filePath = GetProfileCsvPathFromSettings(profileType);
+            if (filePath == null || !File.Exists(filePath))
+            {
+                Logger.Log($"ERROR: Could not resolve CSV for profile type {profileType}");
+                return;
+            }
 
             // reset
             csvRowNames.Clear();
@@ -586,7 +632,18 @@ namespace AESCConstruct25.FrameGenerator.UI
                 //
                 // 9) Append (or create) “profiles.csv” in C:\ProgramData\AESCConstruct\UserDXFProfiles
                 //
-                string csvPath = Path.Combine(userFolder, "profiles.csv");
+                //string csvPath = Path.Combine(userFolder, "profiles.csv");
+                string csvPath = Settings.Default.profiles;
+
+                // Ensure fallback if only relative path was saved
+                if (!Path.IsPathRooted(csvPath))
+                {
+                    string baseDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        "AESCConstruct"
+                    );
+                    csvPath = Path.Combine(baseDir, csvPath);
+                }
                 bool writeHeader = !File.Exists(csvPath);
 
                 try
@@ -669,7 +726,8 @@ namespace AESCConstruct25.FrameGenerator.UI
             {
                 var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
                 var userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
-                var csvPath = Path.Combine(userFolder, "profiles.csv");
+                //var csvPath = Path.Combine(userFolder, "profiles.csv");
+                var csvPath = Settings.Default.profiles;
                 if (!File.Exists(csvPath))
                     return;
 
@@ -1306,20 +1364,14 @@ namespace AESCConstruct25.FrameGenerator.UI
             foreach (var rb in PlacementGrid.Children.OfType<RadioButton>())
             {
                 var img = FindDescendant<Image>(rb);
-                Logger.Log($"img null? {img == null}");
                 if (img == null) continue;
-                Logger.Log($"img null? false");
-                Logger.Log($"img null? {img.Source}");
 
                 var uri = img.Source.ToString();
-                Logger.Log($"rb uri {uri}");
                 if (rb == selectedRb)
                 {
-                    Logger.Log("rb == selectedRb = true");
                     if (uri.EndsWith(".png") && !uri.Contains("_Active.png"))
                     {
                         var active = uri.Replace(".png", "_Active.png");
-                        Logger.Log(active);
                         img.Source = new BitmapImage(new Uri(active));
                     }
                 }
@@ -1328,7 +1380,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     if (uri.Contains("_Active.png"))
                     {
                         var normal = uri.Replace("_Active.png", ".png");
-                        Logger.Log(normal);
                         img.Source = new BitmapImage(new Uri(normal));
                     }
                 }

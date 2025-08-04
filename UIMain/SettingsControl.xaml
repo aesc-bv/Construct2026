@@ -13,7 +13,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="20" Height="446">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -151,11 +151,17 @@
             </Expander>
 
             <Expander Header="CSV File Paths"
-                      Name="CsvFileExpander">
-                <StackPanel x:Name="CsvPathsPanel"
-                            Margin="8">
-                    <!-- Rows will be added dynamically -->
-                </StackPanel>
+                      Name="CsvFileExpander"
+                      IsExpanded="False">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Height="250">
+                    <!-- Adjust height as needed -->
+                    <StackPanel x:Name="CsvPathsPanel"
+                                Margin="0,8,20,6">
+                        <!-- Rows will be added dynamically -->
+                    </StackPanel>
+                </ScrollViewer>
             </Expander>
 
             <!-- License -->
@@ -164,7 +170,7 @@
                 Header="License"
                 IsExpanded="False">
                 <StackPanel Margin="8">
-                    <Grid HorizontalAlignment="Center"  Width="300">
+                    <Grid HorizontalAlignment="Center" Width="auto">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="85"/>
                             <ColumnDefinition Width="*"/>
@@ -195,7 +201,7 @@
                             <TextBlock Tag="Label_LicenseDetails" Grid.Row="3" Grid.Column="0" Text="License Details:" VerticalAlignment="Center"/>
                             <TextBlock x:Name="LicenseDetailsValue" Grid.Row="3" Grid.Column="1" Tag="Label_LicenseDetailsValue" Text="" VerticalAlignment="Center"/>
                             <TextBlock Tag="Label_SerialNumber" Grid.Row="4" Grid.Column="0" Text="Serial Number:" VerticalAlignment="Center"/>
-                            <TextBox x:Name="SerialNumberTextBox" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center"/>
+                            <TextBox x:Name="SerialNumberTextBox" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Margin="1"/>
                         </Grid>
                     </Grid>
                     <Button Tag="Button_ActivateLicense"

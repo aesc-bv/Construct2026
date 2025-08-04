@@ -157,12 +157,157 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.Collections.Specialized.StringCollection CSVFilePaths {
+        [global::System.Configuration.DefaultSettingValueAttribute("Connectors\\ConnectorProperties.csv")]
+        public string ConnectorProperties {
             get {
-                return ((global::System.Collections.Specialized.StringCollection)(this["CSVFilePaths"]));
+                return ((string)(this["ConnectorProperties"]));
             }
             set {
-                this["CSVFilePaths"] = value;
+                this["ConnectorProperties"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("CustomProperty\\CompProperties.csv")]
+        public string CompProperties {
+            get {
+                return ((string)(this["CompProperties"]));
+            }
+            set {
+                this["CompProperties"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Bolt.csv")]
+        public string Bolt {
+            get {
+                return ((string)(this["Bolt"]));
+            }
+            set {
+                this["Bolt"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Nut.csv")]
+        public string Nut {
+            get {
+                return ((string)(this["Nut"]));
+            }
+            set {
+                this["Nut"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Washer.csv")]
+        public string Washer {
+            get {
+                return ((string)(this["Washer"]));
+            }
+            set {
+                this["Washer"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Plates\\PlatesProperties.csv")]
+        public string PlatesProperties {
+            get {
+                return ((string)(this["PlatesProperties"]));
+            }
+            set {
+                this["PlatesProperties"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_Circular.csv")]
+        public string Profiles_Circular {
+            get {
+                return ((string)(this["Profiles_Circular"]));
+            }
+            set {
+                this["Profiles_Circular"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_H.csv")]
+        public string Profiles_H {
+            get {
+                return ((string)(this["Profiles_H"]));
+            }
+            set {
+                this["Profiles_H"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_L.csv")]
+        public string Profiles_L {
+            get {
+                return ((string)(this["Profiles_L"]));
+            }
+            set {
+                this["Profiles_L"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_Rectangular.csv")]
+        public string Profiles_Rectangular {
+            get {
+                return ((string)(this["Profiles_Rectangular"]));
+            }
+            set {
+                this["Profiles_Rectangular"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_T.csv")]
+        public string Profiles_T {
+            get {
+                return ((string)(this["Profiles_T"]));
+            }
+            set {
+                this["Profiles_T"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_U.csv")]
+        public string Profiles_U {
+            get {
+                return ((string)(this["Profiles_U"]));
+            }
+            set {
+                this["Profiles_U"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("UserDXFProfiles\\profiles.csv")]
+        public string profiles {
+            get {
+                return ((string)(this["profiles"]));
+            }
+            set {
+                this["profiles"] = value;
             }
         }
     }

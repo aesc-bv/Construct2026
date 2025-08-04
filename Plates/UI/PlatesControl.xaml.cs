@@ -9,6 +9,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using AESCConstruct25.FrameGenerator.Utilities;
+using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.UI
 {
@@ -45,7 +46,8 @@ namespace AESCConstruct25.UI
                 var folder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "AESCConstruct", "Plates");
-                var csvPath = Path.Combine(folder, "PlatesProperties.csv");
+                //var csvPath = Path.Combine(folder, "PlatesProperties.csv");
+                var csvPath = Settings.Default.PlatesProperties;
 
                 if (!File.Exists(csvPath))
                     throw new FileNotFoundException("PlatesProperties.csv not found", csvPath);

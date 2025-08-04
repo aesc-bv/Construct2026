@@ -186,7 +186,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                     // 2) Generate a small PNG preview (Base64) by creating a temporary document
                     var docImg = Document.Create();
                     DesignBody db = DesignBody.Create(docImg.MainPart, "ProfileBody", body);
-                    Color myCustomColor = ColorTranslator.FromHtml("#007AFF");
+                    Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
                     db.SetColor(null, myCustomColor);
                     string imgString = getImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
 

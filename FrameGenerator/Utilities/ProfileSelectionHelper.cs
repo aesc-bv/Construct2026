@@ -11,7 +11,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
         /// </summary>
         public static List<ITrimmedCurve> GetSelectedCurves(Window window)
         {
-            List<ITrimmedCurve> selectedCurves = new List<ITrimmedCurve>();
+            List<ITrimmedCurve> selectedCurves = new();
             var selectedObjects = window.ActiveContext.Selection;
 
             foreach (var obj in selectedObjects)
@@ -20,39 +20,34 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 
                 if (obj is not NurbsCurve)
                 {
-                    if (obj is DesignCurve designCurve)
+                    if (obj is DesignCurve genericCurve)
                     {
-                        curve = designCurve.Shape;
-                        //Logger.Log("Selected DesignCurve.");
+                        curve = genericCurve.Shape;
                     }
                     else if (obj is DesignEdge edge)
                     {
                         curve = edge.Shape;
-                        //Logger.Log("Selected DesignEdge.");
                     }
                     else if (obj.Master is DesignEdge componentEdge)
                     {
                         curve = componentEdge.Shape;
-                        //Logger.Log("Selected ComponentEdge via Master.");
                     }
 
-
-                    var testStraight = curve.Geometry as Line;
-                    if (curve != null && testStraight != null)
+                    if (curve != null && curve.Geometry is Line)
                     {
-                        Logger.Log("testStraight");
+                        Logger.Log("→ Valid straight line curve added.");
                         selectedCurves.Add(curve);
                     }
                     else
                     {
-                        Logger.Log("testStraight false");
-                        //Logger.Log("Skipped object - no valid curve shape.");
+                        Logger.Log($"[Selection] obj.GetType() = {obj?.GetType().FullName}");
+                        Logger.Log("→ Skipped: null curve or non-line.");
                     }
                 }
             }
 
-            //Logger.Log($"Total selected curves: {selectedCurves.Count}");
             return selectedCurves;
         }
+
     }
 }

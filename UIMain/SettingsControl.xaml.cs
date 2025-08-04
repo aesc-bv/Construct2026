@@ -2,6 +2,7 @@
 using AESCConstruct25.Properties;
 using SpaceClaim.Api.V242;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -148,15 +149,21 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (SerialNumberTextBox.Text is string sn)
                 Settings.Default.SerialNumber = sn;
 
-            var newPaths = new System.Collections.Specialized.StringCollection();
             foreach (var child in CsvPathsPanel.Children.OfType<TextBox>())
             {
-                var path = child.Text.Trim();
-                if (!string.IsNullOrWhiteSpace(path))
-                    newPaths.Add(path);
-            }
-            Settings.Default.CSVFilePaths = newPaths;
+                if (child.Tag is string settingKey)
+                {
+                    string path = child.Text.Trim();
 
+                    if (!string.IsNullOrWhiteSpace(path))
+                    {
+                        Logger.Log($"Saving setting [{settingKey}] = {path}");
+                        Settings.Default[settingKey] = path;
+                    }
+                }
+            }
+
+            Settings.Default.Save();
             // persist all settings
             try
             {
@@ -204,36 +211,76 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         private void PopulateCsvFilePathFields()
         {
-            Logger.Log("PopulateCsvFilePathFields");
+            Logger.Log("=== PopulateCsvFilePathFields (Using Settings Keys) ===");
+
             CsvPathsPanel.Children.Clear();
 
-            var paths = Settings.Default.CSVFilePaths ?? new System.Collections.Specialized.StringCollection();
+            string baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "AESCConstruct"
+            );
+            Logger.Log($"Base directory: {baseDir}");
 
-            Logger.Log(paths.ToString());
-            // If nothing stored yet, scan the default folder
-
-            var defaultDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "AESCConstruct");
-            Logger.Log(defaultDir);
-            if (Directory.Exists(defaultDir))
+            // Mapping: Label → Setting Name
+            var settingMap = new Dictionary<string, string>
             {
-                foreach (var file in Directory.GetFiles(defaultDir, "*.csv"))
+                { "Connector properties", "ConnectorProperties" },
+                { "Component properties", "CompProperties" },
+                { "Bolts", "Bolt" },
+                { "Nuts", "Nut" },
+                { "Washers", "Washer" },
+                { "Plate properties", "PlatesProperties" },
+                { "Profiles - circular", "Profiles_Circular" },
+                { "Profiles - H", "Profiles_H" },
+                { "Profiles - L", "Profiles_L" },
+                { "Profiles - rectangular", "Profiles_Rectangular" },
+                { "Profiles - T", "Profiles_T" },
+                { "Profiles - U", "Profiles_U" },
+                { "Custom profiles", "profiles" }
+            };
+
+            foreach (var kvp in settingMap)
+            {
+                string label = kvp.Key;
+                string settingKey = kvp.Value;
+
+                string relPath = (string)Settings.Default[settingKey];
+                string fullPath = Path.IsPathRooted(relPath) ? relPath : Path.Combine(baseDir, relPath);
+
+                Logger.Log($"Adding UI for '{label}' from setting '{settingKey}' → {fullPath}");
+
+                CsvPathsPanel.Children.Add(new Label
                 {
-                    paths.Add(file);
-                    Logger.Log(file);
-                }
+                    Content = label,
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 5, 0, 0)
+                });
+
+                CsvPathsPanel.Children.Add(new TextBox
+                {
+                    Text = fullPath,
+                    Margin = new Thickness(0, 2, 0, 0),
+                    Tag = settingKey
+                });
             }
 
-            // Show each path as a textbox
-            for (int i = 0; i < paths.Count; i++)
-            {
-                var tb = new TextBox
-                {
-                    Text = paths[i],
-                    Margin = new Thickness(0, 5, 0, 5),
-                    Tag = i
-                };
-                CsvPathsPanel.Children.Add(tb);
-            }
+            Logger.Log("=== Done populating CSV path fields ===");
+        }
+
+
+        string ResolveCsvPath(string settingKey)
+        {
+            string stored = (string)Settings.Default[settingKey];
+            if (Path.IsPathRooted(stored) && File.Exists(stored))
+                return stored;
+
+            string fallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "AESCConstruct",
+                stored
+            );
+
+            return File.Exists(fallback) ? fallback : "";
         }
     }
 }

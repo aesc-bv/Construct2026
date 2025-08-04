@@ -12,6 +12,7 @@ using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using AESCConstruct25.FrameGenerator.Utilities;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Runtime.Remoting.Messaging;
+using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.Fastener.Module
 {
@@ -27,14 +28,22 @@ namespace AESCConstruct25.Fastener.Module
             var basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                "AESCConstruct", "Fasteners");
+            //string csvPath = Settings.Default.profiles;
+            //_bolts = File.ReadAllLines(Path.Combine(basePath, "Bolt.csv"))
+            //             .Skip(1).Select(Bolt.FromCsv).ToList();
 
-            _bolts = File.ReadAllLines(Path.Combine(basePath, "Bolt.csv"))
+            //_washers = File.ReadAllLines(Path.Combine(basePath, "Washer.csv"))
+            //                .Skip(1).Select(Washer.FromCsv).ToList();
+
+            //_nuts = File.ReadAllLines(Path.Combine(basePath, "Nut.csv"))
+            //             .Skip(1).Select(Nut.FromCsv).ToList();
+            _bolts = File.ReadAllLines(Settings.Default.Bolt)
                          .Skip(1).Select(Bolt.FromCsv).ToList();
 
-            _washers = File.ReadAllLines(Path.Combine(basePath, "Washer.csv"))
+            _washers = File.ReadAllLines(Settings.Default.Washer)
                             .Skip(1).Select(Washer.FromCsv).ToList();
 
-            _nuts = File.ReadAllLines(Path.Combine(basePath, "Nut.csv"))
+            _nuts = File.ReadAllLines(Settings.Default.Nut)
                          .Skip(1).Select(Nut.FromCsv).ToList();
         }
 

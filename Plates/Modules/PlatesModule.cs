@@ -117,11 +117,11 @@ namespace AESCConstruct25.Plates.Modules
         }
 
         private static Body CreatePlateBody(
-    string type,
-    double L1, double L2, int Lnr,
-    double B1, double B2, int Bnr,
-    double T, double Rad, double Diam
-)
+            string type,
+            double L1, double L2, int Lnr,
+            double B1, double B2, int Bnr,
+            double T, double Rad, double Diam
+        )
         {
             Logger.Log($"[CreatePlateBody] Enter: type={type}, L1={L1}, L2={L2}, Lnr={Lnr}, B1={B1}, B2={B2}, Bnr={Bnr}, T={T}, Rad={Rad}, Diam={Diam}");
 
@@ -286,6 +286,7 @@ namespace AESCConstruct25.Plates.Modules
             var dZ = plane.Frame.DirZ;
             var boundary = new List<ITrimmedCurve>();
 
+            Logger.Log("[createRoundedRectangle] 1");
             if (radius <= 0)
             {
                 var p0 = o - 0.5 * length * dX - 0.5 * width * dY;
@@ -316,6 +317,7 @@ namespace AESCConstruct25.Plates.Modules
                 boundary.Add(CurveSegment.Create(p6, p7));
                 boundary.Add(CurveSegment.CreateArc(p7 + radius * dX, p7, p0, dZ));
             }
+            Logger.Log("[createRoundedRectangle] 2");
 
             var body = Body.ExtrudeProfile(new Profile(plane, boundary), thickness);
             Logger.Log("[createRoundedRectangle] extruded plate");

@@ -1,25 +1,60 @@
 ﻿using SpaceClaim.Api.V242;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
+using AESCConstruct25.Properties;
+using System.IO;
 
 namespace AESCConstruct25.UI
 {
     public partial class CustomComponentControl : UserControl
     {
+        //public CustomComponentControl()
+        //{
+        //    InitializeComponent();
+        //    DataContext = this;
+
+        //    // Example template list; replace with your actual CSV names
+        //    TemplateOptions = new ObservableCollection<string>
+        //    {
+        //        "CompProperties.csv",
+        //        "OtherTemplate.csv"
+        //    };
+        //    SelectedTemplate = TemplateOptions.FirstOrDefault();
+        //}
+        private string ResolveCsvPath(string relOrAbs)
+        {
+            if (string.IsNullOrWhiteSpace(relOrAbs))
+                return null;
+
+            return Path.IsPathRooted(relOrAbs)
+                ? relOrAbs
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "AESCConstruct",
+                    relOrAbs
+                );
+        }
         public CustomComponentControl()
         {
             InitializeComponent();
             DataContext = this;
 
-            // Example template list; replace with your actual CSV names
-            TemplateOptions = new ObservableCollection<string>
+            TemplateOptions = new ObservableCollection<string>();
+
+            // Load available templates from Settings.Default.CompProperties
+            string compPropsPath = ResolveCsvPath(Settings.Default.CompProperties);
+            if (!string.IsNullOrEmpty(compPropsPath) && File.Exists(compPropsPath))
             {
-                "CompProperties.csv",
-                "OtherTemplate.csv"
-            };
+                TemplateOptions.Add(Path.GetFileName(compPropsPath));  // e.g. "CompProperties.csv"
+            }
+
+            // Add other templates here if needed
+            // Example: TemplateOptions.Add("OtherTemplate.csv");
+
             SelectedTemplate = TemplateOptions.FirstOrDefault();
         }
 
