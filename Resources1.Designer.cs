@@ -63,26 +63,6 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] AESC_Logo {
-            get {
-                object obj = ResourceManager.GetObject("AESC_Logo", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] AESCToolsOptions {
-            get {
-                object obj = ResourceManager.GetObject("AESCToolsOptions", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] BOMLogo {
             get {
                 object obj = ResourceManager.GetObject("BOMLogo", resourceCulture);
@@ -173,9 +153,9 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] Icon_Upload {
+        internal static byte[] Icon_Update {
             get {
-                object obj = ResourceManager.GetObject("Icon_Upload", resourceCulture);
+                object obj = ResourceManager.GetObject("Icon_Update", resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -216,16 +196,6 @@ namespace AESCConstruct25 {
         internal static byte[] STEPLogo {
             get {
                 object obj = ResourceManager.GetObject("STEPLogo", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] update {
-            get {
-                object obj = ResourceManager.GetObject("update", resourceCulture);
                 return ((byte[])(obj));
             }
         }

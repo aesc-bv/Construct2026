@@ -117,6 +117,11 @@
     <Compile Include="FrameGenerator\Modules\Profiles\ProfileBase.cs" />
     <Compile Include="FrameGenerator\Utilities\LeaseSponsor.cs" />
     <Compile Include="FrameGenerator\Utilities\RibCutOutSelectionHelper.cs" />
+    <Compile Include="Resources1.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="RibCutout\Commands\KruisRibCmd.cs" />
     <Compile Include="RibCutout\Modules\RibCutOutModule.cs" />
     <Compile Include="UIMain\Language.cs" />
@@ -133,11 +138,6 @@
     </Compile>
     <Compile Include="FrameGenerator\UI\ProfileSelectionControl.xaml.cs">
       <DependentUpon>ProfileSelectionControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="UIMain\SettingsControl.xaml.cs">
       <DependentUpon>SettingsControl.xaml</DependentUpon>
@@ -157,8 +157,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources1.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="UIMain\Ribbon.xml" />
   </ItemGroup>
@@ -272,4 +272,65 @@
   <ItemGroup>
     <Resource Include="FrameGenerator\UI\Images\Icon_Delete.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="UIMain\Images\Ribbon\Menu_BOM.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Compare.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Custom_Properties.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Cutout.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Engraving.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Export_STEP.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Fastener.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_FG.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Plate.png" />
+    <Resource Include="UIMain\Images\Ribbon\Menu_Settings.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AESCConstruct25.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <Content Include="Resources\5085214-200.png" />
+    <Content Include="Resources\5441154-200.png" />
+    <Content Include="Resources\AESCToolsOptions.png" />
+    <Content Include="Resources\AESC_Logo.png" />
+    <Content Include="Resources\cog-outline-custom.png" />
+    <Content Include="Resources\compare-horizontal-custom.png" />
+    <Content Include="Resources\export-custom.png" />
+    <Content Include="Resources\Fasteners.png" />
+    <Content Include="Resources\FrameGen.png" />
+    <Content Include="Resources\FrameGenPosition.png" />
+    <Content Include="Resources\FrameGenProfileH.png" />
+    <Content Include="Resources\FrameGenProfileL.png" />
+    <Content Include="Resources\FrameGenProfileRound.png" />
+    <Content Include="Resources\FrameGenProfileSquare.png" />
+    <Content Include="Resources\FrameGenProfileT.png" />
+    <Content Include="Resources\FrameGenProfileU.png" />
+    <Content Include="Resources\FrameGen_Miter_Corner.png" />
+    <Content Include="Resources\FrameGen_Miter_Horizontal.png" />
+    <Content Include="Resources\FrameGen_Miter_None.png" />
+    <Content Include="Resources\FrameGen_Miter_Restore.png" />
+    <Content Include="Resources\FrameGen_Miter_RestoreCorner.png" />
+    <Content Include="Resources\FrameGen_Miter_T.png" />
+    <Content Include="Resources\FrameGen_Miter_Trim.png" />
+    <Content Include="Resources\FrameGen_Miter_TrimPlane.png" />
+    <Content Include="Resources\google-spreadsheet-custom.png" />
+    <Content Include="Resources\Icon_Upload.png" />
+    <Content Include="Resources\InsertPlate.png" />
+    <Content Include="Resources\list-box-outline-custom.png" />
+    <Content Include="Resources\Menu_BOM.png" />
+    <Content Include="Resources\Menu_Compare.png" />
+    <Content Include="Resources\Menu_Custom_Properties.png" />
+    <Content Include="Resources\Menu_Cutout.png" />
+    <Content Include="Resources\Menu_Engraving.png" />
+    <Content Include="Resources\Menu_Export_STEP.png" />
+    <Content Include="Resources\Menu_Fastener.png" />
+    <Content Include="Resources\Menu_FG.png" />
+    <Content Include="Resources\Menu_Plate.png" />
+    <Content Include="Resources\Menu_Settings.png" />
+    <Content Include="Resources\Microsoft_Excel-Logo.wine.png" />
+    <Content Include="Resources\open.png" />
+    <Content Include="Resources\update-custom.png" />
+    <Resource Include="UIMain\Images\Ribbon\Icon_Update.png" />
+    <Resource Include="UIMain\Images\Ribbon\Icon_Excel.png" />
+  </ItemGroup>
+  <ItemGroup />
 </Project>

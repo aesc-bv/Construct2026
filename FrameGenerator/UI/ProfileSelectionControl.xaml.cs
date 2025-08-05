@@ -1,8 +1,6 @@
 ﻿using AESCConstruct25.Commands;
 using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.Wordprocessing;
 using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
 using SpaceClaim.Api.V242.Geometry;               // for ITrimmedCurve, Point, etc.
 using System;
@@ -21,10 +19,9 @@ using Image = System.Windows.Controls.Image;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using Orientation = System.Windows.Controls.Orientation;
 using Path = System.IO.Path;
+using Settings = AESCConstruct25.Properties.Settings;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
-using AESCConstruct25.Properties;
-using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.FrameGenerator.UI
 {

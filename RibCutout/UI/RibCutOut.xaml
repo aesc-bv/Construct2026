@@ -83,7 +83,7 @@
                         Margin="0,0,0,0"
                         Grid.Row="0"
                         Grid.Column="1">
-                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
+                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
                        Width="25"
                        Height="25"
                        Margin="0,0,5,0"/>

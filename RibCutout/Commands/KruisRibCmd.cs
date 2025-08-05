@@ -1,12 +1,11 @@
-﻿using System;
+﻿using AESCConstruct25.UI;                         // for RibCutOutControl
+using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Extensibility;          // for CommandCapsule, ExecutionContext
 using System.Drawing;                             // for Rectangle
 using System.Windows.Forms;                       // for DockStyle
 using System.Windows.Forms.Integration;           // for ElementHost
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Extensibility;          // for CommandCapsule, ExecutionContext
 using Application = SpaceClaim.Api.V242.Application;
 using Panel = SpaceClaim.Api.V242.Panel;
-using AESCConstruct25.UI;                         // for RibCutOutControl
 
 namespace AESCConstruct25.RibCutout.Commands
 {

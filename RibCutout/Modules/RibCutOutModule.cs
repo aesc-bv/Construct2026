@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using AESCConstruct25.FrameGenerator.Utilities;   // for Logger
+﻿using AESCConstruct25.FrameGenerator.Utilities;   // for Logger
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;               // Matrix, Vector, Point, Plane, Profile, CurveSegment, Frame
 using SpaceClaim.Api.V242.Modeler;                // Body, DesignBody
+using System;
+using System.Collections.Generic;
 
 namespace AESCConstruct25.RibCutout.Modules
 {

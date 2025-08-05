@@ -4,10 +4,6 @@ using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using AESCConstruct25.FrameGenerator.Utilities;
-using DocumentFormat.OpenXml.Presentation;
-using SpaceClaim.Api.V242.Unsupported.RuledCutting;
-using DocumentFormat.OpenXml.Drawing.Charts;
 
 namespace AESCConstruct25.Fastener.Module
 {

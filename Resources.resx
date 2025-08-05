@@ -118,55 +118,46 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="AESCToolsOptions" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\AESCToolsOptions.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="AESC_Logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\AESC_Logo.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="BOMLogo" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_BOM.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_BOM.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="compare" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Compare.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Compare.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Custom_Properties" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Custom_Properties.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Custom_Properties.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Cutout" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Cutout.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Cutout.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Engraving" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Engraving.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Engraving.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="ExcelLogo" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\google-spreadsheet-custom.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Icon_Excel.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="export" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Export_STEP.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Export_STEP.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Fasteners" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Fastener.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="FrameGen" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_FG.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="Icon_Upload" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Icon_Upload.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Fastener.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="InsertPlate" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Plate.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Plate.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="ribCutout" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Cutout.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Cutout.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="settings" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Settings.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Settings.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="STEPLogo" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Menu_Export_STEP.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>UIMain\Images\Ribbon\Menu_Export_STEP.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="update" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\update-custom.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="FrameGen" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>UIMain\Images\Ribbon\Menu_FG.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="Icon_Update" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>UIMain\Images\Ribbon\Icon_Update.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

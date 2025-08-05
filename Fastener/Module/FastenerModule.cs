@@ -1,4 +1,5 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
@@ -9,9 +10,6 @@ using Application = SpaceClaim.Api.V242.Application;
 using Body = SpaceClaim.Api.V242.Modeler.Body;
 using Document = SpaceClaim.Api.V242.Document;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
-using AESCConstruct25.FrameGenerator.Utilities;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
-using System.Runtime.Remoting.Messaging;
 using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.Fastener.Module

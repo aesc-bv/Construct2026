@@ -1,10 +1,7 @@
-﻿using AESCConstruct25.Commands;
-using AESCConstruct25.FrameGenerator.Modules.Profiles;
-using AESCConstruct25.FrameGenerator.UI;
+﻿using AESCConstruct25.FrameGenerator.Modules.Profiles;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
-using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -170,7 +167,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             var framesLayer = doc.GetLayer("Frames");
             var db = DesignBody.Create(comp.Template, "ExtrudedProfile", outerBody);
             db.Layer = framesLayer;
-            
+
             // 11) Log bounding-box center in local and world to verify
             //Point localCenter = BodyCenterLocal(outerBody);
             //Logger.Log($"Created ExtrudedProfile body: center local = {PointToString(localCenter)}, world = {PointToString(comp.Placement * localCenter)}");

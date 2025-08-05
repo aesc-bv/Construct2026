@@ -1,12 +1,11 @@
 ﻿using AESCConstruct25.Fastener.Module;
+using AESCConstruct25.FrameGenerator.Utilities;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using AESCConstruct25.FrameGenerator.Utilities;
 using System.Windows.Forms;
 using UserControl = System.Windows.Controls.UserControl;
 

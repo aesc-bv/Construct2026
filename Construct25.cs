@@ -51,12 +51,12 @@ namespace AESCConstruct25
                     Logger.Log($"Expired = {valid}");
 
                     // Extrude Profile
-                    var createProfileCmd = Command.Create("AESCConstruct25.Profile_Executing");
-                    createProfileCmd.Text = "Extrude Profile";
-                    createProfileCmd.Hint = "Extrudes a selected profile along a selected line.";
-                    createProfileCmd.Executing += Profile_Executing;
-                    createProfileCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
-                    createProfileCmd.KeepAlive(true);
+                    //var createProfileCmd = Command.Create("AESCConstruct25.Profile_Executing");
+                    //createProfileCmd.Text = "Extrude Profile";
+                    //createProfileCmd.Hint = "Extrudes a selected profile along a selected line.";
+                    //createProfileCmd.Executing += Profile_Executing;
+                    //createProfileCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+                    //createProfileCmd.KeepAlive(true);
                     //Logger.Log("AESCConstruct25: 1");
 
                     // Export to Excel
@@ -83,7 +83,7 @@ namespace AESCConstruct25
                     var updateBOM = Command.Create("AESCConstruct25.UpdateBOM");
                     updateBOM.Text = "Update BOM";
                     updateBOM.Hint = "Update an existing bill-of-materials.";
-                    updateBOM.Image = loadImg(Resources.update);
+                    updateBOM.Image = loadImg(Resources.Icon_Update);
                     updateBOM.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
                     updateBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
                     updateBOM.KeepAlive(true);
@@ -92,7 +92,7 @@ namespace AESCConstruct25
                     var exportSTEP = Command.Create("AESCConstruct25.ExportSTEP");
                     exportSTEP.Text = "Export STEP";
                     exportSTEP.Hint = "Export frame as a STEP file.";
-                    exportSTEP.Image = loadImg(Resources.export);
+                    exportSTEP.Image = loadImg(Resources.STEPLogo);
                     exportSTEP.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
                     exportSTEP.Executing += (s, e) => ExportCommands.ExportSTEP(Window.ActiveWindow);
                     exportSTEP.KeepAlive(true);

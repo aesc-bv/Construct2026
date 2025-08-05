@@ -63,7 +63,7 @@
                                      Margin="0,0,10,10"
                                      Grid.Row="0"
                                      Grid.Column="0">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_1.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_1.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -76,7 +76,7 @@
                                      Grid.Row="0"
                                      Grid.Column="1"
                                      Margin="0,0,0,10">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_2.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_2.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -89,7 +89,7 @@
                                      Grid.Row="0"
                                      Grid.Column="2"
                                      Margin="10,0,0,10">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_3.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_3.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -102,7 +102,7 @@
                                      Margin="0,0,10,0"
                                      Grid.Row="1"
                                      Grid.Column="0">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_4.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_4.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -114,7 +114,7 @@
                                      Grid.Row="1"
                                      Grid.Column="1"
                                      Margin="0,0,0,0">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_5.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_5.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -127,7 +127,7 @@
                                      Margin="10,0,0,0"
                                      Grid.Row="1"
                                      Grid.Column="2">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_6.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_6.png"
                                    Width="25"
                                    Height="25" />
                         </RadioButton>
@@ -160,7 +160,7 @@
                                 Height="20"
                                 Margin="5,0,10,0"
                                 Click="ConvertDXFButton_Click">
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Upload.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Upload.png"
                                    Width="15"
                                    Height="15" />
                         </Button>
@@ -191,7 +191,7 @@
                                       Height="25"
                                       Grid.Column="0"
                                       Grid.Row="0"
-                                      Style="{StaticResource ComboBoxFlatStyle}"/>
+                                      Style="{StaticResource ComboBoxFlatStyle}" />
                             <Button x:Name="EditButton"
                                     Style="{StaticResource IconFlatButton}"
                                     Grid.Column="1"
@@ -200,7 +200,7 @@
                                     Height="20"
                                     Margin="5,0,35,0"
                                     Click="EditProfileSizes_Click">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Edit.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Edit.png"
                                        Width="15"
                                        Height="15" />
                             </Button>
@@ -211,7 +211,7 @@
                                         Grid.Column="2"
                                         Grid.Row="0"
                                         HorizontalAlignment="Right">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
                                        Width="25"
                                        Height="25"
                                        Margin="0,0,5,0"
@@ -222,7 +222,7 @@
                                          Height="25"
                                          Text="0"
                                          Margin="0"
-                                         HorizontalAlignment="Right"/>
+                                         HorizontalAlignment="Right" />
                             </StackPanel>
 
                             <CheckBox x:Name="HollowCheckBox"
@@ -289,7 +289,7 @@
                               Margin="0,0,0,0"
                               Width="140"
                               Grid.Column="0" />
-                        <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Img_Measures_Frame_Rect.png"
+                        <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Img_Measures_Frame_Rect.png"
                                Width="90"
                                x:Name="ProfilePreviewImage"
                                Stretch="Uniform"
@@ -324,20 +324,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="45"
                                                          CenterX="12.5"
@@ -352,20 +341,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="90"
                                                          CenterX="12.5"
@@ -380,20 +358,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="135"
                                                          CenterX="12.5"
@@ -408,20 +375,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="0"
                                                          CenterX="12.5"
@@ -437,20 +393,9 @@
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}"
                                          IsChecked="True">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Center_Active.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Center_Active.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Center_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                 </Image>
                             </RadioButton>
                             <RadioButton x:Name="Offset_MiddleRight"
@@ -460,20 +405,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="180"
                                                          CenterX="12.5"
@@ -488,20 +422,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="315"
                                                          CenterX="12.5"
@@ -516,20 +439,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="270"
                                                          CenterX="12.5"
@@ -544,20 +456,9 @@
                                          GroupName="OffsetGroup"
                                          Checked="PlacementRadio_Checked"
                                          Style="{StaticResource RoundPlacementRadioStyle}">
-                                <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
+                                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow.png"
                                        Width="25"
                                        Height="25">
-                                    <!--<Image.Style>
-                                        <Style TargetType="Image">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=IsChecked}"
-                                                             Value="True">
-                                                    <Setter Property="Source"
-                                                            Value="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Arrow_Active.png" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>-->
                                     <Image.RenderTransform>
                                         <RotateTransform Angle="225"
                                                          CenterX="12.5"
@@ -603,7 +504,7 @@
                                        Margin="5,0,8,0"
                                        VerticalAlignment="Center"
                                        Grid.Column="0"/>-->
-                            
+
                             <TextBlock Text="Generate Profile"
                                        Tag="GenerateProfileButtonText"
                                        x:Name="GenerateProfileButtonText"
@@ -611,8 +512,8 @@
                                        FontWeight="Bold"
                                        VerticalAlignment="Center"
                                        Grid.Column="0"
-                                       Margin="5,0,0,0"/>
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png"
+                                       Margin="5,0,0,0" />
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png"
                                    x:Name="GenerateProfileButtonIcon"
                                    Width="15"
                                    Height="15"
@@ -672,7 +573,7 @@
                              Grid.Row="0"
                              Grid.Column="0"
                              Margin="0,0,10,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_1.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_1.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -684,7 +585,7 @@
                              Grid.Row="0"
                              Grid.Column="1"
                              Margin="0,0,0,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_2.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_2.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -696,7 +597,7 @@
                              Grid.Row="0"
                              Grid.Column="2"
                              Margin="10,0,0,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_3.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_3.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -708,7 +609,7 @@
                              Grid.Row="1"
                              Grid.Column="0"
                              Margin="0,0,10,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_4.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_4.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -720,7 +621,7 @@
                              Grid.Row="1"
                              Grid.Column="1"
                              Margin="0,0,0,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_5.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_5.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -732,7 +633,7 @@
                              Grid.Row="1"
                              Grid.Column="2"
                              Margin="10,0,0,10">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_6.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_6.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -744,7 +645,7 @@
                              Grid.Row="2"
                              Grid.Column="0"
                              Margin="0,0,10,0">
-                    <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_7.png"
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_7.png"
                            Width="25"
                            Height="25" />
                 </RadioButton>
@@ -772,7 +673,7 @@
                             Height="30"
                             Click="RestoreGeometry_Click"
                             Margin="0">
-                        <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
+                        <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
                                Width="20"
                                Height="20" />
                     </Button>
@@ -805,7 +706,7 @@
                             Height="30"
                             Click="RestoreJoint_Click"
                             Margin="0">
-                        <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
+                        <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
                                Width="20"
                                Height="20" />
                     </Button>
@@ -848,7 +749,7 @@
                                        Margin="5,0,8,0"
                                        VerticalAlignment="Center"
                                        Grid.Column="0" />
-                            <Image Source="/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png"
+                            <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png"
                                    x:Name="GenerateJointButtonIcon"
                                    Width="15"
                                    Height="15"

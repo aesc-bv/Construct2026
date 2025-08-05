@@ -1,4 +1,5 @@
-﻿using AESCConstruct25.Plates.Modules;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.Plates.Modules;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using AESCConstruct25.FrameGenerator.Utilities;
 using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.UI

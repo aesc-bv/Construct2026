@@ -85,3 +85,4 @@ C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCCons.9867665C.Up2Date
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.dll
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb
+C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.xml

@@ -1,10 +1,10 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using AESCConstruct25.FrameGenerator.Utilities;
 
 namespace AESCConstruct25.Plates.Modules
 {
@@ -357,7 +357,8 @@ namespace AESCConstruct25.Plates.Modules
             var dY = pl.Frame.DirY;
             var pn = $"{type}_{name}";
 
-            WriteBlock.ExecuteTask("Create part", () => {
+            WriteBlock.ExecuteTask("Create part", () =>
+            {
                 var plates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates")
                               ?? Part.Create(doc, "Plates")
                                  .Also(pp => Component.Create(main, pp));
@@ -448,7 +449,8 @@ namespace AESCConstruct25.Plates.Modules
                 ["Rad"] = Rad
             };
             const double tol = 1e-6;
-            bool ok = exp.All(kv => {
+            bool ok = exp.All(kv =>
+            {
                 if (!props.TryGetValue(kv.Key, out var pr)) { Logger.Log($"[Compare] missing {kv.Key}"); return false; }
                 if (!double.TryParse(pr.Value.ToString(), out var a)) { Logger.Log($"[Compare] parse fail {kv.Key}"); return false; }
                 if (Math.Abs(a - kv.Value) > tol) { Logger.Log($"[Compare] {kv.Key}:{a}≠{kv.Value}"); return false; }

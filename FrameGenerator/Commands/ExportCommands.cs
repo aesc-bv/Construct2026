@@ -178,7 +178,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         contents[i + 1, 4] = bomRows[i].Material;
                 }
 
-                double margin = 0.02;
                 double rowHeight = 0.008;
                 double width = 0.30;
                 double columnWidth = width / cols;
