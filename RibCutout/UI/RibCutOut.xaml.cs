@@ -45,12 +45,24 @@ namespace AESCConstruct25.UI
             }
 
             bool perpendicular = PerpendicularCut.IsChecked == true;
+            bool applyMiddleTolerance = MiddleTolerance.IsChecked == true;
+
             Logger.Log($"RibCutOut: perpendicularCut={perpendicular}.");
+
+            if (!double.TryParse(
+                    ToleranceInput.Text,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out double toleranceMM))
+            {
+                Logger.Log($"RibCutOut: Invalid tolerance input '{ToleranceInput.Text}'. Defaulting to 0.0.");
+                toleranceMM = 0.0;
+            }
 
             WriteBlock.ExecuteTask("Rib Cut-Out", () =>
             {
                 Logger.Log("RibCutOut: WriteBlock start.");
-                RibCutout.Modules.RibCutOutModule.ProcessPairs(doc, pairs, perpendicular);
+                RibCutout.Modules.RibCutOutModule.ProcessPairs(doc, pairs, perpendicular, toleranceMM, applyMiddleTolerance);
                 Logger.Log("RibCutOut: WriteBlock end.");
             });
         }

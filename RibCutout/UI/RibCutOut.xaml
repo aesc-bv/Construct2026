@@ -35,13 +35,16 @@
                         Grid.Row="1">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Tag="ToleranceLabel" Text="Tolerance" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBox Tag="ToleranceInput" Width="60" Text="{Binding Tolerance}" />
+                <TextBox Tag="ToleranceInput"
+                         x:Name="ToleranceInput" Width="60" Text="{Binding Tolerance}" />
                 </StackPanel>
-                <CheckBox Tag="ReverseDirectionText" Content="Reverse direction"
+                <CheckBox Tag="ReverseDirectionText" Content="Reverse direction" 
                           IsChecked="{Binding ReverseDirection}"
                           Margin="0,5,0,0"/>
-                <CheckBox Tag="MiddleToleranceText" Content="Middle Tolerance"
-                          IsChecked="{Binding MiddleTolerance}"
+            <CheckBox Tag="MiddleToleranceText"
+                      Content="Middle Tolerance"
+                      x:Name="MiddleTolerance"
+                      IsChecked="{Binding MiddleTolerance}"
                           Margin="0,5,0,0"/>
                 <CheckBox x:Name="PerpendicularCut"
                   Tag="PerpendicularCutText"
@@ -92,12 +95,12 @@
                          Text="{Binding WeldRoundRadius}"
                          Margin="0,0,0,0"/>
             </StackPanel>
-            <CheckBox Tag="WeldRoundReverseText"
+            <!--<CheckBox Tag="WeldRoundReverseText"
                       Content="Reverse direction"
                       IsChecked="{Binding WeldRoundReverse}"
                       Margin="0,0,0,0"
                       Grid.Row="1"
-                      Grid.Column="0"/>
+                      Grid.Column="0"/>-->
         </Grid>
 
         <!-- 3) Create button -->

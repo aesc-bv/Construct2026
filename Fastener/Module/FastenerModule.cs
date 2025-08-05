@@ -1,8 +1,10 @@
 ﻿using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -380,7 +382,7 @@ namespace AESCConstruct25.Fastener.Module
                     {
                         if (PD == null)
                             continue;
-                        Part boltPart = GetBoltPart(doc, boltName, boltType, _bolt, parBoltL, out Component componentBolt);
+
                         Matrix matrixMapping = Matrix.CreateMapping(SpaceClaim.Api.V242.Geometry.Frame.Create(PD.Origin, PD.Direction));
                         Matrix matrixBolt = matrixMapping;
 
@@ -444,7 +446,12 @@ namespace AESCConstruct25.Fastener.Module
                             continue;
                         }
 
-                        componentBolt.Transform(matrixBolt);
+                        if (!useCustom)
+                        {
+                            Part boltPart = GetBoltPart(doc, boltName, boltType, _bolt, parBoltL, out Component componentBolt);
+                            componentBolt.Transform(matrixBolt);
+                        }
+
                         double displacementZ = -PD.Depth;
 
                         if (this.includeWasherBottom)
@@ -496,6 +503,8 @@ namespace AESCConstruct25.Fastener.Module
             Part boltPart = doc.Parts
                 .FirstOrDefault(p => p.DisplayName == name);
 
+
+            Logger.Log("getboltpart");
             // Create Fasteners Part if not existing
             Part fastenersPart = GetFastenersPart(doc);
             if (boltPart is null)
@@ -548,7 +557,7 @@ namespace AESCConstruct25.Fastener.Module
             return part;
         }
 
-        private static bool CheckSelectedCircle(Window window, bool singleSelection = false)
+        public static bool CheckSelectedCircle(Window window, bool singleSelection = false)
         {
             var selection = window.ActiveContext.Selection;
 
@@ -588,7 +597,7 @@ namespace AESCConstruct25.Fastener.Module
         }
 
 
-        private static double GetSizeCircle(Window window, out double depthMM)
+        public static double GetSizeCircle(Window window, out double depthMM)
         {
             double radiusMM = 0;
 
@@ -644,23 +653,24 @@ namespace AESCConstruct25.Fastener.Module
         }
 
 
-        public static void CheckSize()
-        {
+        //public static void CheckSize()
+        //{
 
-            Window window = Window.ActiveWindow;
-            Document doc = window.Document;
-            Part rootPart = doc.MainPart;
+        //    Window window = Window.ActiveWindow;
+        //    Document doc = window.Document;
+        //    Part rootPart = doc.MainPart;
 
-            if (!CheckSelectedCircle(window, true))
-                return;
+        //    if (!CheckSelectedCircle(window, true))
+        //        return;
 
-            double radiusMM = GetSizeCircle(window, out double depthMM);
+        //    double radiusMM = GetSizeCircle(window, out double depthMM);
+        //    Logger.Log($"radiusMM - {radiusMM}");
 
-            if (radiusMM == 0)
-                return;
+        //    if (radiusMM == 0)
+        //        return;
 
-            //// Apply filter to the Sizes of all comboboxes
+        //    //// Apply filter to the Sizes of all comboboxes
 
-        }
+        //}
     }
 }

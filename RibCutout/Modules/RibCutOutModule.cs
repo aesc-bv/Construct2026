@@ -1,7 +1,7 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;   // for Logger
+﻿using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;               // Matrix, Vector, Point, Plane, Profile, CurveSegment, Frame
-using SpaceClaim.Api.V242.Modeler;                // Body, DesignBody
+using SpaceClaim.Api.V242.Geometry;
+using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 
@@ -10,13 +10,23 @@ namespace AESCConstruct25.RibCutout.Modules
     internal static class RibCutOutModule
     {
         public static void ProcessPairs(
-            Document doc,
-            List<(Body A, Body B)> pairs,
-            bool perpendicularCut
-        )
+    Document doc,
+    List<(Body A, Body B)> pairs,
+    bool perpendicularCut,
+    double toleranceMM,
+    bool applyMiddleTolerance
+)
         {
             Logger.Log("RibCutOutModule: ProcessPairs() start.");
             var part = doc.MainPart;
+
+            double tol = toleranceMM / 2000.0;
+
+            Point GetCenter(Box box)
+            {
+                var vec = 0.5 * (box.MinCorner.Vector + box.MaxCorner.Vector);
+                return Point.Create(vec.X, vec.Y, vec.Z);
+            }
 
             foreach (var (origA, origB) in pairs)
             {
@@ -24,95 +34,114 @@ namespace AESCConstruct25.RibCutout.Modules
                 {
                     if (!perpendicularCut)
                     {
-                        // === simple subtraction ===
-                        var rawB = origB.Copy();
-                        var dbB = DesignBody.Create(part, $"toolB_{Guid.NewGuid():N}", rawB);
-                        var rawA = origA.Copy();
-                        var dbA = DesignBody.Create(part, $"toolA_{Guid.NewGuid():N}", rawA);
+                        // Simple mutual subtraction
+                        var toolB = DesignBody.Create(part, $"toolB_{Guid.NewGuid():N}", origB.Copy());
+                        var toolA = DesignBody.Create(part, $"toolA_{Guid.NewGuid():N}", origA.Copy());
 
-                        origA.Subtract(new[] { dbB.Shape });
-                        origB.Subtract(new[] { dbA.Shape });
+                        origA.Subtract(new[] { toolB.Shape });
+                        origB.Subtract(new[] { toolA.Shape });
 
-                        dbB.Delete();
-                        dbA.Delete();
+                        toolA.Delete();
+                        toolB.Delete();
+
+                        Logger.Log("Simple A-B and B-A subtraction completed.");
+                        continue;
                     }
-                    else
+
+                    // Perpendicular logic below
+                    var overlapBase = origA.Copy();
+                    overlapBase.Intersect(new[] { origB.Copy() });
+
+                    if (overlapBase.Volume <= 0)
                     {
-                        Logger.Log("Perpendicular mode: generating edge-anchored half-Y bboxes.");
+                        Logger.Log("No overlap; skipping.");
+                        continue;
+                    }
 
-                        // Compute overlap
-                        var overlapTool = origB.Copy();
-                        var overlap = origA.Copy();
-                        overlap.Intersect(new[] { overlapTool });
-                        overlapTool.Dispose();
+                    var centerA = GetCenter(origA.GetBoundingBox(Matrix.Identity, true));
+                    var centerB = GetCenter(origB.GetBoundingBox(Matrix.Identity, true));
+                    var centerOverlap = GetCenter(overlapBase.GetBoundingBox(Matrix.Identity, true));
 
-                        if (overlap.Volume <= 0)
+                    void SubtractHalfFrom(Body target, Point targetCenter, string debugPrefix)
+                    {
+                        var overlap = overlapBase.Copy();
+
+                        var direction = (centerOverlap - targetCenter).Direction;
+                        var plane = Plane.Create(Frame.Create(centerOverlap, direction));
+
+                        overlap.Split(plane, null);
+                        var pieces = overlap.SeparatePieces();
+
+                        if (pieces.Count != 2)
                         {
-                            Logger.Log("No overlap; skipping perpendicular cut.");
-                            continue;
+                            Logger.Log("Split failed or incorrect number of pieces.");
+                            return;
                         }
 
-                        // Compute bounds
-                        var bb = overlap.GetBoundingBox(Matrix.Identity, true);
-                        var min = bb.MinCorner;
-                        var max = bb.MaxCorner;
-                        double xMin = min.X, xMax = max.X;
-                        double yMin = min.Y, yMax = max.Y;
-                        double zMin = min.Z, zMax = max.Z;
-                        double height = zMax - zMin;
-                        double yMid = (yMax - yMin) / 2.0;
-                        double centerZ = (zMin + zMax) / 2.0;
-                        double centerX = (xMin + xMax) / 2.0;
+                        Body furthest = null;
+                        double maxDist = double.MinValue;
 
-                        // Decide which half for A and B (keep same logic as before)
-                        bool useLowerHalf = true; // or derive from geometry if needed
-                        double y0A = useLowerHalf ? yMin : yMin + yMid;
-                        double y1A = useLowerHalf ? yMin + yMid : yMax;
-                        double y0B = !useLowerHalf ? yMin : yMin + yMid;
-                        double y1B = !useLowerHalf ? yMin + yMid : yMax;
-
-                        // Always align cutters to global Y-axis
-                        var globalFrame = Frame.Create(Point.Origin,            // origin
-                                                       Direction.DirZ,       // Z-axis 
-                                                       Direction.DirY);      // Y-axis
-
-                        void BuildAndSubtract(double y0, double y1, Body target)
+                        foreach (var piece in pieces)
                         {
-                            // 1) Create 2D profile in XY
-                            var pts = new[]
+                            var mid = GetCenter(piece.GetBoundingBox(Matrix.Identity, true));
+                            double dist = (mid - targetCenter).Magnitude;
+
+                            if (dist > maxDist)
                             {
-                                Point.Create(xMin, y0, 0),
-                                Point.Create(xMax, y0, 0),
-                                Point.Create(xMax, y1, 0),
-                                Point.Create(xMin, y1, 0)
-                            };
+                                maxDist = dist;
+                                furthest = piece;
+                            }
+                        }
+
+                        if (furthest != null)
+                        {
+                            var bb = furthest.GetBoundingBox(Matrix.Identity, true);
+                            var min = bb.MinCorner;
+                            var max = bb.MaxCorner;
+
+                            double inflateZ = applyMiddleTolerance ? tol : 0.0;
+
+                            Point p0 = Point.Create(min.X - tol, min.Y - tol, min.Z - inflateZ);
+                            Point p1 = Point.Create(max.X + tol, max.Y + tol, max.Z + inflateZ);
+
+                            var basePts = new[]
+                            {
+                        Point.Create(p0.X, p0.Y, 0),
+                        Point.Create(p1.X, p0.Y, 0),
+                        Point.Create(p1.X, p1.Y, 0),
+                        Point.Create(p0.X, p1.Y, 0)
+                    };
                             var prof = new Profile(Plane.PlaneXY, new[]
                             {
-                                CurveSegment.Create(pts[0], pts[1]),
-                                CurveSegment.Create(pts[1], pts[2]),
-                                CurveSegment.Create(pts[2], pts[3]),
-                                CurveSegment.Create(pts[3], pts[0]),
-                            });
+                        CurveSegment.Create(basePts[0], basePts[1]),
+                        CurveSegment.Create(basePts[1], basePts[2]),
+                        CurveSegment.Create(basePts[2], basePts[3]),
+                        CurveSegment.Create(basePts[3], basePts[0]),
+                    });
 
-                            // 2) Extrude up to match overlap height
-                            var cutter = Body.ExtrudeProfile(prof, height);
-                            cutter.Transform(Matrix.CreateTranslation(Vector.Create(0, 0, zMin)));
+                            double height = p1.Z - p0.Z;
+                            var inflatedCutter = Body.ExtrudeProfile(prof, height);
+                            inflatedCutter.Transform(Matrix.CreateTranslation(Vector.Create(0, 0, p0.Z)));
 
-                            // 3) Rotate/translate cutter into the same global orientation
-                            cutter.Transform(Matrix.CreateMapping(globalFrame));
+                            var debugCut = DesignBody.Create(part, $"{debugPrefix}_CutPreview", inflatedCutter.Copy());
+                            debugCut.SetColor(null, System.Drawing.Color.Red);
 
-                            // 4) Create a temporary DesignBody, subtract, and clean up
-                            var db = DesignBody.Create(part, $"bbox_{Guid.NewGuid():N}", cutter);
-                            target.Subtract(new[] { db.Shape });
-                            db.Delete();
+                            var line = CurveSegment.Create(targetCenter, centerOverlap);
+                            var dc = DesignCurve.Create(part, line);
+                            dc.Name = $"{debugPrefix}_CutDirection";
+                            dc.SetColor(null, System.Drawing.Color.Cyan);
 
-                            Logger.Log($"  Subtracted half-Y bbox from body.");
+                            target.Subtract(new[] { debugCut.Shape });
+                            Logger.Log("  → Subtracted inflated cutter from target.");
                         }
-
-                        // Apply to both A and B
-                        BuildAndSubtract(y0A, y1A, origA);
-                        BuildAndSubtract(y0B, y1B, origB);
+                        else
+                        {
+                            Logger.Log("Could not determine furthest half.");
+                        }
                     }
+
+                    SubtractHalfFrom(origA, centerA, "DEBUG_A");
+                    SubtractHalfFrom(origB, centerB, "DEBUG_B");
                 }
                 catch (Exception ex)
                 {

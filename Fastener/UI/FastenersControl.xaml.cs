@@ -1,13 +1,16 @@
 ﻿using AESCConstruct25.Fastener.Module;
 using AESCConstruct25.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Forms;
 using UserControl = System.Windows.Controls.UserControl;
+using Window = SpaceClaim.Api.V242.Window;
 
 namespace AESCConstruct25.UI
 {
@@ -241,10 +244,68 @@ namespace AESCConstruct25.UI
         }
 
 
+        //private void GetSizesButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    // you can call your CheckSize logic here
+        //    FastenerModule.CheckSize();
+        //}
         private void GetSizesButton_Click(object sender, RoutedEventArgs e)
         {
-            // you can call your CheckSize logic here
-            FastenerModule.CheckSize();
+            Window window = Window.ActiveWindow;
+            Document doc = window?.Document;
+            Part rootPart = doc?.MainPart;
+
+            if (window == null || doc == null || rootPart == null)
+                return;
+
+            if (!FastenerModule.CheckSelectedCircle(window, true))
+                return;
+
+            double radiusMM = FastenerModule.GetSizeCircle(window, out double depthMM);
+            Logger.Log($"radiusMM - {radiusMM}");
+
+            if (radiusMM == 0)
+                return;
+
+            void SelectClosestSize(System.Windows.Controls.ComboBox comboBox)
+            {
+                if (comboBox == null || comboBox.Items.Count == 0)
+                    return;
+
+                double maxSize = 0.0;
+                int selectedIndex = -1;
+
+                for (int i = 0; i < comboBox.Items.Count; i++)
+                {
+                    string item = comboBox.Items[i].ToString().Trim();
+
+                    if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
+                        double.TryParse(item.Substring(1), NumberStyles.Any, CultureInfo.InvariantCulture, out double diameter))
+                    {
+                        Logger.Log($"====");
+                        Logger.Log($"diameter / 2.0 = {diameter / 2.0}");
+                        Logger.Log($"radiusMM = {radiusMM}");
+                        Logger.Log($"diameter = {diameter}");
+                        Logger.Log($"maxSize = {maxSize}");
+                        Logger.Log($"(diameter / 2.0) - radiusMM < 1e-6 = {(diameter / 2.0) - radiusMM < 1e-6}");
+                        Logger.Log($"diameter > maxSize = {diameter > maxSize}");
+                        if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)
+                        {
+                            maxSize = diameter;
+                            selectedIndex = i;
+                        }
+                    }
+                }
+
+                if (selectedIndex != -1)
+                    comboBox.SelectedIndex = selectedIndex;
+            }
+
+            // Apply to all relevant ComboBoxes:
+            SelectClosestSize(BoltSizeCombo);
+            SelectClosestSize(NutSizeCombo);
+            SelectClosestSize(WasherTopSizeCombo);
+            SelectClosestSize(WasherBottomSizeCombo);
         }
 
         private void InsertButton_Click(object sender, RoutedEventArgs e)
