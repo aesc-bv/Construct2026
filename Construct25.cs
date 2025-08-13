@@ -1,5 +1,6 @@
 ﻿using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
 using SpaceClaim.Api.V242.Geometry;
@@ -23,45 +24,27 @@ namespace AESCConstruct25
         {
             try
             {
-                Logger.Log("AESCConstruct25: Connect() started");
-
                 Api.Initialize();
 
                 // Attach to first active session
                 var session = Session.GetSessions().FirstOrDefault();
                 if (session == null)
                 {
-                    //Logger.Log("AESCConstruct25: No active session found!");
                     return false;
                 }
 
                 Api.AttachToSession(session);
-                //Logger.Log("AESCConstruct25: API initialized successfully");
-
-                Logger.Log($"AESCConstruct25: License valid? {LicenseSpot.LicenseSpot.State.Valid}");
 
                 LicenseSpot.LicenseSpot.Initialize();
-                //bool licensed = LicenseSpot.LicenseSpot.State.Valid;
-                Logger.Log($"AESCConstruct25: License valid? {LicenseSpot.LicenseSpot.State.Valid}");
 
                 if (!isCommandRegistered)
                 {
                     //Logger.Log("AESCConstruct25: Registering Commands...");
-                    bool valid = DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
-                    Logger.Log($"Expired = {valid}");
-
-                    // Extrude Profile
-                    //var createProfileCmd = Command.Create("AESCConstruct25.Profile_Executing");
-                    //createProfileCmd.Text = "Extrude Profile";
-                    //createProfileCmd.Hint = "Extrudes a selected profile along a selected line.";
-                    //createProfileCmd.Executing += Profile_Executing;
-                    //createProfileCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
-                    //createProfileCmd.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 1");
+                    bool valid = LicenseSpot.LicenseSpot.State.Valid;//DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
 
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
-                    exportExcel.Text = "Export to Excel";
+                    exportExcel.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
                     exportExcel.Hint = "Export frame data to an Excel file.";
                     exportExcel.Image = loadImg(Resources.ExcelLogo);
                     exportExcel.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
@@ -71,7 +54,7 @@ namespace AESCConstruct25
 
                     // Export BOM
                     var exportBOM = Command.Create("AESCConstruct25.ExportBOM");
-                    exportBOM.Text = "Export BOM";
+                    exportBOM.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
                     exportBOM.Hint = "Create a bill-of-materials.";
                     exportBOM.Image = loadImg(Resources.BOMLogo);
                     exportBOM.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
@@ -81,7 +64,7 @@ namespace AESCConstruct25
 
 
                     var updateBOM = Command.Create("AESCConstruct25.UpdateBOM");
-                    updateBOM.Text = "Update BOM";
+                    updateBOM.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
                     updateBOM.Hint = "Update an existing bill-of-materials.";
                     updateBOM.Image = loadImg(Resources.Icon_Update);
                     updateBOM.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
@@ -90,7 +73,7 @@ namespace AESCConstruct25
 
                     // Export STEP
                     var exportSTEP = Command.Create("AESCConstruct25.ExportSTEP");
-                    exportSTEP.Text = "Export STEP";
+                    exportSTEP.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
                     exportSTEP.Hint = "Export frame as a STEP file.";
                     exportSTEP.Image = loadImg(Resources.STEPLogo);
                     exportSTEP.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
@@ -159,18 +142,36 @@ namespace AESCConstruct25
 
                     // Sidebar commands
                     var _ = Localization.Language.Translate("Settings");
-                    UIMain.UIManager.RegisterAll();
+                    UIManager.RegisterAll();
+                    UpdateCommandTexts();
+                    UIManager.UpdateCommandTexts();
+                    //UIManager.ShowPanel("RibCutOut");
 
                     isCommandRegistered = true;
                 }
 
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //Logger.Log($"AESCConstruct25: Error during initialization - {ex.Message}");
                 return false;
             }
+        }
+
+        public static void UpdateCommandTexts()
+        {
+            var cmd = Command.GetCommand("AESCConstruct25.ExportExcel");
+            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
+
+            cmd = Command.GetCommand("AESCConstruct25.ExportBOM");
+            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
+
+            cmd = Command.GetCommand("AESCConstruct25.UpdateBOM");
+            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
+
+            cmd = Command.GetCommand("AESCConstruct25.ExportSTEP");
+            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
         }
 
         private Image loadImg(byte[] bytes)
@@ -195,7 +196,7 @@ namespace AESCConstruct25
             try
             {
                 string resourceName = "AESCConstruct25.UIMain.Ribbon.xml";
-                Logger.Log($"AESCConstruct25: Loading Ribbon UI from {resourceName}");
+                // Logger.Log($"AESCConstruct25: Loading Ribbon UI from {resourceName}");
 
                 using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
                 {
@@ -204,14 +205,14 @@ namespace AESCConstruct25
 
                     using (StreamReader reader = new StreamReader(stream))
                     {
-                        Logger.Log("AESCConstruct25: Ribbon UI Loaded Successfully");
+                        // Logger.Log("AESCConstruct25: Ribbon UI Loaded Successfully");
                         return reader.ReadToEnd();
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log($"AESCConstruct25: Error loading Ribbon UI - {ex.Message}");
+                // Logger.Log($"AESCConstruct25: Error loading Ribbon UI - {ex.Message}");
                 return "";
             }
         }
@@ -364,6 +365,51 @@ namespace AESCConstruct25
                 MessageBox.Show($"Failed to save CSV:\n{ex.Message}", "Save DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        public string GetRibbonLabel(string controlId)
+        {
+            // Map only button IDs (you said groups don’t need translation)
+            switch (controlId)
+            {
+                case "AESCConstruct25.ProfileSidebarBtn":
+                    return Localization.Language.Translate("Ribbon.Button.FrameGenerator");
+
+                case "AESCConstruct25.ExportSTEPBtn":
+                    return Localization.Language.Translate("Ribbon.Button.ExportSTEP");
+                case "AESCConstruct25.ExportBOMBtn":
+                    return Localization.Language.Translate("Ribbon.Button.GenerateBOM");
+                case "AESCConstruct25.UpdateBOM":
+                    return Localization.Language.Translate("Ribbon.Button.UpdateBOM");
+                case "AESCConstruct25.ExportExcelBtn":
+                    return Localization.Language.Translate("Ribbon.Button.ExportExcel");
+
+                case "AESCConstruct25.Plate":
+                    return Localization.Language.Translate("Ribbon.Button.Plate");
+                case "AESCConstruct25.Fastener":
+                    return Localization.Language.Translate("Ribbon.Button.Fastener");
+                case "AESCConstruct25.RibCutOut":
+                    return Localization.Language.Translate("Ribbon.Button.RibCutOut");
+
+                case "AESCConstruct25.SettingsSidebarBtn":
+                    return Localization.Language.Translate("Ribbon.Button.Settings");
+
+                case "AESCConstruct25.DockBtn":
+                    // Reflect current toggle state by reading the command’s Text,
+                    // which UIManager already sets to a translated string.
+                    var dockCmd = Command.GetCommand("AESCConstruct25.DockCmd");
+                    if (dockCmd != null && !string.IsNullOrWhiteSpace(dockCmd.Text))
+                        return dockCmd.Text;
+                    // Fallback if command isn’t created yet:
+                    return Localization.Language.Translate("Ribbon.Button.Float");
+
+                default:
+                    // If you ever add more ids, they will at least show their id
+                    return controlId;
+            }
+        }
+
+        public string GetEngravingLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.Engraving");
+        public string GetCustomPropertiesLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.CustomProperties");
 
         private void LoadDXFProfiles_Execute(object sender, EventArgs e)
         {

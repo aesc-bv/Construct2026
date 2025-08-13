@@ -1,5 +1,5 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -15,15 +15,58 @@ namespace AESCConstruct25.Localization
         private static readonly DataTable _translations = new DataTable();
         private static string[] _columns;
 
+        // ControlId -> CSV translation key
+        private static readonly Dictionary<string, string> _ribbonMap = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // Frame Generator group
+            ["AESCConstruct25.Group"] = "Ribbon.Group.FrameGenerator",
+
+            // Copy Edges (label hidden in XML, but we translate anyway for consistency)
+            ["AESC.Construct.CopyEdges"] = "Ribbon.Button.CopyEdges",
+
+            // Export / BOM
+            ["AESCConstruct25.ExportSTEPBtn"] = "Ribbon.Button.ExportSTEP",
+            ["AESCConstruct25.ExportBOMBtn"] = "Ribbon.Button.GenerateBOM",
+            ["AESCConstruct25.UpdateBOM"] = "Ribbon.Button.UpdateBOM",
+            ["AESCConstruct25.ExportExcelBtn"] = "Ribbon.Button.ExportExcel",
+
+            // Plate
+            ["AESCConstruct25.PlateGroup"] = "Ribbon.Group.Plate",
+            ["AESCConstruct25.Plate"] = "Ribbon.Button.Plate",
+
+            // Fastener
+            ["AESCConstruct25.FastenerGroup"] = "Ribbon.Group.Fastener",
+            ["AESCConstruct25.Fastener"] = "Ribbon.Button.Fastener",
+
+            // Rib Cut-Out
+            ["AESCConstruct25.RibCutOutGroup"] = "Ribbon.Group.RibCutOut",
+            ["AESCConstruct25.RibCutOut"] = "Ribbon.Button.RibCutOut",
+
+            // Engraving
+            ["AESCConstruct25.Engraving"] = "Ribbon.Group.Engraving",
+            ["AESCConstruct25.EngravingBtn"] = "Ribbon.Button.Engraving",
+
+            // Custom Properties
+            ["AESCConstruct25.CustomProperties"] = "Ribbon.Group.CustomProperties",
+            ["AESCConstruct25.CustomPropertiesBtn"] = "Ribbon.Button.CustomProperties",
+
+            // Settings
+            ["AESCConstruct25.SettingsSidebarBtn"] = "Ribbon.Button.Settings",
+
+            // UI
+            ["AESCConstruct25.FloatBtn"] = "Ribbon.Button.Float", // if you add it later
+            ["AESCConstruct25.DockBtn"] = "Ribbon.Button.Dock",
+        };
+
         static Language()
         {
             try
             {
                 LoadCSV();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log("[Language] CSV load failed: " + ex.Message);
+                // Logger.Log("[Language] CSV load failed: " + ex.Message);
             }
         }
 
@@ -32,7 +75,7 @@ namespace AESCConstruct25.Localization
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
             var path = Path.Combine(appData, "AESCConstruct", "Language", "languageConstruct.csv");
 
-            Logger.Log("[Language] Loading CSV from " + path);
+            // Logger.Log("[Language] Loading CSV from " + path);
             if (!File.Exists(path))
                 throw new FileNotFoundException("[Language] Missing CSV at " + path);
 
@@ -87,6 +130,46 @@ namespace AESCConstruct25.Localization
             }
             return id;
         }
+
+        public static string RibbonGetLabel(string controlId)
+        {
+            if (string.IsNullOrEmpty(controlId)) return string.Empty;
+
+            if (_ribbonMap.TryGetValue(controlId, out var key))
+                return Translate(key);
+
+            // Fallbacks:
+            // 1) Allow direct id-based translation (if you put the id in the CSV)
+            var direct = Translate(controlId);
+            if (!string.IsNullOrWhiteSpace(direct) && !string.Equals(direct, controlId, StringComparison.Ordinal))
+                return direct;
+
+            // 2) Last resort: show the id (useful while wiring new controls)
+            return controlId;
+        }
+
+        /// <summary>
+        /// For explicit cases (e.g., legacy GetEngravingLabel/GetCustomPropertiesLabel),
+        /// translate by a known CSV key.
+        /// </summary>
+        public static string RibbonGetLabelByKey(string csvKey)
+            => Translate(csvKey);
+
+        /// <summary>
+        /// Called once from OnRibbonLoad to enable invalidation.
+        /// </summary>
+        //public static void AttachRibbon(IRibbonUI ribbonUI) => _ribbon = ribbonUI;
+
+        /// <summary>
+        /// Re-queries all ribbon labels. Call this after the user changes language.
+        /// </summary>
+        //public static void InvalidateRibbon()
+        //{
+        //    try { _ribbon?.Invalidate(); } catch { /* ignore UI exceptions */ }
+        //}
+
+
+
 
         /// <summary>
         /// Translates only the header/text properties, leaving all control content intact.

@@ -28,7 +28,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             string selectedProfileString = ""
         )
         {
-            Logger.Log($"ExtrudeProfileCommand: {updateBOM}");
+            // Logger.Log($"ExtrudeProfileCommand: {updateBOM}");
 
             var win = Window.ActiveWindow;
             if (win == null)
@@ -75,7 +75,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 // Built-in shape mode (Rectangular, Circular, etc.)
                 profileData = fields.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                Logger.Log($"profileData {profileData}");
+                // Logger.Log($"profileData {profileData}");
             }
             else
             {

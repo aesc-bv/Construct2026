@@ -1,5 +1,5 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Properties;
+﻿using AESCConstruct25.Properties;
+using Microsoft.Win32;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
@@ -38,10 +38,13 @@ namespace AESCConstruct25.FrameGenerator.UI
         {
             // 1) populate language combo with codes
             ComboBox_Language.ItemsSource = new[] { "EN", "NL", "FR", "DE", "IT", "ES" };
-            ComboBox_Language.SelectedItem = Properties.Settings.Default.Construct_Language;
+            ComboBox_Language.SelectedItem = Settings.Default.Construct_Language;
 
             // 2) translate every tagged element in _this_ control
             Localization.Language.LocalizeFrameworkElement(this);
+
+            UIMain.UIManager.UpdateCommandTexts();
+            Construct25.UpdateCommandTexts();
 
             PopulateCsvFilePathFields();
         }
@@ -91,18 +94,21 @@ namespace AESCConstruct25.FrameGenerator.UI
             SerialNumberTextBox.Text = SerialNumber;
 
             LicenseStatusValue.Text = LicenseSpot.LicenseSpot.State.Status;
-            Logger.Log($"exp: {LicenseSpot.LicenseSpot.State.Status}");
+            // Logger.Log($"exp: {LicenseSpot.LicenseSpot.State.Status}");
             var expiration = LicenseSpot.LicenseSpot.License?.GetTimeLimit()?.EndDate;
-            Logger.Log($"exp: {expiration}");
+            // Logger.Log($"exp: {expiration}");
             LicenseDetailsValue.Text = expiration.HasValue
                 ? expiration.Value.ToShortDateString()
                 : string.Empty;
 
-            ComboBox_Language.ItemsSource = new[] { "EN", "NL", "FR", "DE", "IT" };
+            ComboBox_Language.ItemsSource = new[] { "EN", "NL", "FR", "DE", "IT", "ES" };
             ComboBox_Language.SelectedItem = Settings.Default.Construct_Language ?? "EN";
 
             // Localize all named elements
             Localization.Language.LocalizeFrameworkElement(this);
+
+            UIMain.UIManager.UpdateCommandTexts();
+            Construct25.UpdateCommandTexts();
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -125,11 +131,9 @@ namespace AESCConstruct25.FrameGenerator.UI
             // Initialize license state
             LicenseSpot.LicenseSpot.Initialize();
             LicenseStatusValue.Text = LicenseSpot.LicenseSpot.State.Status;
-            Logger.Log($"exp: {LicenseSpot.LicenseSpot.State.Status}");
 
             // Show expiration date if available
             var expiration = LicenseSpot.LicenseSpot.License?.GetTimeLimit()?.EndDate;
-            Logger.Log($"exp: {expiration}");
             LicenseDetailsValue.Text = expiration.HasValue
                 ? expiration.Value.ToShortDateString()
                 : string.Empty;
@@ -149,17 +153,20 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (SerialNumberTextBox.Text is string sn)
                 Settings.Default.SerialNumber = sn;
 
-            foreach (var child in CsvPathsPanel.Children.OfType<TextBox>())
+            foreach (var row in CsvPathsPanel.Children.OfType<StackPanel>())
             {
-                if (child.Tag is string settingKey)
-                {
-                    string path = child.Text.Trim();
+                // find the TextBox inside that row:
+                var txt = row.Children
+                             .OfType<TextBox>()
+                             .FirstOrDefault();
+                if (txt == null || !(txt.Tag is string settingKey))
+                    continue;
 
-                    if (!string.IsNullOrWhiteSpace(path))
-                    {
-                        Logger.Log($"Saving setting [{settingKey}] = {path}");
-                        Settings.Default[settingKey] = path;
-                    }
+                var path = txt.Text.Trim();
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    // Logger.Log($"Saving setting [{settingKey}] = {path}");
+                    Settings.Default[settingKey] = path;
                 }
             }
 
@@ -189,9 +196,9 @@ namespace AESCConstruct25.FrameGenerator.UI
             LicenseSpot.LicenseSpot.Activate(serial);
             // Update UI
             LicenseStatusValue.Text = LicenseSpot.LicenseSpot.State.Status;
-            Logger.Log($"exp: {LicenseSpot.LicenseSpot.State.Status}");
+            // Logger.Log($"exp: {LicenseSpot.LicenseSpot.State.Status}");
             var expiration = LicenseSpot.LicenseSpot.License?.GetTimeLimit()?.EndDate;
-            Logger.Log($"exp: {expiration}");
+            // Logger.Log($"exp: {expiration}");
             LicenseDetailsValue.Text = expiration.HasValue
                 ? expiration.Value.ToShortDateString()
                 : string.Empty;
@@ -206,12 +213,16 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                 // re-translate this panel
                 Localization.Language.LocalizeFrameworkElement(this);
+
+                //AESCConstruct25.Localization.Language.InvalidateRibbon();                // ribbon text
+                UIMain.UIManager.UpdateCommandTexts();                   // sidebar/floating commands
+                Construct25.UpdateCommandTexts();
             }
         }
 
         private void PopulateCsvFilePathFields()
         {
-            Logger.Log("=== PopulateCsvFilePathFields (Using Settings Keys) ===");
+            // Logger.Log("=== PopulateCsvFilePathFields (Using Settings Keys) ===");
 
             CsvPathsPanel.Children.Clear();
 
@@ -219,7 +230,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "AESCConstruct"
             );
-            Logger.Log($"Base directory: {baseDir}");
+            // Logger.Log($"Base directory: {baseDir}");
 
             // Mapping: Label → Setting Name
             var settingMap = new Dictionary<string, string>
@@ -247,7 +258,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 string relPath = (string)Settings.Default[settingKey];
                 string fullPath = Path.IsPathRooted(relPath) ? relPath : Path.Combine(baseDir, relPath);
 
-                Logger.Log($"Adding UI for '{label}' from setting '{settingKey}' → {fullPath}");
+                // Logger.Log($"Adding UI for '{label}' from setting '{settingKey}' → {fullPath}");
 
                 CsvPathsPanel.Children.Add(new Label
                 {
@@ -256,31 +267,66 @@ namespace AESCConstruct25.FrameGenerator.UI
                     Margin = new Thickness(0, 5, 0, 0)
                 });
 
-                CsvPathsPanel.Children.Add(new TextBox
+                var row = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 2, 0, 0)
+                };
+
+                // the path TextBox
+                var txt = new TextBox
                 {
                     Text = fullPath,
-                    Margin = new Thickness(0, 2, 0, 0),
+                    Tag = settingKey,
+                    Width = 195
+                };
+
+                // the browse‐icon Button
+                var btn = new Button
+                {
+                    Width = 16,
+                    Height = 16,
+                    Margin = new Thickness(5, 0, 0, 0),
                     Tag = settingKey
-                });
+                };
+                // load your browse.png (put it in Resources and mark “Resource” in the project)
+                var icon = new System.Windows.Controls.Image
+                {
+                    Source = new System.Windows.Media.Imaging.BitmapImage(
+                        new Uri("pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Upload.png")
+                    )
+                };
+                btn.Content = icon;
+                btn.Click += BrowseCsvButton_Click;
+
+                // assemble
+                row.Children.Add(txt);
+                row.Children.Add(btn);
+                CsvPathsPanel.Children.Add(row);
             }
 
-            Logger.Log("=== Done populating CSV path fields ===");
+            // Logger.Log("=== Done populating CSV path fields ===");
         }
 
-
-        string ResolveCsvPath(string settingKey)
+        private void BrowseCsvButton_Click(object sender, RoutedEventArgs e)
         {
-            string stored = (string)Settings.Default[settingKey];
-            if (Path.IsPathRooted(stored) && File.Exists(stored))
-                return stored;
+            var btn = (Button)sender;
+            var key = (string)btn.Tag;
+            var dlg = new OpenFileDialog
+            {
+                Title = $"Select CSV for {key}",
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*"
+            };
+            if (dlg.ShowDialog() != true)
+                return;
 
-            string fallback = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "AESCConstruct",
-                stored
-            );
+            // locate the TextBox whose Tag matches
+            var textBox = CsvPathsPanel.Children
+                .OfType<StackPanel>()
+                .SelectMany(sp => sp.Children.OfType<TextBox>())
+                .First(tb => (string)tb.Tag == key);
 
-            return File.Exists(fallback) ? fallback : "";
+            textBox.Text = dlg.FileName;
         }
     }
 }

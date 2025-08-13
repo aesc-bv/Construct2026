@@ -171,7 +171,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 
             // 2) Default to the “w” dimension
             double chosenWidth = width;
-            string chosenDimension = "w";
 
             // 3) If rotated near 90° or near 270°, swap to h/b/D
             const double tolcheck = 1e-3;
@@ -185,25 +184,22 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 if (h.HasValue)
                 {
                     chosenWidth = h.Value;
-                    chosenDimension = "h";
                 }
                 else if (b.HasValue)
                 {
                     chosenWidth = b.Value;
-                    chosenDimension = "b";
                 }
                 else if (D.HasValue)
                 {
                     chosenWidth = D.Value;
-                    chosenDimension = "D";
                 }
             }
 
             // 3) Log it:
-            Logger.Log(
-                $"GetOffsetEdges: using dimension '{chosenDimension}' = {chosenWidth:F4} m " +
-                $"because RotationAngle = {angleDeg:F1}°"
-            );
+            // Logger.Log(
+            //    $"GetOffsetEdges: using dimension '{chosenDimension}' = {chosenWidth:F4} m " +
+            //    $"because RotationAngle = {angleDeg:F1}°"
+            //);
 
             // 11’) build two shifts that still sum to exactly width:
             double halfWidth = chosenWidth * 0.5;

@@ -1,10 +1,7 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.UI;
-using SpaceClaim.Api.V242;
+﻿using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -41,26 +38,63 @@ namespace AESCConstruct25.Fastener.Module
                          .Skip(1).Select(Bolt.FromCsv).ToList();
 
             _washers = File.ReadAllLines(Settings.Default.Washer)
-                            .Skip(1).Select(Washer.FromCsv).ToList();
+                        .Skip(1).Select(Washer.FromCsv).ToList();
 
             _nuts = File.ReadAllLines(Settings.Default.Nut)
                          .Skip(1).Select(Nut.FromCsv).ToList();
         }
 
         // top-level lists for your “Type” ComboBoxes
-        public IEnumerable<string> BoltTypes => _bolts.Select(b => b.type).Distinct();
-        public IEnumerable<string> WasherTypes => _washers.Select(w => w.type).Distinct();
-        public IEnumerable<string> NutTypes => _nuts.Select(n => n.type).Distinct();
+        //public IEnumerable<string> BoltTypes => _bolts.Select(b => b.type).Distinct();
+        //public IEnumerable<string> WasherTypes => _washers.Select(w => w.type).Distinct();
+        //public IEnumerable<string> NutTypes => _nuts.Select(n => n.type).Distinct();
+        public IEnumerable<string> BoltNames => _bolts.Select(b => b.Name).Distinct();
+        public IEnumerable<string> WasherNames => _washers.Select(w => w.Name).Distinct();
+        public IEnumerable<string> NutNames => _nuts.Select(n => n.Name).Distinct();
+
+        public string GetBoltTypeByName(string name) =>
+        _bolts.FirstOrDefault(b => b.Name == name)?.type
+        ?? throw new InvalidOperationException($"Unknown bolt name '{name}'");
+
+        public string GetWasherTopTypeByName(string name) =>
+        _washers.FirstOrDefault(w => w.Name == name)?.type
+        ?? throw new InvalidOperationException($"Unknown washer name '{name}'");
+
+        public string GetNutTypeByName(string name) =>
+        _nuts.FirstOrDefault(n => n.Name == name)?.type
+        ?? throw new InvalidOperationException($"Unknown nut name '{name}'");
 
         // called when the user picks a type, to fill the “Size” list
-        public IEnumerable<string> BoltSizesFor(string type) =>
-            _bolts.Where(b => b.type == type).Select(b => b.size).Distinct();
+        //public IEnumerable<string> BoltSizesFor(string type) =>
+        //    _bolts.Where(b => b.type == type).Select(b => b.size).Distinct();
 
-        public IEnumerable<string> WasherSizesFor(string type) =>
-            _washers.Where(w => w.type == type).Select(w => w.size).Distinct();
+        //public IEnumerable<string> WasherSizesFor(string type) =>
+        //    _washers.Where(w => w.type == type).Select(w => w.size).Distinct();
 
-        public IEnumerable<string> NutSizesFor(string type) =>
-            _nuts.Where(n => n.type == type).Select(n => n.size).Distinct();
+        //public IEnumerable<string> NutSizesFor(string type) =>
+        //    _nuts.Where(n => n.type == type).Select(n => n.size).Distinct();
+
+        public IEnumerable<string> BoltSizesFor(string selectedName)
+        {
+            // find all underlying types for that name
+            var types = _bolts.Where(b => b.Name == selectedName)
+                              .Select(b => b.type)
+                              .Distinct();
+            // aggregate sizes across all matching types
+            return _bolts.Where(b => types.Contains(b.type))
+                         .Select(b => b.size)
+                         .Distinct();
+        }
+        public IEnumerable<string> WasherSizesFor(string selectedName)
+        {
+            var types = _washers.Where(w => w.Name == selectedName).Select(w => w.type).Distinct();
+            return _washers.Where(w => types.Contains(w.type)).Select(w => w.size).Distinct();
+        }
+        public IEnumerable<string> NutSizesFor(string selectedName)
+        {
+            var types = _nuts.Where(n => n.Name == selectedName).Select(n => n.type).Distinct();
+            return _nuts.Where(n => types.Contains(n.type)).Select(n => n.size).Distinct();
+        }
 
         double parBoltL = 20;
         double parDistance = 20;
@@ -96,14 +130,18 @@ namespace AESCConstruct25.Fastener.Module
         private bool _lockDistance;
         public void SetLockDistance(bool l) => _lockDistance = l;
 
+        private bool _overwriteDistance;
+        public void SetOverwriteDistance(bool od) => _overwriteDistance = od;
+
+
         private Part GetWasherPart(Document doc, string name, Washer washer, out Component component)
         {
-            Logger.Log($"[GetWasherPart] START name={name}, d1={washer.d1}, d2={washer.d2}, s={washer.s}");
+            // Logger.Log($"[GetWasherPart] START name={name}, d1={washer.d1}, d2={washer.d2}, s={washer.s}");
 
             // Always create new part
             Part fastenersPart = GetFastenersPart(doc);
             string uniqueName = $"{name}_{Guid.NewGuid():N}";
-            Logger.Log($"[GetWasherPart] Creating new Part '{uniqueName}' under 'Fasteners'");
+            // Logger.Log($"[GetWasherPart] Creating new Part '{uniqueName}' under 'Fasteners'");
             Part part = Part.Create(doc, uniqueName);
             component = Component.Create(fastenersPart, part);
 
@@ -113,19 +151,19 @@ namespace AESCConstruct25.Fastener.Module
             {
                 body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log($"[GetWasherPart] ERROR in createWasher: {ex}");
+                // Logger.Log($"[GetWasherPart] ERROR in createWasher: {ex}");
                 throw;
             }
-            Logger.Log($"[GetWasherPart] Body created; calling DesignBody.Create");
+            // Logger.Log($"[GetWasherPart] Body created; calling DesignBody.Create");
 
             DesignBody db = DesignBody.Create(part, name, body);
             db.IsLocked = _lockDistance;
-            Logger.Log($"[GetWasherPart] DesignBody created, attaching property");
+            // Logger.Log($"[GetWasherPart] DesignBody created, attaching property");
             CustomPartProperty.Create(part, "AESC_Construct", true);
 
-            Logger.Log($"[GetWasherPart] COMPLETE for '{uniqueName}'");
+            // Logger.Log($"[GetWasherPart] COMPLETE for '{uniqueName}'");
             return part;
         }
 
@@ -316,8 +354,8 @@ namespace AESCConstruct25.Fastener.Module
                 WriteBlock.ExecuteTask("AESCConstruct.FastenersCreate",
                 delegate
                 {
-                    Logger.Log($"[FastenerModule] CreateFasteners() starting; includeTop={includeWasherTop}, includeBottom={includeWasherBottom}, includeNut={includeNut}");
-                    Logger.Log($"[FastenerModule] boltType={boltType}, boltSize={boltSize}, washerTopType={washerTopType}, washerTopSize={washerTopSize}, washerBottomType={washerBottomType}, washerBottomSize={washerBottomSize}");
+                    // Logger.Log($"[FastenerModule] CreateFasteners() starting; includeTop={includeWasherTop}, includeBottom={includeWasherBottom}, includeNut={includeNut}");
+                    // Logger.Log($"[FastenerModule] boltType={boltType}, boltSize={boltSize}, washerTopType={washerTopType}, washerTopSize={washerTopSize}, washerBottomType={washerBottomType}, washerBottomSize={washerBottomSize}");
 
                     Bolt _bolt = listBolt.First();
 
@@ -385,19 +423,31 @@ namespace AESCConstruct25.Fastener.Module
 
                         Matrix matrixMapping = Matrix.CreateMapping(SpaceClaim.Api.V242.Geometry.Frame.Create(PD.Origin, PD.Direction));
                         Matrix matrixBolt = matrixMapping;
+                        if (_overwriteDistance)
+                        {
+                            // parDistance is in mm; convert to m (×0.001)
+                            matrixBolt = matrixMapping
+                                * Matrix.CreateTranslation(Vector.Create(0, 0, parDistance * 0.001));
+                        }
 
                         if (this.includeWasherTop)
                         {
-                            Logger.Log($"[CreateFasteners] Inserting TOP washer 'name' at {PD.Origin} dir={PD.Direction}");
+                            // Logger.Log($"[CreateFasteners] Inserting TOP washer 'name' at {PD.Origin} dir={PD.Direction}");
                             Part washerPart = GetWasherPart(doc, washerTopName, _washerTop, out Component componentWasherTop);
-                            Logger.Log($"[CreateFasteners] Transforming TOP washer component...");
+                            // Logger.Log($"[CreateFasteners] Transforming TOP washer component...");
                             matrixBolt = matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, _washerTop.s * 0.001));
-                            Logger.Log($"[CreateFasteners] Transform COMPLETE for TOP washer");
+                            if (_overwriteDistance)
+                            {
+                                // parDistance is in mm; convert to m (×0.001)
+                                matrixBolt = matrixMapping
+                                    * Matrix.CreateTranslation(Vector.Create(0, 0, (parDistance + _washerTop.s) * 0.001));
+                            }
+                            // Logger.Log($"[CreateFasteners] Transform COMPLETE for TOP washer");
                             componentWasherTop.Transform(matrixMapping);
                         }
                         if (useCustom && !string.IsNullOrEmpty(customFile))
                         {
-                            Logger.Log($"[CreateFasteners] Inserting CUSTOM part: {customFile}");
+                            // Logger.Log($"[CreateFasteners] Inserting CUSTOM part: {customFile}");
 
                             // 1) Build the full path
                             string customDir = Path.Combine(
@@ -418,13 +468,13 @@ namespace AESCConstruct25.Fastener.Module
                             if (ext == ".scdoc" || ext == ".scdocx")
                             {
                                 // Native SpaceClaim document
-                                Logger.Log($"[CreateFasteners] Loading SpaceClaim doc via Document.Load: {path}");
+                                // Logger.Log($"[CreateFasteners] Loading SpaceClaim doc via Document.Load: {path}");
                                 customDoc = Document.Load(path);
                             }
                             else if (ext == ".stp" || ext == ".step")
                             {
                                 // STEP import
-                                Logger.Log($"[CreateFasteners] Importing STEP via Document.Open + ImportOptions: {path}");
+                                // Logger.Log($"[CreateFasteners] Importing STEP via Document.Open + ImportOptions: {path}");
                                 var opts = ImportOptions.Create();
                                 customDoc = Document.Open(path, opts);
                             }
@@ -456,12 +506,12 @@ namespace AESCConstruct25.Fastener.Module
 
                         if (this.includeWasherBottom)
                         {
-                            Logger.Log($"[CreateFasteners] Inserting BOTTOM washer 'name'");
+                            // Logger.Log($"[CreateFasteners] Inserting BOTTOM washer 'name'");
                             Part washerPart = GetWasherPart(doc, washerBottomName, _washerBottom, out Component componentWasherBottom);
-                            Logger.Log($"[CreateFasteners] Transforming BOTTOM washer component...");
+                            // Logger.Log($"[CreateFasteners] Transforming BOTTOM washer component...");
                             displacementZ += -0.001 * _washerBottom.s;
                             componentWasherBottom.Transform(matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ)));
-                            Logger.Log($"[CreateFasteners] Transform COMPLETE for BOTTOM washer");
+                            // Logger.Log($"[CreateFasteners] Transform COMPLETE for BOTTOM washer");
                         }
 
                         if (this.includeNut)
@@ -504,7 +554,7 @@ namespace AESCConstruct25.Fastener.Module
                 .FirstOrDefault(p => p.DisplayName == name);
 
 
-            Logger.Log("getboltpart");
+            // Logger.Log("getboltpart");
             // Create Fasteners Part if not existing
             Part fastenersPart = GetFastenersPart(doc);
             if (boltPart is null)
@@ -664,7 +714,7 @@ namespace AESCConstruct25.Fastener.Module
         //        return;
 
         //    double radiusMM = GetSizeCircle(window, out double depthMM);
-        //    Logger.Log($"radiusMM - {radiusMM}");
+        //   // Logger.Log($"radiusMM - {radiusMM}");
 
         //    if (radiusMM == 0)
         //        return;

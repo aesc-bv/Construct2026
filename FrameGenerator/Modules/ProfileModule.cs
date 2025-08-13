@@ -94,19 +94,19 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // 5) Build profile loops in that localPlane
             string[] args = GetArgs(profileType, profileData);
 
-            Logger.Log($"args {args}");
-            Logger.Log($"args length {args.Length}");
-            foreach (var arg in args)
-                Logger.Log($"arg {arg}");
+            // Logger.Log($"args {args}");
+            // Logger.Log($"args length {args.Length}");
+            //foreach (var arg in args)
+            // Logger.Log($"arg {arg}");
             var profile = ProfileBase.CreateProfile(
                 profileType, args, isHollow,
                 offsetX, offsetY,
                 dxfFilePath, dxfContours
             );
-            Logger.Log($"profile{profile}");
+            // Logger.Log($"profile{profile}");
             if (profile == null)
             {
-                Logger.Log($"ERROR – CreateProfile returned null for {profileType}");
+                // Logger.Log($"ERROR – CreateProfile returned null for {profileType}");
                 return;
             }
             var outerLoop = profile.GetProfileCurves(localPlane).ToList();
@@ -200,12 +200,12 @@ namespace AESCConstruct25.FrameGenerator.Modules
             {
                 foreach (var kv in profileData)
                 {
-                    Logger.Log($"[GetProfileName] profileData[\"{kv.Key}\"] = \"{kv.Value}\"");
+                    // Logger.Log($"[GetProfileName] profileData[\"{kv.Key}\"] = \"{kv.Value}\"");
                 }
             }
             else
             {
-                Logger.Log("[GetProfileName] profileData is NULL");
+                // Logger.Log("[GetProfileName] profileData is NULL");
             }
 
             // 2) Now try to grab the "Name" entry
@@ -213,12 +213,12 @@ namespace AESCConstruct25.FrameGenerator.Modules
              && profileData.TryGetValue("Name", out var nm)
              && !string.IsNullOrWhiteSpace(nm))
             {
-                Logger.Log($"[GetProfileName] returning Name = \"{nm}\"");
+                // Logger.Log($"[GetProfileName] returning Name = \"{nm}\"");
                 return nm;
             }
             else
             {
-                Logger.Log("[GetProfileName] no \"Name\" key found or value was empty");
+                // Logger.Log("[GetProfileName] no \"Name\" key found or value was empty");
                 return string.Empty;
             }
         }
@@ -284,7 +284,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
             string rawName = GetProfileName(profileData) ?? "";
             string profileName = Regex.Replace(rawName.Trim(), @"\s+", "_");
-            Logger.Log($"name prop = {profileName}");
+            // Logger.Log($"name prop = {profileName}");
             // store metadata
             CreateCustomProperty(part, "Type", profileType);
             CreateCustomProperty(part, "Hollow", isHollow.ToString().ToLower());
@@ -348,7 +348,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                         CreateCustomProperty(part, "DXFPath", dxfFilePath);
                         break;
                     case "CSV":
-                        Logger.Log(dxfContourVal.ToString());
+                        // Logger.Log(dxfContourVal.ToString());
                         CreateCustomProperty(part, "RawCSV", csvProfileString);
                         break;
                     default:
@@ -371,7 +371,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // write out all Construct_ properties
             foreach (var kv in profileData)
             {
-                Logger.Log($"Construct_{kv.Key}, {kv.Value}");
+                // Logger.Log($"Construct_{kv.Key}, {kv.Value}");
                 CreateCustomProperty(part, "Construct_" + kv.Key, kv.Value);
             }
 

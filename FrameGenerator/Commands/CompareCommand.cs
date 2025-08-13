@@ -65,13 +65,34 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 double heightMm = size.Y * 1000.0;    // mm
 
                 // pull Type + existing Construct_… props
-                string profileType = part.CustomProperties["Type"].Value.ToString();
-                var profileData = part.CustomProperties
-                    .Where(kv => kv.Key.StartsWith("Construct_") && kv.Key != "Construct_Length")
-                    .ToDictionary(
-                        kv => kv.Key.Substring("Construct_".Length),
-                        kv => kv.Value.ToString()
-                    );
+                //string profileType = part.CustomProperties["Type"].Value.ToString();
+                string profileType = null;
+                if (!part.CustomProperties.ContainsKey("Type"))
+                {
+                    // No Type on this part; skip or handle as you prefer
+                    continue; // or: profileType = "Unknown";
+                }
+                profileType = part.CustomProperties["Type"].Value?.ToString() ?? "";
+                //var profileData = part.CustomProperties
+                //    .Where(kv => kv.Key.StartsWith("Construct_") && kv.Key != "Construct_Length")
+                //    .ToDictionary(
+                //        kv => kv.Key.Substring("Construct_".Length),
+                //        kv => kv.Value.ToString()
+                //    );
+
+                //// override w/h so helper sees the real numbers
+                //profileData["w"] = widthMm.ToString(CultureInfo.InvariantCulture);
+                //profileData["h"] = heightMm.ToString(CultureInfo.InvariantCulture);
+
+                //// **this** wipes any old “(n)” off the name and writes the new length
+                //CompNameHelper.SetNameAndLength(comp1, profileType, profileData, lengthM);
+                var profileData = new Dictionary<string, string>();
+                foreach (var kv in part.CustomProperties.Where(kv => kv.Key.StartsWith("Construct_") && kv.Key != "Construct_Length"))
+                {
+                    var v = kv.Value?.Value?.ToString();
+                    if (!string.IsNullOrEmpty(v))
+                        profileData[kv.Key.Substring("Construct_".Length)] = v;
+                }
 
                 // override w/h so helper sees the real numbers
                 profileData["w"] = widthMm.ToString(CultureInfo.InvariantCulture);

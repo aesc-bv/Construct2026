@@ -26,7 +26,7 @@
 
 //        public static void activateLicense()
 //        {
-//            Logger.Log("activate");
+//           // Logger.Log("activate");
 //            var info = new LicenseValidationInfo
 //            {
 //                LicenseFile = new LicenseFile(LicenseSpot.LicenseSpot.licenseFolder),
@@ -120,7 +120,7 @@
 //            //info.LicenseFile = new LicenseFile(licenseFolder);
 //            //license = ExtendedLicenseManager.GetLicense(typeof(AESCConstruct25.UIMain.UIManager), null, info, keyPair);
 //            //LicenseSpot._License.isNetwork = license.IsNetwork;
-//            Logger.Log(" Logger.Log(\"AESCConstruct25:Licensing started\");");
+//           // Logger.Log("// Logger.Log(\"AESCConstruct25:Licensing started\");");
 //            //try
 //            //{
 //            //    license.Refresh();
@@ -162,14 +162,13 @@
 //            //}
 //            //else if (DateTime.Compare(LicenseExpiration, DateTime.Now) > 0)
 //            //{
-//            //    Logger.Log("Trial version expires in " + (LicenseExpiration - DateTime.Now).Days.ToString() + "days");
+//            //   // Logger.Log("Trial version expires in " + (LicenseExpiration - DateTime.Now).Days.ToString() + "days");
 //            //    LicenseSpot._License.valid = true;
 //            //}
 //        }
 
 //    }
 //}
-using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.Properties;
 using LicenseSpot.Framework;
 using System;
@@ -194,7 +193,7 @@ namespace AESCConstruct25.LicenseSpot
         /// </summary>
         public static void Initialize()
         {
-            Logger.Log("LicenseSpot: Initializing license");
+            // Logger.Log("LicenseSpot: Initializing license");
             var serial = Settings.Default.SerialNumber?.Trim();
             if (string.IsNullOrEmpty(serial))
             {
@@ -220,7 +219,7 @@ namespace AESCConstruct25.LicenseSpot
             {
                 State.Valid = false;
                 State.Status = "License check failed: " + ex.Message;
-                Logger.Log("LicenseSpot: exception in Initialize(): " + ex);
+                // Logger.Log("LicenseSpot: exception in Initialize(): " + ex);
             }
         }
 
@@ -234,7 +233,7 @@ namespace AESCConstruct25.LicenseSpot
             // 1) save to user settings
             Settings.Default.SerialNumber = serial;
             Settings.Default.Save();
-            Logger.Log($"LicenseSpot: activating serial “{serial}”");
+            // Logger.Log($"LicenseSpot: activating serial “{serial}”");
 
             try
             {
@@ -252,13 +251,13 @@ namespace AESCConstruct25.LicenseSpot
                 // 4) now re-validate
                 Initialize();
 
-                Logger.Log($"LicenseSpot: Activation result: {State.Status} (Valid={State.Valid})");
+                // Logger.Log($"LicenseSpot: Activation result: {State.Status} (Valid={State.Valid})");
             }
             catch (Exception ex)
             {
                 State.Valid = false;
                 State.Status = "Activation failed: " + ex.Message;
-                Logger.Log("LicenseSpot: exception in Activate(): " + ex);
+                // Logger.Log("LicenseSpot: exception in Activate(): " + ex);
             }
         }
 

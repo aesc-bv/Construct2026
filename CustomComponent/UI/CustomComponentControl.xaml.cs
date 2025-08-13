@@ -41,7 +41,9 @@ namespace AESCConstruct25.UI
         public CustomComponentControl()
         {
             InitializeComponent();
+
             DataContext = this;
+            Localization.Language.LocalizeFrameworkElement(this);
 
             TemplateOptions = new ObservableCollection<string>();
 

@@ -173,6 +173,26 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] Menu_Dock {
+            get {
+                object obj = ResourceManager.GetObject("Menu_Dock", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Menu_Undock {
+            get {
+                object obj = ResourceManager.GetObject("Menu_Undock", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] ribCutout {
             get {
                 object obj = ResourceManager.GetObject("ribCutout", resourceCulture);

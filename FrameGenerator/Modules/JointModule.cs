@@ -313,7 +313,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             string connectionSideOld = ""
         )
         {
-            Logger.Log("**ENTER** ResetComponentGeometryAndExtend");
+            // Logger.Log("**ENTER** ResetComponentGeometryAndExtend");
             const double tol = 1e-6;
             const double extendAmount = 200.0;
 
@@ -324,7 +324,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
             foreach (var component in components)
             {
-                Logger.Log($"-- Component '{component.Name}' --");
+                // Logger.Log($"-- Component '{component.Name}' --");
                 var template = component.Template;
                 if (template == null) continue;
 
@@ -356,7 +356,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 }
                 if (string.IsNullOrEmpty(profileType))
                 {
-                    Logger.Log("  ERROR: no profileType; skipping component");
+                    // Logger.Log("  ERROR: no profileType; skipping component");
                     continue;
                 }
 
@@ -365,7 +365,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                                   .FirstOrDefault(dc => dc.Shape is CurveSegment);
                 if (storedDc?.Shape is not CurveSegment segOrig)
                 {
-                    Logger.Log("  ERROR: no valid construction curve; skipping");
+                    // Logger.Log("  ERROR: no valid construction curve; skipping");
                     continue;
                 }
 
@@ -389,7 +389,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 {
                     if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
                     {
-                        Logger.Log("    ERROR – failed to re-import DXF contours; skipping");
+                        // Logger.Log("    ERROR – failed to re-import DXF contours; skipping");
                         continue;
                     }
                 }
@@ -417,10 +417,10 @@ namespace AESCConstruct25.FrameGenerator.Modules
                     reuseComponent: component
                 );
 
-                Logger.Log($"-- Finished '{component.Name}' --");
+                // Logger.Log($"-- Finished '{component.Name}' --");
             }
 
-            Logger.Log("**EXIT** ResetComponentGeometryAndExtend");
+            // Logger.Log("**EXIT** ResetComponentGeometryAndExtend");
         }
 
 
@@ -584,7 +584,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 target.Shape.Subtract(new[] { temp.Shape });
                 //Logger.Log($"  Subtraction succeeded. New target BB local center = {PointToString(target.Shape.GetBoundingBox(Matrix.Identity, true).Center)}");
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
                 //Logger.Log($"JointModule: ERROR during subtraction: {ex.Message}");
             }
@@ -754,7 +754,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
                 return (halfStart, halfEnd);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //Logger.Log($"SplitBodyAtMidpoint: EXCEPTION – {ex.Message}");
                 return (null, null);
@@ -771,65 +771,65 @@ namespace AESCConstruct25.FrameGenerator.Modules
     List<Component> selectedComponents
 )
         {
-            Logger.Log($"[ResetHalfForJoint] START for component='{component?.Name}', side='{connectionSide}', extend={extendProfile}");
+            // Logger.Log($"[ResetHalfForJoint] START for component='{component?.Name}', side='{connectionSide}', extend={extendProfile}");
             if (component?.Template == null)
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – invalid component or template; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – invalid component or template; aborting.");
                 return;
             }
             var template = component.Template;
 
             // 1) Grab & shift the construction segment
             var dc = template.Curves.OfType<DesignCurve>().FirstOrDefault();
-            Logger.Log(dc == null
-                ? "[ResetHalfForJoint] ERROR – no DesignCurve in template"
-                : $"[ResetHalfForJoint] Found construction curve '{dc.Name}'");
+            // Logger.Log(dc == null
+            //? "[ResetHalfForJoint] ERROR – no DesignCurve in template"
+            //: $"[ResetHalfForJoint] Found construction curve '{dc.Name}'");
             if (dc?.Shape is not CurveSegment seg)
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – shape is not a CurveSegment; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – shape is not a CurveSegment; aborting.");
                 return;
             }
 
             double halfW = JointCurveHelper.GetProfileWidth(component) * 0.5;
-            Logger.Log($"[ResetHalfForJoint] ProfileWidth={halfW * 2:F6} m ⇒ halfW={halfW:F6}");
+            // Logger.Log($"[ResetHalfForJoint] ProfileWidth={halfW * 2:F6} m ⇒ halfW={halfW:F6}");
             Vector shiftX = Vector.Create(1, 0, 0) * halfW;
             Point localStart = seg.StartPoint - shiftX;
             Point localEnd = seg.EndPoint - shiftX;
-            Logger.Log($"[ResetHalfForJoint] localStart={localStart}, localEnd={localEnd}");
+            // Logger.Log($"[ResetHalfForJoint] localStart={localStart}, localEnd={localEnd}");
 
             // 2) compute localUp, xDir, yDir
             Vector sweepDir = (localEnd - localStart).Direction.ToVector();
             if (sweepDir.Magnitude < 1e-6)
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – zero-length swept segment; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – zero-length swept segment; aborting.");
                 return;
             }
             Vector localUp = Vector.Create(0, 1, 0);
             Vector xDir = Vector.Cross(localUp, sweepDir).Direction.ToVector();
             if (xDir.Magnitude < 1e-6)
             {
-                Logger.Log("[ResetHalfForJoint] xDir degenerate, switching localUp to X axis");
+                // Logger.Log("[ResetHalfForJoint] xDir degenerate, switching localUp to X axis");
                 localUp = Vector.Create(1, 0, 0);
                 xDir = Vector.Cross(localUp, sweepDir).Direction.ToVector();
             }
             Vector yDir = Vector.Cross(sweepDir, xDir).Direction.ToVector();
-            Logger.Log($"[ResetHalfForJoint] Computed axes: sweepDir={sweepDir}, localUp={localUp}, xDir={xDir}, yDir={yDir}");
+            // Logger.Log($"[ResetHalfForJoint] Computed axes: sweepDir={sweepDir}, localUp={localUp}, xDir={xDir}, yDir={yDir}");
 
             // 3) First split
-            Logger.Log("[ResetHalfForJoint] Performing initial split…");
+            // Logger.Log("[ResetHalfForJoint] Performing initial split…");
             var (halfStart, halfEnd) = SplitBodyAtMidpoint(component, localUp);
-            Logger.Log($"[ResetHalfForJoint] Split result: halfStart={(halfStart == null ? "null" : "ok")}, halfEnd={(halfEnd == null ? "null" : "ok")}");
+            // Logger.Log($"[ResetHalfForJoint] Split result: halfStart={(halfStart == null ? "null" : "ok")}, halfEnd={(halfEnd == null ? "null" : "ok")}");
             if (halfStart == null || halfEnd == null)
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – initial split failed; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – initial split failed; aborting.");
                 return;
             }
 
             // 4) preserve non-corner half
             bool preserveEnd = connectionSide == "HalfStart";
-            Logger.Log($"[ResetHalfForJoint] preserveEnd={preserveEnd}");
+            // Logger.Log($"[ResetHalfForJoint] preserveEnd={preserveEnd}");
             Body preserved = preserveEnd ? halfEnd.Copy() : halfStart.Copy();
-            Logger.Log($"[ResetHalfForJoint] Preserved half shape copied: {(preserved == null ? "null" : "ok")}");
+            // Logger.Log($"[ResetHalfForJoint] Preserved half shape copied: {(preserved == null ? "null" : "ok")}");
 
             // 5) delete old halves & existing ExtrudedProfile
             foreach (var name in new[] { "HalfStart", "HalfEnd", "ExtrudedProfile" })
@@ -837,18 +837,18 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 var old = template.Bodies.FirstOrDefault(b => b.Name == name);
                 if (old != null)
                 {
-                    Logger.Log($"[ResetHalfForJoint] Deleting existing body '{name}'");
+                    // Logger.Log($"[ResetHalfForJoint] Deleting existing body '{name}'");
                     old.Delete();
                 }
             }
-            Logger.Log("[ResetHalfForJoint] Storing 'preservedHalf'");
+            // Logger.Log("[ResetHalfForJoint] Storing 'preservedHalf'");
             DesignBody.Create(template, "preservedHalf", preserved)
                      .Layer = template.Document.GetLayer("Frames");
 
             // 6) regenerate full profile
             if (extendProfile)
             {
-                Logger.Log("  [ResetHalfForJoint] Regenerating EXTENDED profile…");
+                // Logger.Log("  [ResetHalfForJoint] Regenerating EXTENDED profile…");
                 ResetComponentGeometryAndExtend(
                     new List<Component> { component },
                     localUp,
@@ -858,7 +858,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
             else
             {
-                Logger.Log("  [ResetHalfForJoint] Regenerating ORIGINAL (unextended) profile…");
+                // Logger.Log("  [ResetHalfForJoint] Regenerating ORIGINAL (unextended) profile…");
                 ResetComponentGeometryOnly(
                     new List<Component> { component },
                     localUp,
@@ -866,42 +866,42 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 );
             }
 
-            Logger.Log($"[ResetHalfForJoint] Bodies after regeneration: {string.Join(",", template.Bodies.Select(b => b.Name))}");
+            // Logger.Log($"[ResetHalfForJoint] Bodies after regeneration: {string.Join(",", template.Bodies.Select(b => b.Name))}");
             if (template.Bodies.All(b => b.Name != "ExtrudedProfile"))
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – no 'ExtrudedProfile' after regeneration; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – no 'ExtrudedProfile' after regeneration; aborting.");
                 return;
             }
 
             // 7) second split
-            Logger.Log("[ResetHalfForJoint] Performing second split…");
+            // Logger.Log("[ResetHalfForJoint] Performing second split…");
             var (halfStart2, halfEnd2) = SplitBodyAtMidpoint(component, localUp);
-            Logger.Log($"[ResetHalfForJoint] Second split: halfStart2={(halfStart2 == null ? "null" : "ok")}, halfEnd2={(halfEnd2 == null ? "null" : "ok")}");
+            // Logger.Log($"[ResetHalfForJoint] Second split: halfStart2={(halfStart2 == null ? "null" : "ok")}, halfEnd2={(halfEnd2 == null ? "null" : "ok")}");
             if (halfStart2 == null || halfEnd2 == null)
             {
-                Logger.Log("[ResetHalfForJoint] ERROR – second split failed; aborting.");
+                // Logger.Log("[ResetHalfForJoint] ERROR – second split failed; aborting.");
                 return;
             }
 
             // 8) isolate corner half
             Body corner = preserveEnd ? halfStart2 : halfEnd2;
-            Logger.Log($"[ResetHalfForJoint] Isolated corner half: {(corner == null ? "null" : "ok")}");
+            // Logger.Log($"[ResetHalfForJoint] Isolated corner half: {(corner == null ? "null" : "ok")}");
 
             // 9) copy & delete temps
             Body presCopy = preserved.Copy();
             Body corCopy = corner.Copy();
-            Logger.Log($"[ResetHalfForJoint] Copies: presCopy={(presCopy == null ? "null" : "ok")}, corCopy={(corCopy == null ? "null" : "ok")}");
+            // Logger.Log($"[ResetHalfForJoint] Copies: presCopy={(presCopy == null ? "null" : "ok")}, corCopy={(corCopy == null ? "null" : "ok")}");
             foreach (var name in new[] { "HalfStart", "HalfEnd", "ExtrudedProfile", "preservedHalf" })
                 template.Bodies.FirstOrDefault(b => b.Name == name)?.Delete();
 
             // 10) unite into final
-            Logger.Log("[ResetHalfForJoint] Uniting preserved + corner into new 'ExtrudedProfile'");
+            // Logger.Log("[ResetHalfForJoint] Uniting preserved + corner into new 'ExtrudedProfile'");
             presCopy.Unite(new[] { corCopy });
             var finalDb = DesignBody.Create(template, "ExtrudedProfile", presCopy);
             finalDb.Layer = template.Document.GetLayer("Frames");
 
-            Logger.Log("[ResetHalfForJoint] COMPLETED successfully; final bodies: " +
-                       string.Join(",", template.Bodies.Select(b => b.Name)));
+            // Logger.Log("[ResetHalfForJoint] COMPLETED successfully; final bodies: " +
+            //string.Join(",", template.Bodies.Select(b => b.Name)));
         }
 
 

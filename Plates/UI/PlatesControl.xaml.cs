@@ -1,5 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Plates.Modules;
+﻿using AESCConstruct25.Plates.Modules;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -82,14 +81,14 @@ namespace AESCConstruct25.UI
                 SelectedProfileType = ProfileTypes.FirstOrDefault();
 
                 // 3) Logging for debug
-                Logger.Log($"[PlatesControl] Loaded {_records.Count} records from CSV.");
-                Logger.Log($"[PlatesControl] ProfileTypes: {string.Join(", ", ProfileTypes)}");
-                Logger.Log($"[PlatesControl] Initial SelectedProfileType: {SelectedProfileType}");
+                // Logger.Log($"[PlatesControl] Loaded {_records.Count} records from CSV.");
+                // Logger.Log($"[PlatesControl] ProfileTypes: {string.Join(", ", ProfileTypes)}");
+                // Logger.Log($"[PlatesControl] Initial SelectedProfileType: {SelectedProfileType}");
             }
             catch (Exception ex)
             {
                 // Log and alert user—no silent fallback defaults
-                Logger.Log($"[PlatesControl] ERROR loading PlatesProperties.csv: {ex}");
+                // Logger.Log($"[PlatesControl] ERROR loading PlatesProperties.csv: {ex}");
                 MessageBox.Show(
                     $"Failed to load plate properties:\n{ex.Message}",
                     "Plates Data Error",

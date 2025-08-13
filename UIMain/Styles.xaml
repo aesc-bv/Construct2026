@@ -600,8 +600,6 @@
                             <Setter TargetName="border"
                                     Property="Opacity"
                                     Value="0.8" />
-                            <Setter Property="Cursor"
-                                    Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

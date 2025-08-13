@@ -1,5 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242.Geometry;
+﻿using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
@@ -51,8 +50,8 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Frame frame = profilePlane.Frame;
             //Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
-            Logger.Log($"rect radius = ${radius}");
-            // Define key points
+                                        // Logger.Log($"rect radius = ${radius}");
+                                        // Define key points
             Point p1 = center + (-width / 2 + radius) * frame.DirX + (height / 2) * frame.DirY;
             Point p2 = center + (width / 2 - radius) * frame.DirX + (height / 2) * frame.DirY;
             Point p3 = center + (width / 2) * frame.DirX + (height / 2 - radius) * frame.DirY;

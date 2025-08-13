@@ -1,5 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242.Geometry;
+﻿using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,7 +26,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            Logger.Log($"AESCConstruct25: Generating L Profile {width}x{height}x{thickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+            // Logger.Log($"AESCConstruct25: Generating L Profile {width}x{height}x{thickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
@@ -37,7 +36,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
 
-            Logger.Log($"AESCConstruct25: OffsetL: {offsetX},  {offsetY}\n");
+            // Logger.Log($"AESCConstruct25: OffsetL: {offsetX},  {offsetY}\n");
             // Define 9 key points
             Point p1 = center + (-width / 2) * frame.DirX + (height / 2) * frame.DirY;
             Point p2 = center + (-width / 2 + thickness - outerCornerRadius) * frame.DirX + (height / 2) * frame.DirY;

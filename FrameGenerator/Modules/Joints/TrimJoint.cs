@@ -152,7 +152,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Joints
                     JointModule.SubtractCutter(componentA, cutterLocal);
                     //Logger.Log("TrimJoint: Cutter subtracted successfully.");
                 }
-                catch (System.Exception ex)
+                catch (System.Exception)
                 {
                     //Logger.Log($"TrimJoint: ERROR during cutter creation: {ex.Message}");
                 }

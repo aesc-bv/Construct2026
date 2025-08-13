@@ -16,267 +16,40 @@ namespace AESCConstruct25.FrameGenerator.Commands
     {
         public const string CommandName = "AESCConstruct25.ExecuteJoint";
 
-        //public static void ExecuteJoint(Window window, double spacing, string jointType)
-        //{
-        //    //Logger.Log("AESCConstruct25: ExecuteJoint started");
+        private static bool ValidateTrimSelectionOrAlert(Window window)
+        {
+            var ctx = window?.ActiveContext;
+            var sel = ctx?.Selection;
 
-        //    List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
-        //    if (selectedComponents.Count < 1)
-        //    {
-        //        MessageBox.Show("Select at least one component to apply a joint.", "Selection Error");
-        //        return;
-        //    }
+            if (sel == null || sel.Count == 0)
+            {
+                MessageBox.Show(
+                    "Trim requires: select at least one profile (body/component/edge) and one face for the cutter.",
+                    "Trim", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
+            }
 
+            // Count faces and detect at least one valid target
+            int faceCount = 0;
+            bool hasTarget = false;
 
-        //    //Logger.Log($"Number of selected components: {selectedComponents.Count}");
+            foreach (var o in sel)
+            {
+                if (o is IDesignFace) { faceCount++; continue; }
+                if (o is IDesignBody || o is IComponent || o is IDesignEdge || o is IDesignCurve)
+                    hasTarget = true;
+            }
 
-        //    //RotateComponentCommand.ApplyStoredRotation(window, selectedComponents);
+            if (!hasTarget || faceCount < 1)
+            {
+                MessageBox.Show(
+                    "Trim requires: at least one profile (body/component/edge of target body) and one face for the cutter.\nPlease adjust your selection and try again.",
+                    "Trim", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
+            }
 
-        //    List<DesignCurve> allCurves = selectedComponents
-        //   .SelectMany(c => c.Template.Curves.OfType<DesignCurve>())
-        //   .ToList();
-
-        //    var halves = new Dictionary<Component, (Body Start, Body End)>();
-
-        //    var alreadyProcessed = new HashSet<(Component, Component)>();
-
-        //    // Apply joint logic for each valid connection
-        //    if (jointType == "Trim")
-        //    {
-        //        //Logger.Log("Trim: Start.");
-        //        // Trim only needs one component
-        //        Component compA = selectedComponents.FirstOrDefault();
-        //        if (compA == null)
-        //        {
-        //            //Logger.Log("Trim: No component selected.");
-        //            return;
-        //        }
-
-        //        JointBase joint = CreateJoint(jointType);
-        //        joint.Execute(compA, null, spacing, null, null);
-
-        //        //Logger.Log("Trim: Execute complete.");
-        //    }
-        //    else
-        //    {
-        //        IEnumerable<(Component A, Component B)> workItems = GetConnectedPairs(selectedComponents, jointType);
-        //        using (var PT = ProgressTracker.Create(workItems.Count()))
-        //        {
-        //            int i = 0;
-        //            foreach (var (compA, compB) in workItems)
-        //            {
-        //                i++;
-        //                //Logger.Log($"i = {i}");
-        //                PT.Progress = i;
-        //                PT.Message = $"Applying {jointType} joint {i}/{workItems.Count()}";
-
-        //                if (alreadyProcessed.Contains((compA, compB)) || alreadyProcessed.Contains((compB, compA)))
-        //                    continue;
-
-        //                bool aStartConnected = ArePointsConnected(compA, compB, "start");
-        //                bool aEndConnected = ArePointsConnected(compA, compB, "end");
-        //                bool bStartConnected = ArePointsConnected(compB, compA, "start");
-        //                bool bEndConnected = ArePointsConnected(compB, compA, "end");
-
-        //                //Logger.Log($"connections: {aStartConnected},: {aEndConnected},: {bStartConnected},: {bEndConnected}.");
-
-        //                var locSegA = compA.Template.Curves.First().Shape as CurveSegment;
-        //                var locSegB = compB.Template.Curves.First().Shape as CurveSegment;
-        //                if (locSegA == null || locSegB == null)
-        //                {
-        //                    //Logger.Log("Missing construction curves.");
-        //                    continue;
-        //                }
-
-        //                // compute purely‐local directions:
-        //                var dA = (locSegA.EndPoint - locSegA.StartPoint).Direction.ToVector();
-        //                var dB = (locSegB.EndPoint - locSegB.StartPoint).Direction.ToVector();
-
-        //                // --- stable localUp computation (local) ---
-        //                var rawUp = Vector.Cross(dA, dB);
-        //                Vector localUp = rawUp.Magnitude > 1e-6
-        //                              ? rawUp.Direction.ToVector()
-        //                              : Vector.Create(0, 1, 0);
-
-        //                // now flip to keep a consistent hemisphere (still local)
-        //                Vector WY = Vector.Create(0, 1, 0),
-        //                       WX = Vector.Create(1, 0, 0),
-        //                       WZ = Vector.Create(0, 0, 1);
-        //                if (Math.Abs(Vector.Dot(localUp, WY)) > 1e-6 && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
-        //                else if (Math.Abs(Vector.Dot(localUp, WX)) > 1e-6 && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
-        //                else if (Math.Abs(Vector.Dot(localUp, WZ)) > 1e-6 && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
-
-
-        //                // --- stable localUp computation ---
-        //                //var rawUp = Vector.Cross(dA, dB);
-        //                //Vector localUp = rawUp.Magnitude > 1e-6
-        //                //              ? rawUp.Direction.ToVector()
-        //                //              : Vector.Create(0, 1, 0);
-
-        //                // now flip to keep a consistent hemisphere
-        //                //Vector WY = Vector.Create(0, 1, 0), WX = Vector.Create(1, 0, 0), WZ = Vector.Create(0, 0, 1);
-        //                //if (Math.Abs(Vector.Dot(localUp, WY)) > 1e-6 && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
-        //                //else if (Math.Abs(Vector.Dot(localUp, WX)) > 1e-6 && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
-        //                //else if (Math.Abs(Vector.Dot(localUp, WZ)) > 1e-6 && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
-
-        //                JointBase joint = CreateJoint(jointType);
-        //                bool shouldExtend = true;// (jointType == "Miter" || jointType == "Straight" || jointType == "Straight2");
-
-        //                if (jointType == "T")
-        //                {
-        //                    //Logger.Log($"{compA.Name} ⊥ {compB.Name}");
-
-        //                    // make sure compB is split once
-        //                    if (!halves.ContainsKey(compB))
-        //                    {
-        //                        var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
-        //                        if (sB != null && eB != null)
-        //                            halves[compB] = (sB, eB);
-        //                    }
-
-        //                    // fetch local construction segments
-        //                    var segA = compA.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
-        //                    var segB = compB.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
-        //                    if (segA == null || segB == null)
-        //                    {
-        //                        //Logger.Log("TJoint: Missing construction curves.");
-        //                        continue;
-        //                    }
-
-        //                    // lift into world
-        //                    Point wA0 = compA.Placement * segA.StartPoint;
-        //                    Point wA1 = compA.Placement * segA.EndPoint;
-        //                    Point wB0 = compB.Placement * segB.StartPoint;
-        //                    Point wB1 = compB.Placement * segB.EndPoint;
-
-        //                    // determine which B-end lies on A’s world line
-        //                    bool cutStart = IsPointOnSegment(wB0, wA0, wA1);
-        //                    bool cutEnd = IsPointOnSegment(wB1, wA0, wA1);
-
-        //                    string jointHalfName;
-        //                    if (cutStart)
-        //                    {
-        //                        // B’s start sits on A → we need to reset B’s opposite half (HalfEnd)
-        //                        jointHalfName = "HalfStart";
-        //                        //Logger.Log($"{compB.Name}: T-joint — segB.Start lies on A; resetting HalfEnd.");
-        //                    }
-        //                    else if (cutEnd)
-        //                    {
-        //                        // B’s end sits on A → reset B’s HalfStart
-        //                        jointHalfName = "HalfEnd";
-        //                        //Logger.Log($"{compB.Name}: T-joint — segB.End lies on A; resetting HalfStart.");
-        //                    }
-        //                    else
-        //                    {
-        //                        //Logger.Log($"{compB.Name}: WARNING — no valid T connection detected; skipping.");
-        //                        continue;
-        //                    }
-
-        //                    // reset just that half of B
-        //                    //Logger.Log($"Start ResetHalfForJoint(…, \"{jointHalfName}\", …) on {compB.Name}");
-        //                    JointModule.ResetHalfForJoint(
-        //                        compB,
-        //                        jointHalfName,
-        //                        extendProfile: true,
-        //                        localUp,
-        //                        allCurves,
-        //                        new List<Component> { compA, compB }
-        //                    );
-        //                    //Logger.Log($"Finished ResetHalfForJoint on {compB.Name}");
-
-        //                    // grab the freshly-reset half as ExtrudedProfile
-        //                    Body resetHalf = compB
-        //                      .Template
-        //                      .Bodies
-        //                      .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-        //                      ?.Shape;
-        //                    if (resetHalf == null)
-        //                    {
-        //                        //Logger.Log($"{compB.Name}: ERROR — reset half not found as ExtrudedProfile.");
-        //                        continue;
-        //                    }
-
-        //                    // now execute the cutter on *only* that half
-        //                    joint.Execute(compA, compB, spacing, null, resetHalf);
-        //                }
-        //                else
-        //                {
-        //                    // Non-T joints: split A and B if not split yet
-        //                    if (!halves.ContainsKey(compA))
-        //                    {
-        //                        var (startA, endA) = JointModule.SplitBodyAtMidpoint(compA, localUp);
-        //                        if (startA != null && endA != null)
-        //                            halves[compA] = (startA, endA);
-        //                    }
-        //                    if (!halves.ContainsKey(compB))
-        //                    {
-        //                        var (startB, endB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
-        //                        if (startB != null && endB != null)
-        //                            halves[compB] = (startB, endB);
-        //                    }
-
-        //                    var (aStart, aEnd) = halves[compA];
-        //                    var (bStart, bEnd) = halves[compB];
-
-        //                    if (aEndConnected && bStartConnected)
-        //                    {
-        //                        //Logger.Log($"{compA.Name}.end ↔ {compB.Name}.start");
-
-        //                        JointModule.ResetHalfForJoint(compA, "HalfEnd", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-        //                        JointModule.ResetHalfForJoint(compB, "HalfStart", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-
-        //                        aEnd = compA.Template.Bodies.FirstOrDefault(b => b.Name == "HalfEnd")?.Shape;
-        //                        bStart = compB.Template.Bodies.FirstOrDefault(b => b.Name == "HalfStart")?.Shape;
-
-        //                        joint.Execute(compA, compB, spacing, aEnd, bStart);
-        //                    }
-        //                    else if (aStartConnected && bEndConnected)
-        //                    {
-        //                        //Logger.Log($"{compA.Name}.start ↔ {compB.Name}.end");
-
-        //                        JointModule.ResetHalfForJoint(compA, "HalfStart", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-        //                        JointModule.ResetHalfForJoint(compB, "HalfEnd", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-
-        //                        aStart = compA.Template.Bodies.FirstOrDefault(b => b.Name == "HalfStart")?.Shape;
-        //                        bEnd = compB.Template.Bodies.FirstOrDefault(b => b.Name == "HalfEnd")?.Shape;
-
-        //                        joint.Execute(compA, compB, spacing, aStart, bEnd);
-        //                    }
-        //                    else if (aStartConnected && bStartConnected)
-        //                    {
-        //                        //Logger.Log($"{compA.Name}.start ↔ {compB.Name}.start");
-
-        //                        JointModule.ResetHalfForJoint(compA, "HalfStart", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-        //                        JointModule.ResetHalfForJoint(compB, "HalfStart", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-
-        //                        aStart = compA.Template.Bodies.FirstOrDefault(b => b.Name == "HalfStart")?.Shape;
-        //                        bStart = compB.Template.Bodies.FirstOrDefault(b => b.Name == "HalfStart")?.Shape;
-
-        //                        joint.Execute(compA, compB, spacing, aStart, bStart);
-        //                    }
-        //                    else if (aEndConnected && bEndConnected)
-        //                    {
-        //                        //Logger.Log($"{compA.Name}.end ↔ {compB.Name}.end");
-
-        //                        JointModule.ResetHalfForJoint(compA, "HalfEnd", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-        //                        JointModule.ResetHalfForJoint(compB, "HalfEnd", shouldExtend, localUp, allCurves, new List<Component> { compA, compB });
-
-        //                        aEnd = compA.Template.Bodies.FirstOrDefault(b => b.Name == "HalfEnd")?.Shape;
-        //                        bEnd = compB.Template.Bodies.FirstOrDefault(b => b.Name == "HalfEnd")?.Shape;
-
-        //                        joint.Execute(compA, compB, spacing, aEnd, bEnd);
-        //                    }
-        //                    else
-        //                    {
-        //                        //Logger.Log($"{compA.Name} and {compB.Name}: WARNING - No matching connection found for joint.");
-        //                    }
-        //                }
-        //                alreadyProcessed.Add((compA, compB));
-        //            }
-        //        }
-        //    }
-        //    //Logger.Log("ExecuteJoint: Complete.");
-        //}
+            return true;
+        }
 
         public static void ExecuteJoint(Window window, double spacing, string jointType, bool updateBOM)
         {
@@ -318,11 +91,20 @@ namespace AESCConstruct25.FrameGenerator.Commands
             // 4) Trim joint is special
             if (jointType == "Trim")
             {
+                if (!ValidateTrimSelectionOrAlert(window))
+                    return;
+
                 Component compA = selectedComponents.FirstOrDefault();
                 if (compA == null) return;
 
                 JointBase trimJoint = CreateJoint(jointType);
                 trimJoint.Execute(compA, null, spacing, null, null);
+            }
+            else if (jointType == "CutOut")
+            {
+                Logger.Log("cutout!");
+                ExecuteCutOut(window);
+                return;
             }
             else
             {
@@ -499,7 +281,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
         public static void RestoreJoint(Window window)
         {
-            Logger.Log("==== RestoreJoint START ====");
+            // Logger.Log("==== RestoreJoint START ====");
             WriteBlock.ExecuteTask("RestoreJoint", () =>
             {
                 // 1) Gather selection
@@ -576,7 +358,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 // 5) Execute resets (always extended profile)
                 foreach (var (comp, half, up, partners) in resetActions)
                 {
-                    Logger.Log($"RestoreJoint: ResetHalfForJoint({comp.Name}, {half}, extendProfile: true)");
+                    // Logger.Log($"RestoreJoint: ResetHalfForJoint({comp.Name}, {half}, extendProfile: true)");
                     try
                     {
                         JointModule.ResetHalfForJoint(
@@ -588,9 +370,9 @@ namespace AESCConstruct25.FrameGenerator.Commands
                             partners
                         );
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Logger.Log($"RestoreJoint: ERROR on {comp.Name}.{half} → {ex.Message}");
+                        // Logger.Log($"RestoreJoint: ERROR on {comp.Name}.{half} → {ex.Message}");
                     }
                 }
 
@@ -600,11 +382,119 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 //    MessageBoxButtons.OK,
                 //    MessageBoxIcon.Information
                 //);
-                Logger.Log("RestoreJoint: complete");
+                // Logger.Log("RestoreJoint: complete");
             });
-            Logger.Log("==== RestoreJoint END ====");
+            // Logger.Log("==== RestoreJoint END ====");
         }
 
+        public static void ExecuteCutOut(Window window)
+        {
+            var comps = JointSelectionHelper.GetSelectedComponents(window);
+            if (comps == null || comps.Count < 2)
+            {
+                MessageBox.Show("Select at least two profiles. The last selected will be cut by the others.", "Cut-Out");
+                return;
+            }
+
+            var target = comps.Last();
+            var cutters = comps.Take(comps.Count - 1).Where(c => c != target).ToList();
+            if (cutters.Count == 0) return;
+
+            WriteBlock.ExecuteTask("CutOut", () =>
+            {
+                var part = target.Template;
+                if (part == null) return;
+
+                // Snapshot original target bodies and main-body metrics (fallback: largest volume)
+                var preBodies = part.Bodies.Where(b => b.Shape != null && b.Shape.Volume > 0).ToList();
+                var preMain = preBodies.OrderByDescending(b => b.Shape.Volume).FirstOrDefault();
+
+                Point preCenter = Point.Origin;
+                double preVol = 0.0;
+                double lenScale = 1.0;
+
+                if (preMain != null)
+                {
+                    var bb = preMain.Shape.GetBoundingBox(Matrix.Identity, true);
+                    preCenter = bb.Center;
+                    preVol = preMain.Shape.Volume;
+                    var size = bb.MaxCorner - bb.MinCorner;
+                    lenScale = Math.Max(1e-6, Math.Abs(size.X) + Math.Abs(size.Y) + Math.Abs(size.Z));
+                }
+
+                // Subtract all cutters (using copies transformed into target-local)
+                foreach (var cutterComp in cutters)
+                {
+                    try
+                    {
+                        if (cutterComp?.Template == null) continue;
+
+                        var bodies = cutterComp.Template.Bodies
+                            .Where(b => b.Shape != null && b.Shape.Volume > 0)
+                            .ToList();
+                        if (bodies.Count == 0) continue;
+
+                        Matrix toTargetLocal = target.Placement.Inverse * cutterComp.Placement;
+
+                        foreach (var db in bodies)
+                        {
+                            Body copy = db.Shape.Copy();          // keep original cutter intact
+                            copy.Transform(toTargetLocal);         // place into target's local frame
+                            JointModule.SubtractCutter(target, copy);
+                            copy.Dispose();
+                        }
+                    }
+                    catch
+                    {
+                        // ignore a single failing cutter; continue with the rest
+                    }
+                }
+
+                // Cleanup: retain the post-cut body that is closest to the original main body.
+                var postBodies = part.Bodies.Where(b => b.Shape != null && b.Shape.Volume > 0).ToList();
+                if (postBodies.Count <= 1) return;
+
+                DesignBody keeper = null;
+
+                if (preMain != null)
+                {
+                    // Score by normalized center distance + volume difference ratio
+                    double bestScore = double.MaxValue;
+
+                    foreach (var b in postBodies)
+                    {
+                        var bb = b.Shape.GetBoundingBox(Matrix.Identity, true);
+                        var center = bb.Center;
+                        double dist = (center - preCenter).Magnitude / lenScale;
+
+                        double v = b.Shape.Volume;
+                        double volDiff = (preVol > 0.0 || v > 0.0)
+                            ? Math.Abs(v - preVol) / Math.Max(preVol, v)
+                            : 0.0;
+
+                        double score = dist + volDiff; // simple composite score
+                        if (score < bestScore)
+                        {
+                            bestScore = score;
+                            keeper = b;
+                        }
+                    }
+                }
+                else
+                {
+                    // Fallback: keep largest volume if we had no pre-main
+                    keeper = postBodies.OrderByDescending(b => b.Shape.Volume).FirstOrDefault();
+                }
+
+                if (keeper != null)
+                {
+                    foreach (var extra in postBodies.Where(b => !object.ReferenceEquals(b, keeper)).ToList())
+                    {
+                        try { extra.Delete(); } catch { /* ignore */ }
+                    }
+                }
+            });
+        }
 
 
         private static JointBase CreateJoint(string jointType)

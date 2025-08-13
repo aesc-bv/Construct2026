@@ -1,35 +1,30 @@
 ﻿using AESCConstruct25.FrameGenerator.UI;
-using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
 using System;
 using System.Drawing;
 using System.IO;
+using System.Threading;
+using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;       // for ElementHost
+using System.Windows.Threading;
+using Application = SpaceClaim.Api.V242.Application;
 using Image = System.Drawing.Image;
-using WinForms = System.Windows.Forms;        // alias WinForms namespace
+using Panel = SpaceClaim.Api.V242.Panel;
+using WpfWindow = System.Windows.Window;
 
 namespace AESCConstruct25.UIMain
 {
     public static class UIManager
     {
+        // Tracks whether to float or dock
+        private static bool _floatingMode;
+        private static string _lastPanelKey;
 
-        static PanelTab myPanelTab;
-        // Command names
-        public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
-        public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
-        public const string PlateCommand = "AESCConstruct25.Plate";
-        public const string FastenerCommand = "AESCConstruct25.Fastener";
-        public const string RibCutOutCommand = "AESCConstruct25.RibCutOut";
-        public const string CustomPropertiesCommand = "AESCConstruct25.CustomProperties";
-        public const string EngravingCommand = "AESCConstruct25.EngravingControl";
-
-        // Shared ElementHosts for WPF controls
-        private static ElementHost _profileHost, _settingsHost,
-                                  _plateHost, _fastenerHost, _ribCutOutHost, _customPropertiesHost, _engravingHost;
-
-        // WPF controls (instances of UserControl)
+        // Docked hosts and controls
+        private static ElementHost _profileHost, _settingsHost, _plateHost, _fastenerHost,
+                                  _ribCutOutHost, _customPropertiesHost, _engravingHost;
         private static ProfileSelectionControl _profileControl;
         private static SettingsControl _settingsControl;
         private static PlatesControl _plateControl;
@@ -38,203 +33,366 @@ namespace AESCConstruct25.UIMain
         private static CustomComponentControl _customPropertiesControl;
         private static EngravingControl _engravingControl;
 
+        // Floating window and host
+        private static Form _mainWindow;
+        private static ElementHost _elementHost;
+        private static System.Windows.Controls.UserControl _currentControl;
+        private static int _toggleCount;
+
+        // Command names
+        public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
+        public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
+        public const string PlateCommand = "AESCConstruct25.Plate";
+        public const string FastenerCommand = "AESCConstruct25.Fastener";
+        public const string RibCutOutCommand = "AESCConstruct25.RibCutOut";
+        public const string CustomPropertiesCommand = "AESCConstruct25.CustomProperties";
+        public const string EngravingCommand = "AESCConstruct25.EngravingControl";
+        public const string DockToggleCommand = "AESCConstruct25.DockCmd";
+
+        private static Thread _floatingThread;
+        private static Dispatcher _floatingDispatcher;
+        private static WpfWindow _floatingWindow;
+
+        private static Command DockToggleCommandHolder;
+        static Bitmap _undock = new Bitmap(new MemoryStream(Resources.Menu_Undock));
+        static Bitmap _dock = new Bitmap(new MemoryStream(Resources.Menu_Dock));
         public static void RegisterAll()
         {
-            bool valid = DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
-            // Profile
-            var profileCmd = Command.Create(ProfileCommand);
-            profileCmd.Text = "Profile Selector";
-            profileCmd.Hint = "Open the profile selection sidebar";
-            profileCmd.Image = LoadImage(Resources.FrameGen);
-            profileCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
-            profileCmd.Executing += (s, e) => ShowProfile();
-            profileCmd.KeepAlive(true);
+            bool valid = LicenseSpot.LicenseSpot.State.Valid;// DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
+            //Register(ProfileCommand, "Frame Generator", "Open the profile selection sidebar", Resources.FrameGen, () => Show(ProfileCommand), valid);
+            //Register(SettingsCommand, "Settings", "Open the settings sidebar", Resources.settings, () => Show(SettingsCommand), valid);
+            //Register(PlateCommand, "Plate", "Open the plate-creation pane", Resources.InsertPlate, () => Show(PlateCommand), valid);
+            //Register(FastenerCommand, "Fastener", "Open the fastener insertion pane", Resources.Fasteners, () => Show(FastenerCommand), valid);
+            //Register(RibCutOutCommand, "Rib Cut-Out", "Open the rib cut-out pane", Resources.ribCutout, () => Show(RibCutOutCommand), valid);
+            //Register(CustomPropertiesCommand, "Custom Properties", "Open the custom-properties pane", Resources.Custom_Properties, () => Show(CustomPropertiesCommand), valid);
+            //Register(EngravingCommand, "Engraving", "Open the engraving pane", Resources.Engraving, () => Show(EngravingCommand), valid);
+            //Register(DockToggleCommand, "Float", "Toggle between docked panel and floating window", Resources.Menu_Undock, () => ToggleMode(), true);
+            Register(
+        ProfileCommand,
+        AESCConstruct25.Localization.Language.Translate("Ribbon.Button.FrameGenerator"),
+        "Open the profile selection sidebar",
+        Resources.FrameGen,
+        () => Show(ProfileCommand),
+        valid
+    );
 
-            // Settings
-            var settingsCmd = Command.Create(SettingsCommand);
-            settingsCmd.Text = "Settings";
-            settingsCmd.Hint = "Open the settings sidebar";
-            settingsCmd.Image = LoadImage(Resources.settings);
-            settingsCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
-            settingsCmd.Executing += (s, e) => ShowSettings();
-            settingsCmd.KeepAlive(true);
-
-            // Plate
-            var plateCmd = Command.Create(PlateCommand);
-            plateCmd.Text = "Plate";
-            plateCmd.Hint = "Open the plate‐creation pane";
-            plateCmd.Image = LoadImage(Resources.InsertPlate);
-            plateCmd.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
-            plateCmd.Executing += (s, e) => ShowPlate();
-            plateCmd.KeepAlive(true);
-
-            // Fastener
-            var fastenerCmd = Command.Create(FastenerCommand);
-            fastenerCmd.Text = "Fastener";
-            fastenerCmd.Hint = "Open the fastener insertion pane";
-            fastenerCmd.Image = LoadImage(Resources.Fasteners);
-            fastenerCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
-            fastenerCmd.Executing += (s, e) => ShowFastener();
-            fastenerCmd.KeepAlive(true);
-
-            // Rib CutOut
-            var ribCmd = Command.Create(RibCutOutCommand);
-            ribCmd.Text = "Rib Cutout";
-            ribCmd.Hint = "Open the rib cutout pane";
-            ribCmd.Image = LoadImage(Resources.ribCutout);
-            ribCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
-            ribCmd.Executing += (s, e) => ShowRibCutOut();
-            ribCmd.KeepAlive(true);
-
-            var customPropCmd = Command.Create(CustomPropertiesCommand);
-            customPropCmd.Text = "Custom Properties";
-            customPropCmd.Hint = "Open the custom‐properties pane";
-            customPropCmd.Image = LoadImage(Resources.Custom_Properties);
-            customPropCmd.IsEnabled = valid;  // or LicenseSpot.Valid
-            customPropCmd.Executing += (s, e) => ShowCustomProperties();
-            customPropCmd.KeepAlive(true);
-
-            var engravingCmd = Command.Create(EngravingCommand);
-            engravingCmd.Text = "Engraving";
-            engravingCmd.Hint = "Open the engraving pane";
-            engravingCmd.Image = LoadImage(Resources.Engraving); // if you have an icon
-            engravingCmd.IsEnabled = valid;
-            engravingCmd.Executing += (s, e) => ShowEngraving();
-            engravingCmd.KeepAlive(true);
-        }
-
-        private static void ShowEngraving()
-        {
-            Logger.Log("showengraving");
-            if (_engravingControl == null)
-            {
-                Logger.Log("showengraving null");
-                try
-                {
-                    _engravingControl = new EngravingControl();
-                    Logger.Log("EngravingControl ctor succeeded");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"EngravingControl ctor failed: {ex}");
-                    WinForms.MessageBox.Show(
-                        "Could not initialize the Engraving panel:\n" + ex.Message,
-                        "Engraving", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error
-                    );
-                    return;
-                }
-
-                _engravingHost = new ElementHost
-                {
-                    Dock = DockStyle.Fill,
-                    Child = _engravingControl
-                };
-                Logger.Log("_engravingHost created");
-            }
-            Logger.Log("showengraving2");
-
-            var cmd = Command.GetCommand(EngravingCommand);
-            Logger.Log("GetCommand");
-            SpaceClaim.Api.V242.Application.AddPanelContent(
-                cmd,
-                _engravingHost,
-                SpaceClaim.Api.V242.Panel.Options
+            Register(
+                SettingsCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Settings"),
+                "Open the settings sidebar",
+                Resources.settings,
+                () => Show(SettingsCommand),
+                valid
             );
-            Logger.Log("AddPanelContent");
-        }
 
-        private static void ShowCustomProperties()
-        {
-            if (_customPropertiesControl == null)
-            {
-                // your CustomPropertiesControl is a WPF UserControl
-                _customPropertiesControl = new CustomComponentControl();
-                _customPropertiesHost = new ElementHost
-                {
-                    Dock = DockStyle.Fill,
-                    Child = _customPropertiesControl
-                };
-            }
+            Register(
+                PlateCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Plate"),
+                "Open the plate-creation pane",
+                Resources.InsertPlate,
+                () => Show(PlateCommand),
+                valid
+            );
 
-            var cmd = Command.GetCommand(CustomPropertiesCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(
-                cmd,
-                _customPropertiesHost,
-                SpaceClaim.Api.V242.Panel.Options
+            Register(
+                FastenerCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Fastener"),
+                "Open the fastener insertion pane",
+                Resources.Fasteners,
+                () => Show(FastenerCommand),
+                valid
+            );
+
+            Register(
+                RibCutOutCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.RibCutOut"),
+                "Open the rib cut-out pane",
+                Resources.ribCutout,
+                () => Show(RibCutOutCommand),
+                valid
+            );
+
+            Register(
+                CustomPropertiesCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.CustomProperties"),
+                "Open the custom-properties pane",
+                Resources.Custom_Properties,
+                () => Show(CustomPropertiesCommand),
+                valid
+            );
+
+            Register(
+                EngravingCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Engraving"),
+                "Open the engraving pane",
+                Resources.Engraving,
+                () => Show(EngravingCommand),
+                valid
+            );
+
+            Register(
+                DockToggleCommand,
+                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Float"),
+                "Toggle between docked panel and floating window",
+                Resources.Menu_Undock,
+                () => ToggleMode(),
+                true
             );
         }
 
-        private static void ShowProfile()
+        private static void Register(string name, string text, string hint, byte[] icon, Action execute, bool enabled)
         {
-            if (_profileControl == null)
-            {
-                _profileControl = new ProfileSelectionControl();
-                // No TopLevel on WPF UserControl :contentReference[oaicite:5]{index=5}
-                _profileHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _profileControl };  // host WPF :contentReference[oaicite:6]{index=6}
-            }
-            var cmd = Command.GetCommand(ProfileCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(   // fully qualified Application :contentReference[oaicite:7]{index=7}
-                cmd,
-                _profileHost,
-                SpaceClaim.Api.V242.Panel.Options             // fully qualified Panel enum :contentReference[oaicite:8]{index=8}
-            );
+            var cmd = Command.Create(name);
+
+            if (name == DockToggleCommand)
+                DockToggleCommandHolder = cmd;
+
+            cmd.Text = text;
+            cmd.Hint = hint;
+            cmd.Image = LoadImage(icon);
+            cmd.IsEnabled = enabled;
+            cmd.Executing += (s, e) => execute();
+            cmd.KeepAlive(true);
         }
 
-        private static void ShowSettings()
+        private static void ToggleMode()
         {
-            if (_settingsControl == null)
+            _floatingMode = !_floatingMode;
+
+            if (DockToggleCommandHolder != null)
             {
-                _settingsControl = new SettingsControl();
-                _settingsHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _settingsControl };
+                // same icon logic as before
+                DockToggleCommandHolder.Image = _floatingMode ? _dock : _undock;
+
+                // translated label: Dock when floating, Float when docked
+                DockToggleCommandHolder.Text = AESCConstruct25.Localization.Language.Translate(
+                    _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
+                );
             }
-            var cmd = Command.GetCommand(SettingsCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _settingsHost, SpaceClaim.Api.V242.Panel.Options);
+
+            if (_floatingMode)
+            {
+                ShowFloating(_lastPanelKey);
+            }
+            else
+            {
+                CloseFloatingWindow();
+                ShowDocked(_lastPanelKey);
+            }
         }
 
-        private static void ShowPlate()
+        private static void Show(string panelKey)
         {
-            if (_plateControl == null)
+            // Logger.Log($"Show() called for '{panelKey}', floatingMode={_floatingMode}");
+            //MessageBox.Show(
+            //    $"Show() -> panelKey={panelKey}\nMode={(_floatingMode ? "Floating" : "Docked")}",
+            //    "UIManager Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            _lastPanelKey = panelKey;
+            if (_floatingMode)
             {
-                _plateControl = new PlatesControl();
-                _plateHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _plateControl };
+                ShowFloating(panelKey);
             }
-            var cmd = Command.GetCommand(PlateCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _plateHost, SpaceClaim.Api.V242.Panel.Options);
+            else
+            {
+                ShowDocked(panelKey);
+            }
         }
 
-        private static void ShowFastener()
+        private static void CloseFloatingWindow()
         {
-            if (_fastenerControl == null)
+            if (_floatingDispatcher != null)
             {
-                try
+                _floatingDispatcher.BeginInvoke(new Action(() =>
                 {
-                    _fastenerControl = new FastenersControl();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"FastenersControl ctor failed: {ex}");
-                    WinForms.MessageBox.Show(
-                        "Could not initialize the Fastener panel:\n" + ex.Message,
-                        "Fastener", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error
-                    );
-                    return;
-                }
-                _fastenerHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _fastenerControl };
+                    _floatingWindow?.Close();
+                }));
             }
-            var cmd = Command.GetCommand(FastenerCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _fastenerHost, SpaceClaim.Api.V242.Panel.Options);
         }
 
-        private static void ShowRibCutOut()
+        private static void ShowFloating(string key)
         {
-            if (_ribCutOutControl == null)
+            Command.Execute("Line");
+            // If our STA thread + window are already running, just swap the content and bring to front
+            if (_floatingThread != null
+                && _floatingThread.IsAlive
+                && _floatingWindow != null)
             {
-                _ribCutOutControl = new RibCutOutControl();
-                _ribCutOutHost = new ElementHost { Dock = WinForms.DockStyle.Fill, Child = _ribCutOutControl };
+                _floatingDispatcher.BeginInvoke(new Action(() =>
+                {
+                    _floatingWindow.Content = CreateControl(key);
+                    _floatingWindow.Tag = key;
+
+                    if (_floatingWindow.WindowState == WindowState.Minimized)
+                        _floatingWindow.WindowState = WindowState.Normal;
+
+                    _floatingWindow.Activate();
+                }));
+                return;
             }
-            var cmd = Command.GetCommand(RibCutOutCommand);
-            SpaceClaim.Api.V242.Application.AddPanelContent(cmd, _ribCutOutHost, SpaceClaim.Api.V242.Panel.Options);
+
+            // First-time creation (or after user closed the window): spin up STA thread + dispatcher
+            _floatingThread = new Thread(() =>
+            {
+                // capture this thread’s dispatcher
+                _floatingDispatcher = Dispatcher.CurrentDispatcher;
+
+                // build, show, and run the window
+                _floatingWindow = CreateFloatingWindow(key);
+                _floatingWindow.Show();
+                Dispatcher.Run();
+            });
+
+            _floatingThread.SetApartmentState(ApartmentState.STA);
+            _floatingThread.IsBackground = true;
+            _floatingThread.Start();
+
+            // Logger.Log("ShowFloating end");
         }
+
+        // ── Helper to build & wire a single floating window ──
+        private static WpfWindow CreateFloatingWindow(string key)
+        {
+            var fullScreenHeight = SystemParameters.PrimaryScreenHeight;
+            var win = new WpfWindow
+            {
+                Title = "AESC Construct",
+                Width = 320,
+                //Height = 600,
+                Content = CreateControl(key),
+                Tag = key,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen
+            };
+
+            // when the user clicks [X], really close it and clear our reference
+            win.Closed += FloatingWindow_Closed;
+
+            ElementHost.EnableModelessKeyboardInterop(win);
+            // Logger.Log($"Created floating window for '{key}'");
+
+            return win;
+        }
+
+        private static void FloatingWindow_Closed(object sender, EventArgs e)
+        {
+            // Logger.Log("Floating window closed by user");
+            var win = (WpfWindow)sender;
+            win.Closed -= FloatingWindow_Closed;
+            _floatingWindow = null;
+            // note: dispatcher stays alive for reuse
+        }
+        /// <summary>
+        /// Recursively logs & enables WPF TextBoxes under the given visual.
+        /// </summary>
+        private static void LogAndEnableWpfTextBoxes(System.Windows.DependencyObject parent)
+        {
+            if (parent == null) return;
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                // Fully qualify WPF TextBox to avoid ambiguity
+                if (child is System.Windows.Controls.TextBox wpfTb)
+                {
+                    // Logger.Log($"[WPF TextBox] Name={wpfTb.Name}, IsEnabled={wpfTb.IsEnabled}, IsReadOnly={wpfTb.IsReadOnly}");
+                    wpfTb.IsEnabled = true;
+                    wpfTb.IsReadOnly = false;
+                }
+
+                // Recurse into children
+                LogAndEnableWpfTextBoxes(child);
+            }
+        }
+
+
+        private static void ShowDocked(string key)
+        {
+            if (_mainWindow != null && !_mainWindow.IsDisposed && _floatingMode)
+            {
+                _mainWindow.Hide();
+                // Logger.Log("Hid floating window before docking");
+            }
+            // Logger.Log($"ShowDocked start for '{key}'");
+            switch (key)
+            {
+                case ProfileCommand:
+                    EnsureProfile(); Application.AddPanelContent(Command.GetCommand(key), _profileHost, Panel.Options); break;
+                case SettingsCommand:
+                    EnsureSettings(); Application.AddPanelContent(Command.GetCommand(key), _settingsHost, Panel.Options); break;
+                case PlateCommand:
+                    EnsurePlate(); Application.AddPanelContent(Command.GetCommand(key), _plateHost, Panel.Options); break;
+                case FastenerCommand:
+                    EnsureFastener(); Application.AddPanelContent(Command.GetCommand(key), _fastenerHost, Panel.Options); break;
+                case RibCutOutCommand:
+                    EnsureRibCutOut(); Application.AddPanelContent(Command.GetCommand(key), _ribCutOutHost, Panel.Options); break;
+                case CustomPropertiesCommand:
+                    EnsureCustomProperties(); Application.AddPanelContent(Command.GetCommand(key), _customPropertiesHost, Panel.Options); break;
+                case EngravingCommand:
+                    EnsureEngraving(); Application.AddPanelContent(Command.GetCommand(key), _engravingHost, Panel.Options); break;
+            }
+            // Logger.Log("ShowDocked end");
+        }
+
+        /// <summary>
+        /// Always new instance for floating to prevent parent conflicts.
+        /// </summary>
+        private static System.Windows.Controls.UserControl CreateControl(string key)
+        {
+            switch (key)
+            {
+                case ProfileCommand: return new ProfileSelectionControl();
+                case SettingsCommand: return new SettingsControl();
+                case PlateCommand: return new PlatesControl();
+                case FastenerCommand: return new FastenersControl();
+                case RibCutOutCommand: return new RibCutOutControl();
+                case CustomPropertiesCommand: return new CustomComponentControl();
+                case EngravingCommand: return new EngravingControl();
+                default: return null;
+            }
+        }
+
+        public static void UpdateCommandTexts()
+        {
+            // Sidebar buttons
+            var c = Command.GetCommand(ProfileCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.FrameGenerator");
+
+            c = Command.GetCommand(SettingsCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Settings");
+
+            c = Command.GetCommand(PlateCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Plate");
+
+            c = Command.GetCommand(FastenerCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Fastener");
+
+            c = Command.GetCommand(RibCutOutCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.RibCutOut");
+
+            c = Command.GetCommand(CustomPropertiesCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.CustomProperties");
+
+            c = Command.GetCommand(EngravingCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Engraving");
+
+            // Float/Dock toggle
+            if (DockToggleCommandHolder != null)
+            {
+                DockToggleCommandHolder.Text = Localization.Language.Translate(
+                    _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
+                );
+            }
+        }
+
+        // Lazy initializers for docked panels
+        private static void EnsureProfile() { if (_profileControl == null) { _profileControl = new ProfileSelectionControl(); _profileHost = new ElementHost { Dock = DockStyle.Fill, Child = _profileControl }; } }
+        private static void EnsureSettings() { if (_settingsControl == null) { _settingsControl = new SettingsControl(); _settingsHost = new ElementHost { Dock = DockStyle.Fill, Child = _settingsControl }; } }
+        private static void EnsurePlate() { if (_plateControl == null) { _plateControl = new PlatesControl(); _plateHost = new ElementHost { Dock = DockStyle.Fill, Child = _plateControl }; } }
+        private static void EnsureFastener() { if (_fastenerControl == null) { _fastenerControl = new FastenersControl(); _fastenerHost = new ElementHost { Dock = DockStyle.Fill, Child = _fastenerControl }; } }
+        private static void EnsureRibCutOut() { if (_ribCutOutControl == null) { _ribCutOutControl = new RibCutOutControl(); _ribCutOutHost = new ElementHost { Dock = DockStyle.Fill, Child = _ribCutOutControl }; } }
+        private static void EnsureCustomProperties() { if (_customPropertiesControl == null) { _customPropertiesControl = new CustomComponentControl(); _customPropertiesHost = new ElementHost { Dock = DockStyle.Fill, Child = _customPropertiesControl }; } }
+        private static void EnsureEngraving() { if (_engravingControl == null) { _engravingControl = new EngravingControl(); _engravingHost = new ElementHost { Dock = DockStyle.Fill, Child = _engravingControl }; } }
 
         private static Image LoadImage(byte[] bytes)
         {

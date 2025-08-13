@@ -142,6 +142,9 @@
   <data name="Fasteners" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>UIMain\Images\Ribbon\Menu_Fastener.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="FrameGen" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>UIMain\Images\Ribbon\Menu_FG.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="InsertPlate" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>UIMain\Images\Ribbon\Menu_Plate.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
@@ -154,10 +157,13 @@
   <data name="STEPLogo" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>UIMain\Images\Ribbon\Menu_Export_STEP.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="FrameGen" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>UIMain\Images\Ribbon\Menu_FG.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="Icon_Update" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>UIMain\Images\Ribbon\Icon_Update.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="Menu_Undock" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Menu_Undock.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="Menu_Dock" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Menu_Dock.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

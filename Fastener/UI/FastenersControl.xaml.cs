@@ -1,5 +1,4 @@
 ﻿using AESCConstruct25.Fastener.Module;
-using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -17,6 +16,18 @@ namespace AESCConstruct25.UI
     public partial class FastenersControl : UserControl, INotifyPropertyChanged
     {
         private readonly FastenerModule _module;
+
+        private bool _overwriteDistance;
+        public bool OverwriteDistance
+        {
+            get => _overwriteDistance;
+            set
+            {
+                if (_overwriteDistance == value) return;
+                _overwriteDistance = value;
+                OnPropertyChanged(nameof(OverwriteDistance));
+            }
+        }
         private string CustomFolderPath =>
            Path.Combine(
                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -35,14 +46,18 @@ namespace AESCConstruct25.UI
             _module = new FastenerModule();
 
             // 2) populate type lists
-            BoltTypeOptions = new ObservableCollection<string>(_module.BoltTypes);
-            WasherTypeOptions = new ObservableCollection<string>(_module.WasherTypes);
-            NutTypeOptions = new ObservableCollection<string>(_module.NutTypes);
+            //BoltTypeOptions = new ObservableCollection<string>(_module.BoltTypes);
+            //WasherTypeOptions = new ObservableCollection<string>(_module.WasherTypes);
+            //NutTypeOptions = new ObservableCollection<string>(_module.NutTypes);
+            BoltTypeOptions = new ObservableCollection<string>(_module.BoltNames);
+            WasherTopTypeOptions = new ObservableCollection<string>(_module.WasherNames);
+            WasherBottomTypeOptions = new ObservableCollection<string>(_module.WasherNames);
+            NutTypeOptions = new ObservableCollection<string>(_module.NutNames);
 
             // 3) pick initial selections
             SelectedBoltType = BoltTypeOptions.FirstOrDefault();
-            SelectedWasherTopType = WasherTypeOptions.FirstOrDefault();
-            SelectedWasherBottomType = WasherTypeOptions.FirstOrDefault();
+            SelectedWasherTopType = WasherTopTypeOptions.FirstOrDefault();
+            SelectedWasherBottomType = WasherBottomTypeOptions.FirstOrDefault();
             SelectedNutType = NutTypeOptions.FirstOrDefault();
 
             IncludeWasherTop = false;
@@ -51,7 +66,9 @@ namespace AESCConstruct25.UI
 
             // 4) fill dependent size lists
             RefreshBoltSizes();
-            RefreshWasherSizes();
+            //RefreshWasherSizes();
+            RefreshWasherTopSizes();
+            RefreshWasherBottomSizes();
             RefreshNutSizes();
 
             LoadCustomFileList();
@@ -94,7 +111,7 @@ namespace AESCConstruct25.UI
                 selectedPath = dlg.FileName;
             }
 
-            Logger.Log($"AESCConstruct25: Selected custom fastener file – {selectedPath}");
+            // Logger.Log($"AESCConstruct25: Selected custom fastener file – {selectedPath}");
 
             // Copy into the Custom folder
             var customDir = Path.Combine(
@@ -160,15 +177,43 @@ namespace AESCConstruct25.UI
         public string BoltLength { get; set; } = "35";
 
         // --- Washers ---
-        public ObservableCollection<string> WasherTypeOptions { get; }
-        public ObservableCollection<string> WasherSizeOptions { get; private set; }
+        public ObservableCollection<string> WasherTopTypeOptions { get; }
+        public ObservableCollection<string> WasherTopSizeOptions { get; private set; }
+        public ObservableCollection<string> WasherBottomTypeOptions { get; }
+        public ObservableCollection<string> WasherBottomSizeOptions { get; private set; }
 
         public bool IncludeWasherTop { get; set; }
-        public string SelectedWasherTopType { get; set; }
+
+        private string _selectedWasherTopType;
+        public string SelectedWasherTopType
+        {
+            get => _selectedWasherTopType;
+            set
+            {
+                if (_selectedWasherTopType == value) return;
+                _selectedWasherTopType = value;
+                OnPropertyChanged(nameof(SelectedWasherTopType));
+                RefreshWasherTopSizes();
+            }
+        }
+
         public string SelectedWasherTopSize { get; set; }
 
         public bool IncludeWasherBottom { get; set; }
-        public string SelectedWasherBottomType { get; set; }
+
+        private string _selectedWasherBottomType;
+        public string SelectedWasherBottomType
+        {
+            get => _selectedWasherBottomType;
+            set
+            {
+                if (_selectedWasherBottomType == value) return;
+                _selectedWasherBottomType = value;
+                OnPropertyChanged(nameof(SelectedWasherBottomType));
+                RefreshWasherBottomSizes();
+            }
+        }
+
         public string SelectedWasherBottomSize { get; set; }
 
         // --- Nuts ---
@@ -176,7 +221,19 @@ namespace AESCConstruct25.UI
         public ObservableCollection<string> NutSizeOptions { get; private set; }
 
         public bool IncludeNut { get; set; }
-        public string SelectedNutType { get; set; }
+
+        private string _selectedNutType;
+        public string SelectedNutType
+        {
+            get => _selectedNutType;
+            set
+            {
+                if (_selectedNutType == value) return;
+                _selectedNutType = value;
+                OnPropertyChanged(nameof(SelectedNutType));
+                RefreshNutSizes();
+            }
+        }
         public string SelectedNutSize { get; set; }
 
         // --- Custom & insert ---
@@ -216,20 +273,46 @@ namespace AESCConstruct25.UI
         {
             var sizes = _module.BoltSizesFor(SelectedBoltType).ToList();
             BoltSizeOptions = new ObservableCollection<string>(sizes);
-            SelectedBoltSize = sizes.FirstOrDefault();
+            SelectedBoltSize = BoltSizeOptions.FirstOrDefault();
             OnPropertyChanged(nameof(BoltSizeOptions));
             OnPropertyChanged(nameof(SelectedBoltSize));
         }
 
         // Called when any Washer-Type changes (we use top type for both)
-        private void RefreshWasherSizes()
+        //private void RefreshWasherSizes()
+        //{
+        //    var sizes = _module.WasherSizesFor(SelectedWasherTopType).ToList();
+        //    WasherSizeOptions = new ObservableCollection<string>(sizes);
+        //    SelectedWasherTopSize = sizes.FirstOrDefault();
+        //    SelectedWasherBottomSize = sizes.FirstOrDefault();
+        //    OnPropertyChanged(nameof(WasherSizeOptions));
+        //    OnPropertyChanged(nameof(SelectedWasherTopSize));
+        //    OnPropertyChanged(nameof(SelectedWasherBottomSize));
+        //}
+
+        /// <summary>
+        /// Called when SelectedWasherTopType changes.
+        /// Populates only the Top washer‐size list.
+        /// </summary>
+        private void RefreshWasherTopSizes()
         {
             var sizes = _module.WasherSizesFor(SelectedWasherTopType).ToList();
-            WasherSizeOptions = new ObservableCollection<string>(sizes);
-            SelectedWasherTopSize = sizes.FirstOrDefault();
-            SelectedWasherBottomSize = sizes.FirstOrDefault();
-            OnPropertyChanged(nameof(WasherSizeOptions));
+            WasherTopSizeOptions = new ObservableCollection<string>(sizes);
+            SelectedWasherTopSize = WasherTopSizeOptions.FirstOrDefault();
+            OnPropertyChanged(nameof(WasherTopSizeOptions));
             OnPropertyChanged(nameof(SelectedWasherTopSize));
+        }
+
+        /// <summary>
+        /// Called when SelectedWasherBottomType changes.
+        /// Populates only the Bottom washer‐size list.
+        /// </summary>
+        private void RefreshWasherBottomSizes()
+        {
+            var sizes = _module.WasherSizesFor(SelectedWasherBottomType).ToList();
+            WasherBottomSizeOptions = new ObservableCollection<string>(sizes);
+            SelectedWasherBottomSize = WasherBottomSizeOptions.FirstOrDefault();
+            OnPropertyChanged(nameof(WasherBottomSizeOptions));
             OnPropertyChanged(nameof(SelectedWasherBottomSize));
         }
 
@@ -238,7 +321,7 @@ namespace AESCConstruct25.UI
         {
             var sizes = _module.NutSizesFor(SelectedNutType).ToList();
             NutSizeOptions = new ObservableCollection<string>(sizes);
-            SelectedNutSize = sizes.FirstOrDefault();
+            SelectedNutSize = NutSizeOptions.FirstOrDefault();
             OnPropertyChanged(nameof(NutSizeOptions));
             OnPropertyChanged(nameof(SelectedNutSize));
         }
@@ -262,7 +345,7 @@ namespace AESCConstruct25.UI
                 return;
 
             double radiusMM = FastenerModule.GetSizeCircle(window, out double depthMM);
-            Logger.Log($"radiusMM - {radiusMM}");
+            // Logger.Log($"radiusMM - {radiusMM}");
 
             if (radiusMM == 0)
                 return;
@@ -282,13 +365,13 @@ namespace AESCConstruct25.UI
                     if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
                         double.TryParse(item.Substring(1), NumberStyles.Any, CultureInfo.InvariantCulture, out double diameter))
                     {
-                        Logger.Log($"====");
-                        Logger.Log($"diameter / 2.0 = {diameter / 2.0}");
-                        Logger.Log($"radiusMM = {radiusMM}");
-                        Logger.Log($"diameter = {diameter}");
-                        Logger.Log($"maxSize = {maxSize}");
-                        Logger.Log($"(diameter / 2.0) - radiusMM < 1e-6 = {(diameter / 2.0) - radiusMM < 1e-6}");
-                        Logger.Log($"diameter > maxSize = {diameter > maxSize}");
+                        // Logger.Log($"====");
+                        // Logger.Log($"diameter / 2.0 = {diameter / 2.0}");
+                        // Logger.Log($"radiusMM = {radiusMM}");
+                        // Logger.Log($"diameter = {diameter}");
+                        // Logger.Log($"maxSize = {maxSize}");
+                        // Logger.Log($"(diameter / 2.0) - radiusMM < 1e-6 = {(diameter / 2.0) - radiusMM < 1e-6}");
+                        // Logger.Log($"diameter > maxSize = {diameter > maxSize}");
                         if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)
                         {
                             maxSize = diameter;
@@ -311,22 +394,32 @@ namespace AESCConstruct25.UI
         private void InsertButton_Click(object sender, RoutedEventArgs e)
         {
             // push UI state into module
-            _module.SetBoltType(SelectedBoltType);
+            //_module.SetBoltType(SelectedBoltType);
+            // Convert the UI‐picked Name into the actual bolt.type
+            var realBoltType = _module.GetBoltTypeByName(SelectedBoltType);
+            _module.SetBoltType(realBoltType);
             _module.SetBoltSize(SelectedBoltSize);
             _module.SetBoltLength(BoltLength);
             _module.SetIncludeWasherTop(IncludeWasherTop);
-            _module.SetWasherTopType(SelectedWasherTopType);
+            //_module.SetWasherTopType(SelectedWasherTopType);
+            var realWasherTopType = _module.GetWasherTopTypeByName(SelectedWasherTopType);
+            _module.SetWasherTopType(realWasherTopType);
             _module.SetWasherTopSize(SelectedWasherTopSize);
             _module.SetIncludeWasherBottom(IncludeWasherBottom);
-            _module.SetWasherBottomType(SelectedWasherBottomType);
+            //_module.SetWasherBottomType(SelectedWasherBottomType);
+            var realWasherBottomType = _module.GetWasherTopTypeByName(SelectedWasherBottomType);
+            _module.SetWasherBottomType(realWasherBottomType);
             _module.SetWasherBottomSize(SelectedWasherBottomSize);
             _module.SetIncludeNut(IncludeNut);
-            _module.SetNutType(SelectedNutType);
+            //_module.SetNutType(SelectedNutType);
+            var realNutType = _module.GetNutTypeByName(SelectedNutType);
+            _module.SetNutType(realNutType);
             _module.SetNutSize(SelectedNutSize);
             _module.SetUseCustomPart(UseCustomPart);
             _module.SetCustomFile(SelectedCustomFile);
             _module.SetDistance(DistanceMm);
             _module.SetLockDistance(LockDistance);
+            _module.SetOverwriteDistance(OverwriteDistance);
 
             // then invoke creation
             _module.CreateFasteners();

@@ -35,13 +35,13 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 
                     if (curve != null && curve.Geometry is Line)
                     {
-                        Logger.Log("→ Valid straight line curve added.");
+                        // Logger.Log("→ Valid straight line curve added.");
                         selectedCurves.Add(curve);
                     }
                     else
                     {
-                        Logger.Log($"[Selection] obj.GetType() = {obj?.GetType().FullName}");
-                        Logger.Log("→ Skipped: null curve or non-line.");
+                        // Logger.Log($"[Selection] obj.GetType() = {obj?.GetType().FullName}");
+                        // Logger.Log("→ Skipped: null curve or non-line.");
                     }
                 }
             }

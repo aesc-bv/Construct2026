@@ -53,7 +53,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         .GetDescendants<Table>()
                         .Where(t => t.TryGetTextAttribute("IsExportedBOM", out var tag) && tag == "true")
                         .ToList();
-                    Logger.Log($"Deleting {old.Count} existing BOM table(s).");
+                    // Logger.Log($"Deleting {old.Count} existing BOM table(s).");
                     foreach (var tbl in old)
                         tbl.Delete();
                 }
@@ -87,9 +87,9 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
                     string cuts;
                     try { cuts = GetCutString(first); }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
+                        // Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
                         cuts = "N/A";
                     }
 
@@ -122,7 +122,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             // Data rows
             foreach (var row in bomRows)
             {
-                Logger.Log($"Export row: {row.Part} → material={row.Material}");
+                // Logger.Log($"Export row: {row.Part} → material={row.Material}");
                 sb.Append(row.Part).Append('\t')
                   .Append(row.Qty).Append('\t')
                   .Append(row.TubeLength).Append('\t')
@@ -271,9 +271,9 @@ namespace AESCConstruct25.FrameGenerator.Commands
                   {
                       cuts = GetCutString(first);
                   }
-                  catch (Exception ex)
+                  catch (Exception)
                   {
-                      Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
+                      // Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
                       cuts = "N/A";
                   }
 
@@ -532,14 +532,14 @@ namespace AESCConstruct25.FrameGenerator.Commands
         //    }
         //    catch (Exception ex)
         //    {
-        //        Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
+        //       // Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
         //        return "ERR";
         //    }
         //}
         public static (double xStart, double zStart, double xEnd, double zEnd) GetProfileCutAngles(Component comp)
         {
             const double tol = 1e-6;
-            Logger.Log($"GetProfileCutAngles: component='{comp.Name}'");
+            // Logger.Log($"GetProfileCutAngles: component='{comp.Name}'");
 
             // — 1) Extract sweep direction and end-cap normals —
             var dc = comp.Template.Curves
@@ -567,7 +567,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var n0 = endCaps.OrderByDescending(n => Vector.Dot(n, -sweepLocal)).First();
             var n1 = endCaps.OrderByDescending(n => Vector.Dot(n, sweepLocal)).First();
 
-            Logger.Log($"  normals: n0=({n0.X:F3},{n0.Y:F3},{n0.Z:F3}), n1=({n1.X:F3},{n1.Y:F3},{n1.Z:F3})");
+            // Logger.Log($"  normals: n0=({n0.X:F3},{n0.Y:F3},{n0.Z:F3}), n1=({n1.X:F3},{n1.Y:F3},{n1.Z:F3})");
 
             // — 2) Compute signed X-cut: 90°–|clocking|, with sign of clocking ▷ in [–90,90]
             double ComputeXcut(Vector n)
@@ -593,9 +593,9 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
 
             double x0 = ComputeXcut(n0), z0 = ComputeZcut(n0);
-            Logger.Log($"  start cut X={x0:F1}, Z={z0:F1}");
+            // Logger.Log($"  start cut X={x0:F1}, Z={z0:F1}");
             double x1 = ComputeXcut(n1), z1 = ComputeZcut(n1);
-            Logger.Log($"  end   cut X={x1:F1}, Z={z1:F1}");
+            // Logger.Log($"  end   cut X={x1:F1}, Z={z1:F1}");
 
             return (x0, z0, x1, z1);
         }
@@ -606,12 +606,12 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 var (x0, z0, x1, z1) = GetProfileCutAngles(comp);
                 string result = $"X: {x0:F1}/Z: {z0:F1}, X: {x1:F1}/Z: {z1:F1}";
-                Logger.Log($"GetCutString: {result}");
+                // Logger.Log($"GetCutString: {result}");
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
+                // Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
                 return "ERR";
             }
         }

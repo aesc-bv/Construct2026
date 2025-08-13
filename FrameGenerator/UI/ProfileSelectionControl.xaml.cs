@@ -96,7 +96,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             GenerateButton.IsEnabled = profileSelected;
 
-            Logger.Log($"[Profile] selected? {profileSelected}");
+            // Logger.Log($"[Profile] selected? {profileSelected}");
 
             // Swap image
             if (GenerateProfileButtonIcon != null)
@@ -105,7 +105,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
                     : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
 
-                Logger.Log($"GenerateButton: setting image src to {uriString}");
+                // Logger.Log($"GenerateButton: setting image src to {uriString}");
                 GenerateProfileButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
             }
@@ -116,13 +116,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                 GenerateProfileButtonText.Foreground = profileSelected
                     ? Brushes.White : (Brush)FindResource("TextDark");
                 GenerateProfileButtonText.FontWeight = FontWeights.Bold;
-                Logger.Log($"GenerateButton text updated: Foreground={GenerateProfileButtonText.Foreground}, Weight={GenerateProfileButtonText.FontWeight}");
+                // Logger.Log($"GenerateButton text updated: Foreground={GenerateProfileButtonText.Foreground}, Weight={GenerateProfileButtonText.FontWeight}");
             }
 
             // Joint logic
             bool jointSelected = JointGroupContainer.Children.OfType<RadioButton>().Any(rb => rb.IsChecked == true);
             GenerateJoint.IsEnabled = jointSelected;
-            Logger.Log($"[Joint] selected? {jointSelected}");
+            // Logger.Log($"[Joint] selected? {jointSelected}");
 
             if (GenerateJointButtonIcon != null)
             {
@@ -131,7 +131,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
                 GenerateJointButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
-                Logger.Log($"GenerateJoint: setting image src to {uriString}");
+                // Logger.Log($"GenerateJoint: setting image src to {uriString}");
             }
 
             if (GenerateJointButtonText != null)
@@ -139,7 +139,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 GenerateJointButtonText.Foreground = jointSelected
                     ? Brushes.White : (Brush)FindResource("TextDark");
                 GenerateJointButtonText.FontWeight = FontWeights.Bold;
-                Logger.Log($"GenerateJoint text updated: Foreground={GenerateJointButtonText.Foreground}, Weight={GenerateJointButtonText.FontWeight}");
+                // Logger.Log($"GenerateJoint text updated: Foreground={GenerateJointButtonText.Foreground}, Weight={GenerateJointButtonText.FontWeight}");
             }
         }
 
@@ -166,10 +166,12 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (!(sender is RadioButton selectedRb))
                 return;
 
-            Logger.Log($"ProfileButton_Checked fired for {selectedRb.Name}");
+            // Logger.Log($"ProfileButton_Checked fired for {selectedRb.Name}");
 
             var btn = GenerateButton;
             btn.IsEnabled = true;
+
+            PlacementFrame.Visibility = Visibility.Visible;
 
             var imgb = FindFirstImageChild(btn);
             if (imgb?.Source is BitmapImage bi)
@@ -185,31 +187,31 @@ namespace AESCConstruct25.FrameGenerator.UI
             foreach (var rb in ProfileGroupContainer.Children.OfType<RadioButton>())
             {
                 Image img = FindFirstImageChild(rb);
-                Logger.Log($"  checking rb={rb.Name}, img null? {img == null}");
+                // Logger.Log($"  checking rb={rb.Name}, img null? {img == null}");
                 if (img == null) continue;
 
                 var uriStr = img.Source?.ToString();
-                Logger.Log($"    current uri: {uriStr}");
+                // Logger.Log($"    current uri: {uriStr}");
                 if (string.IsNullOrEmpty(uriStr))
                     continue;
 
                 if (rb == selectedRb)
                 {
-                    Logger.Log("    is selected: applying active");
+                    // Logger.Log("    is selected: applying active");
                     if (uriStr.EndsWith(".png") && !uriStr.Contains("_Active"))
                     {
                         var activeUri = uriStr.Replace(".png", "_Active.png");
-                        Logger.Log($"      setting Source to {activeUri}");
+                        // Logger.Log($"      setting Source to {activeUri}");
                         img.Source = new BitmapImage(new Uri(activeUri, UriKind.RelativeOrAbsolute));
                     }
                 }
                 else
                 {
-                    Logger.Log("    is not selected: ensuring normal");
+                    // Logger.Log("    is not selected: ensuring normal");
                     if (uriStr.Contains("_Active.png"))
                     {
                         var normalUri = uriStr.Replace("_Active.png", ".png");
-                        Logger.Log($"      setting Source to {normalUri}");
+                        // Logger.Log($"      setting Source to {normalUri}");
                         img.Source = new BitmapImage(new Uri(normalUri, UriKind.RelativeOrAbsolute));
                     }
                 }
@@ -326,7 +328,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             string filePath = GetProfileCsvPathFromSettings(profileType);
             if (filePath == null || !File.Exists(filePath))
             {
-                Logger.Log($"ERROR: Could not resolve CSV for profile type {profileType}");
+                // Logger.Log($"ERROR: Could not resolve CSV for profile type {profileType}");
                 return;
             }
 
@@ -357,8 +359,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                             .Select(f => f.Trim().Replace(" ", ""))
                             .ToList();
 
-                        Logger.Log(
-                            $"AESCConstruct25: Loaded CSV fields: {string.Join(", ", csvFieldNames)}\n");
+                        // Logger.Log(
+                        //$"AESCConstruct25: Loaded CSV fields: {string.Join(", ", csvFieldNames)}\n");
                     }
 
                     // now read each data row
@@ -407,7 +409,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (SizeComboBox.SelectedIndex >= 0 && SizeComboBox.SelectedIndex < csvDataRows.Count)
             {
                 string[] selectedValues = csvDataRows[SizeComboBox.SelectedIndex];
-                Logger.Log($"AESCConstruct25: Loading Size Values: {string.Join(", ", selectedValues)}\n");
+                // Logger.Log($"AESCConstruct25: Loading Size Values: {string.Join(", ", selectedValues)}\n");
 
                 for (int i = 0; i < csvFieldNames.Count; i++)
                 {
@@ -428,7 +430,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             if (csvFieldNames.Count == 0)
             {
-                Logger.Log($"AESCConstruct25: ERROR - No valid fields found for {selectedProfile}!\n");
+                // Logger.Log($"AESCConstruct25: ERROR - No valid fields found for {selectedProfile}!\n");
                 return;
             }
 
@@ -531,11 +533,12 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                 Window currentWindow = Window.ActiveWindow;
                 Document doc = currentWindow.Document;
+                doc.Save();
                 Part mainPart = doc.MainPart;
                 Window winDXF;
                 Document docDXF;
                 Part mainPartDXF;
-                // 2) Open the DXF in SpaceClaim so that Window.ActiveWindow is valid
+
                 try
                 {
                     Document.Open(dxfPath, null);
@@ -545,7 +548,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         $"Failed to open DXF:\n{ex.Message}",
                         "DXF → Profile",
                         MessageBoxButton.OK,
@@ -557,8 +560,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 DXFProfile profile = DXFImportHelper.DXFtoProfile();
 
                 // 4) Close that DXF window
-                //SpaceClaim.Api.V242.Window.ActiveWindow?.Close();
-
+                Window.ActiveWindow?.Close();
                 if (profile == null)
                 {
                     // DXFtoProfile already showed an error 
@@ -566,10 +568,10 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
 
                 // 5) Copy the profile‐string to the clipboard
-                System.Windows.Clipboard.SetText(profile.ProfileString);
+                Clipboard.SetText(profile.ProfileString);
 
                 // 6) Let the user know that the string was copied
-                System.Windows.MessageBox.Show(
+                MessageBox.Show(
                     $"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)",
                     "DXF → Profile",
                     MessageBoxButton.OK,
@@ -579,7 +581,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // 7) Create “C:\ProgramData\AESC_Construct\UserDXFProfiles” if it doesn’t exist
                 //
                 string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                // CommonApplicationData typically resolves to "C:\ProgramData"
                 string userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
 
                 try
@@ -588,7 +589,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         $"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}",
                         "DXF → Profile",
                         MessageBoxButton.OK,
@@ -599,7 +600,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 //
                 // 8) Decode Base64 preview and save it as a PNG in that folder
                 //
-                // Sanitize profile.Name for a valid filename
                 string safeName = string.Concat(profile.Name
                 .Where(c => !Path.GetInvalidFileNameChars().Contains(c)))
                 .Replace(' ', '_');
@@ -607,7 +607,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // Append timestamp and ensure extension is correct
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string imageFileName = $"{safeName}_{timestamp}.png";
-                Logger.Log($"imagefilename: {imageFileName}");
+                // Logger.Log($"imagefilename: {imageFileName}");
                 string imageFullPath = Path.Combine(userFolder, imageFileName);
 
                 try
@@ -617,7 +617,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         $"Failed to save preview image to disk:\n{ex.Message}",
                         "DXF → Profile",
                         MessageBoxButton.OK,
@@ -629,7 +629,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 //
                 // 9) Append (or create) “profiles.csv” in C:\ProgramData\AESCConstruct\UserDXFProfiles
                 //
-                //string csvPath = Path.Combine(userFolder, "profiles.csv");
                 string csvPath = Settings.Default.profiles;
 
                 // Ensure fallback if only relative path was saved
@@ -661,12 +660,11 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                     //System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     //{
-                    // Re-populate all user profiles from the updated CSV
                     LoadUserProfiles();
 
                     // Auto-check the newest one (so ProfileButton_Checked fires immediately)
                     var newestRb = UserProfilesGrid.Children
-                                     .OfType<System.Windows.Controls.RadioButton>()
+                                     .OfType<RadioButton>()
                                      .LastOrDefault();
                     if (newestRb != null)
                         newestRb.IsChecked = true;
@@ -674,7 +672,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         $"Failed to update CSV:\n{ex.Message}",
                         "DXF → Profile",
                         MessageBoxButton.OK,
@@ -705,12 +703,18 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                     catch (Exception ex)
                     {
-                        System.Windows.MessageBox.Show(
+                        MessageBox.Show(
                             $"Failed to render saved preview image:\n{ex.Message}",
                             "DXF Preview Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
                     }
+                }
+                if (!string.IsNullOrEmpty(doc.Path))
+                {
+                    // Logger.Log(doc.Path);
+                    Window.ActiveWindow?.Close();
+                    Document.Open(doc.Path, null); // reopen the original document
                 }
             });
         }
@@ -778,9 +782,9 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 bitmap.Freeze();
                                 imageControl.Source = bitmap;
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
-                                Logger.Log($"Failed to load image: {ex.Message}");
+                                // Logger.Log($"Failed to load image: {ex.Message}");
                             }
                         }
                     }
@@ -863,9 +867,9 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 {
                                     File.Delete(imgPath);
                                 }
-                                catch (Exception ex)
+                                catch (Exception)
                                 {
-                                    Logger.Log($"WARNING: Failed to delete image for profile \"{prof.Name}\": {ex.Message}");
+                                    // Logger.Log($"WARNING: Failed to delete image for profile \"{prof.Name}\": {ex.Message}");
                                 }
                             }
                         }
@@ -882,9 +886,9 @@ namespace AESCConstruct25.FrameGenerator.UI
                     UserProfilesGrid.Children.Add(container);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log($"Error in LoadUserProfiles(): {ex}\n");
+                // Logger.Log($"Error in LoadUserProfiles(): {ex}\n");
             }
         }
 
@@ -911,7 +915,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 CultureInfo.InvariantCulture,
                 out rotationAngle
             );
-            Logger.Log($"anglerot{rotationAngle}");
+            // Logger.Log($"anglerot{rotationAngle}");
 
             var oldOri = Application.UserOptions.WorldOrientation;
             Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
@@ -932,14 +936,14 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                 bool isHollow = HollowCheckBox.IsChecked == false;
                 bool updateBOM = UpdateBOM.IsChecked == true;
-                Logger.Log($"updateBOM {updateBOM}");
-                Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
+                // Logger.Log($"updateBOM {updateBOM}");
+                // Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
 
                 //
                 // ─── 1) USER‐SAVED PROFILE (selectedProfileString != "") ───────────────────────────────
                 //
                 // Log exactly the raw string (with no trailing “.”):
-                Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
+                // Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
                 if (!string.IsNullOrEmpty(selectedProfileString))
                 {
                     // ─── 1a) SPLIT INTO INDIVIDUAL CURVE STRINGS ───────────────────────────────────────
@@ -1013,11 +1017,11 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
 
                     var firstSeg = (CurveSegment)curves[0];
-                    Logger.Log($"firstseg {firstSeg.StartPoint}, {firstSeg.EndPoint}\n");
+                    // Logger.Log($"firstseg {firstSeg.StartPoint}, {firstSeg.EndPoint}\n");
                     var lastSeg = (CurveSegment)curves[curves.Count - 1];
-                    Logger.Log($"lastSeg {lastSeg.StartPoint}, {lastSeg.EndPoint}\n");
+                    // Logger.Log($"lastSeg {lastSeg.StartPoint}, {lastSeg.EndPoint}\n");
                     var diff = (firstSeg.StartPoint - lastSeg.EndPoint).Magnitude;
-                    Logger.Log($"  Loop closure gap = {diff:0.########} m\n");
+                    // Logger.Log($"  Loop closure gap = {diff:0.########} m\n");
 
                     File.AppendAllText(logPath,
                         $"AESCConstruct25: Total curves parsed = {curves.Count}\n");
@@ -1206,7 +1210,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                     WriteBlock.ExecuteTask("Generate Profile (built-in)", () =>
                     {
-                        Logger.Log($"profile{dataDict}");
+                        // Logger.Log($"profile{dataDict}");
                         ExtrudeProfileCommand.ExecuteExtrusion(
                             selectedProfile,  // e.g. "Rectangular", "H", etc.
                             dataDict,    // numeric‐based sizes

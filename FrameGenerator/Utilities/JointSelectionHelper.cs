@@ -48,7 +48,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                             comp = mg.Invoke(items[i], null) as Component;
                             //Logger.Log($"  Item {i}: {items[i].GetType().Name} → ancestor Component = '{comp?.Name ?? "null"}'");
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             //Logger.Log($"  Item {i}: reflection error: {ex.Message}");
                         }

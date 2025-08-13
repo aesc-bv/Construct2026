@@ -26,9 +26,9 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             double length)
         {
             // ─── LOG ENTRY ──────────────────────────────────────────────────────
-            // Logger.Log($"[SetNameAndLength] ENTER: profileType='{profileType}', length={length}");
-            // Logger.Log($"[SetNameAndLength] Settings.TypeString = '{Settings.Default.TypeString}'");
-            // Logger.Log($"[SetNameAndLength] Settings.NameString = '{Settings.Default.NameString}'");
+            //// Logger.Log($"[SetNameAndLength] ENTER: profileType='{profileType}', length={length}");
+            //// Logger.Log($"[SetNameAndLength] Settings.TypeString = '{Settings.Default.TypeString}'");
+            //// Logger.Log($"[SetNameAndLength] Settings.NameString = '{Settings.Default.NameString}'");
 
             // ─── 1) Build override map ───────────────────────────────────────────
             var overrideMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -41,7 +41,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 {
                     var key = parts[0].Trim();
                     overrideMap[key] = parts[1].Trim();
-                    // Logger.Log($"[SetNameAndLength] overrideMap['{key}'] = '{parts[1].Trim()}'");
+                    //// Logger.Log($"[SetNameAndLength] overrideMap['{key}'] = '{parts[1].Trim()}'");
                 }
             }
 
@@ -55,13 +55,13 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 if (fuzzyKey != null)
                 {
                     overrideName = overrideMap[fuzzyKey];
-                    // Logger.Log($"[SetNameAndLength] Fuzzy-matched overrideMap['{fuzzyKey}'] = '{overrideName}'");
+                    //// Logger.Log($"[SetNameAndLength] Fuzzy-matched overrideMap['{fuzzyKey}'] = '{overrideName}'");
                 }
             }
             //if (overrideName != null)
-            // Logger.Log($"[SetNameAndLength] Using overrideName = '{overrideName}'");
+            //// Logger.Log($"[SetNameAndLength] Using overrideName = '{overrideName}'");
             //else
-            // Logger.Log($"[SetNameAndLength] No override found for '{profileType}'");
+            //// Logger.Log($"[SetNameAndLength] No override found for '{profileType}'");
 
             // ─── 3) If still no override, pull custom 'Name' property ────────────
             var part = component.Template;
@@ -71,16 +71,16 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 && !string.IsNullOrWhiteSpace(nameProp.Value?.ToString()))
             {
                 customName = nameProp.Value.ToString().Trim();
-                // Logger.Log($"[SetNameAndLength] Using custom Part.Name = '{customName}'");
+                //// Logger.Log($"[SetNameAndLength] Using custom Part.Name = '{customName}'");
             }
             else if (overrideName == null)
             {
-                // Logger.Log($"[SetNameAndLength] No custom Part.Name property found");
+                //// Logger.Log($"[SetNameAndLength] No custom Part.Name property found");
             }
 
             // ─── 4) Base name = override → custom → literal profileType ─────────
             var baseName = overrideName ?? customName ?? profileType;
-            // Logger.Log($"[SetNameAndLength] baseName = '{baseName}'");
+            //// Logger.Log($"[SetNameAndLength] baseName = '{baseName}'");
 
             // ─── 5) Parse w/h (mm) ───────────────────────────────────────────────
             double wMm = 0, hMm = 0;
@@ -90,25 +90,25 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             if (profileData.TryGetValue("h", out var hRaw)
                 && double.TryParse(hRaw.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var h))
                 hMm = h;
-            // Logger.Log($"[SetNameAndLength] parsed wMm={wMm}, hMm={hMm}");
+            //// Logger.Log($"[SetNameAndLength] parsed wMm={wMm}, hMm={hMm}");
 
             // ─── 6) Template (fallback if empty) ─────────────────────────────────
             var template = Settings.Default.NameString?.Trim();
             if (string.IsNullOrWhiteSpace(template))
             {
                 template = "[Name]_[p1]x[p2]_[length]";
-                // Logger.Log($"[SetNameAndLength] empty NameString → using default template '{template}'");
+                //// Logger.Log($"[SetNameAndLength] empty NameString → using default template '{template}'");
             }
             else
             {
-                // Logger.Log($"[SetNameAndLength] using template '{template}'");
+                //// Logger.Log($"[SetNameAndLength] using template '{template}'");
             }
 
             // ─── 7) Token values ─────────────────────────────────────────────────
             var p1 = ((int)wMm).ToString(CultureInfo.InvariantCulture);
             var p2 = ((int)hMm).ToString(CultureInfo.InvariantCulture);
             var lengthStr = ((int)(length * 1000)).ToString(CultureInfo.InvariantCulture);
-            // Logger.Log($"[SetNameAndLength] tokens: p1={p1}, p2={p2}, length={lengthStr}");
+            //// Logger.Log($"[SetNameAndLength] tokens: p1={p1}, p2={p2}, length={lengthStr}");
 
             // ─── 8) Replace tokens ────────────────────────────────────────────────
             var finalName = template
@@ -116,25 +116,25 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 .Replace("[p1]", p1)
                 .Replace("[p2]", p2)
                 .Replace("[length]", lengthStr);
-            // Logger.Log($"[SetNameAndLength] finalName = '{finalName}'");
+            //// Logger.Log($"[SetNameAndLength] finalName = '{finalName}'");
 
             // ─── 9) Apply to Part template ────────────────────────────────────────
             part.Name = finalName;
-            // Logger.Log($"[SetNameAndLength] applied part.Name = '{part.Name}'");
+            //// Logger.Log($"[SetNameAndLength] applied part.Name = '{part.Name}'");
 
             // ───10) Stamp Construct_Length ────────────────────────────────────────
             if (part.CustomProperties.ContainsKey("Construct_Length"))
             {
                 part.CustomProperties["Construct_Length"].Value = length;
-                // Logger.Log($"[SetNameAndLength] updated existing Construct_Length = {length}");
+                //// Logger.Log($"[SetNameAndLength] updated existing Construct_Length = {length}");
             }
             else
             {
                 CustomPartProperty.Create(part, "Construct_Length", length);
-                // Logger.Log($"[SetNameAndLength] created new Construct_Length = {length}");
+                //// Logger.Log($"[SetNameAndLength] created new Construct_Length = {length}");
             }
 
-            // Logger.Log($"[SetNameAndLength] EXIT");
+            //// Logger.Log($"[SetNameAndLength] EXIT");
         }
 
     }

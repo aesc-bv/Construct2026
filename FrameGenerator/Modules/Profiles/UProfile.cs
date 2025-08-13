@@ -1,5 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using SpaceClaim.Api.V242.Geometry;
+﻿using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
@@ -26,7 +25,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            Logger.Log($"AESCConstruct25: Generating U Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+            // Logger.Log($"AESCConstruct25: Generating U Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)

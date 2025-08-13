@@ -44,14 +44,16 @@ namespace AESCConstruct25.FrameGenerator.Utilities
         {
             contours = new List<ITrimmedCurve>();
             var localContours = new List<ITrimmedCurve>();
-
+            var originalWindow = Window.ActiveWindow;
             try
             {
                 WriteBlock.ExecuteTask("Import DXF", () =>
                 {
                     Document.Open(filePath, null);
-                    var docDXF = Window.ActiveWindow.Document;
-                    var mainPartDXF = docDXF.MainPart;
+                    //var docDXF = Window.ActiveWindow.Document;
+                    //var mainPartDXF = docDXF.MainPart;
+                    var dxfWindow = Window.ActiveWindow;
+                    var mainPartDXF = dxfWindow.Document.MainPart;
 
                     // Extract curves from first DatumPlane
                     DatumPlane dp = mainPartDXF.DatumPlanes.First();
@@ -60,9 +62,10 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                         localContours.Add(dc.Shape);
                     }
 
-                    Window.ActiveWindow.Close();
+                    //dxfWindow.Close();
                 });
-
+                //Window.ActiveWindow = originalWindow;
+                //originalWindow?.
                 contours.AddRange(localContours);
                 return contours.Count > 2; // Return true if ≥ 3 curves found
             }
@@ -191,7 +194,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                     string imgString = getImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
 
                     // 3) Close the preview window
-                    Window.ActiveWindow.Close();
+                    //Window.ActiveWindow.Close();
 
                     // 4) Build the DXFProfile object
                     dxfProfile = new DXFProfile
@@ -216,7 +219,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             {
                 MessageBox.Show("Invalid profile—check the DXF contours.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
             return dxfProfile;
         }
 
@@ -459,7 +461,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 {
                     bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                     byte[] bytes = ms.ToArray();
-                    _window.Close();
+                    //_window.Close();
                     return Convert.ToBase64String(bytes);
                 }
             }
