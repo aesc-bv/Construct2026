@@ -77,6 +77,11 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connector\Connector.cs" />
+    <Compile Include="Connector\CylInfo.cs" />
+    <Compile Include="Connector\UI\ConnectorControl.xaml.cs">
+      <DependentUpon>ConnectorControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="CustomComponent\UI\CustomComponentControl.xaml.cs">
       <DependentUpon>CustomComponentControl.xaml</DependentUpon>
     </Compile>
@@ -172,6 +177,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Connector\UI\ConnectorControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="CustomComponent\UI\CustomComponentControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

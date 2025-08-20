@@ -6,28 +6,163 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Forms;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
 namespace AESCConstruct25.FrameGenerator.Modules
 {
     public static class JointModule
     {
-        // single paramater
         public static void ResetComponentGeometryOnly(List<Component> components)
         {
             ResetComponentGeometryOnly(components, Vector.Create(0, 1, 0), null);
         }
 
-        // 2) Full ResetComponentGeometryOnly with DXF/CSV support
         public static void ResetComponentGeometryOnly(
             List<Component> components,
             Vector forcedLocalUp,
             List<DesignCurve> allCurves = null
         )
         {
-            WriteBlock.ExecuteTask("ResetComponentGeometryOnly", () =>
+            try
+            {
+                WriteBlock.ExecuteTask("ResetComponentGeometryOnly", () =>
+                {
+                    const double tol = 1e-6;
+
+                    if (allCurves == null)
+                        allCurves = components
+                            .SelectMany(c => c.Template?.Curves.OfType<DesignCurve>() ?? Enumerable.Empty<DesignCurve>())
+                            .ToList();
+
+                    foreach (var component in components)
+                    {
+                        try
+                        {
+                            var template = component.Template;
+                            if (template == null) continue;
+
+                            string profileType = null;
+                            bool isHollow = false;
+                            double offsetX = 0, offsetY = 0;
+                            string dxfPath = null;
+                            string rawCsv = null;
+                            var profileData = new Dictionary<string, string>();
+
+                            foreach (var prop in template.CustomProperties)
+                            {
+                                var key = prop.Key;
+                                var val = prop.Value.Value?.ToString();
+                                switch (key)
+                                {
+                                    case "Type":
+                                        profileType = val;
+                                        break;
+                                    case "Hollow":
+                                        isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                                        break;
+                                    case "offsetX":
+                                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX);
+                                        break;
+                                    case "offsetY":
+                                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY);
+                                        break;
+                                    case "DXFPath":
+                                        dxfPath = val;
+                                        break;
+                                    case "RawCSV":
+                                        rawCsv = val;
+                                        break;
+                                    default:
+                                        if (key.StartsWith("Construct_"))
+                                            profileData[key.Substring("Construct_".Length)] = val;
+                                        break;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(profileType)) continue;
+
+                            var storedDc = template.Curves.OfType<DesignCurve>().FirstOrDefault();
+                            if (storedDc?.Shape is not CurveSegment segOrig) continue;
+
+                            var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
+                            var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
+                            var delta = origStart;
+                            var originSeg = CurveSegment.Create(
+                                Point.Create(0, 0, 0),
+                                Point.Create(origEnd.X - delta.X, origEnd.Y - delta.Y, origEnd.Z - delta.Z)
+                            );
+
+                            Vector localUp = forcedLocalUp.Magnitude > tol
+                                           ? forcedLocalUp
+                                           : Vector.Create(0, 1, 0);
+                            Vector WY = Vector.Create(0, 1, 0), WX = Vector.Create(1, 0, 0), WZ = Vector.Create(0, 0, 1);
+                            if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
+                            else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
+                            else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
+
+                            List<ITrimmedCurve> contours = null;
+                            if (string.Equals(profileType, "DXF", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(dxfPath))
+                            {
+                                if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
+                                    continue;
+                            }
+                            else if (string.Equals(profileType, "CSV", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(rawCsv))
+                            {
+                                contours = new List<ITrimmedCurve>();
+                                foreach (var loop in rawCsv.Split('&'))
+                                    foreach (var chunk in loop.Trim().Split(' '))
+                                        if (!string.IsNullOrEmpty(chunk))
+                                            contours.Add(DXFImportHelper.CurveFromString(chunk));
+                            }
+
+                            ProfileModule.ExtrudeProfile(
+                                Window.ActiveWindow,
+                                profileType,
+                                originSeg,
+                                isHollow,
+                                profileData,
+                                offsetX,
+                                offsetY,
+                                localUp,
+                                dxfFilePath: profileType == "DXF" ? dxfPath : null,
+                                dxfContours: contours,
+                                reuseComponent: component
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(
+                                $"Error resetting geometry for component '{component?.Name}':\n{ex.Message}",
+                                "JointModule Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                            );
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Unexpected error during geometry reset:\n{ex.Message}",
+                    "JointModule Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+        }
+
+        public static void ResetComponentGeometryAndExtend(
+            List<Component> components,
+            Vector forcedLocalUp,
+            List<DesignCurve> allCurves = null,
+            string connectionSideOld = ""
+        )
+        {
+            try
             {
                 const double tol = 1e-6;
+                const double extendAmount = 200.0;
 
                 if (allCurves == null)
                     allCurves = components
@@ -36,391 +171,104 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
                 foreach (var component in components)
                 {
-                    var template = component.Template;
-                    if (template == null) continue;
-
-                    // --- Pull metadata ---
-                    string profileType = null;
-                    bool isHollow = false;
-                    double offsetX = 0, offsetY = 0;
-                    string dxfPath = null;
-                    string rawCsv = null;
-                    var profileData = new Dictionary<string, string>();
-
-                    foreach (var prop in template.CustomProperties)
+                    try
                     {
-                        var key = prop.Key;
-                        var val = prop.Value.Value?.ToString();
-                        switch (key)
+                        var template = component.Template;
+                        if (template == null) continue;
+
+                        string profileType = null;
+                        bool isHollow = false;
+                        double offsetX = 0, offsetY = 0;
+                        string dxfPath = null;
+                        string rawCsv = null;
+                        var profileData = new Dictionary<string, string>();
+
+                        foreach (var prop in template.CustomProperties)
                         {
-                            case "Type":
-                                profileType = val;
-                                break;
-                            case "Hollow":
-                                isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
-                                break;
-                            case "offsetX":
-                                double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX);
-                                break;
-                            case "offsetY":
-                                double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY);
-                                break;
-                            case "DXFPath":
-                                dxfPath = val;
-                                break;
-                            case "RawCSV":
-                                rawCsv = val;
-                                break;
-                            default:
-                                if (key.StartsWith("Construct_"))
-                                    profileData[key.Substring("Construct_".Length)] = val;
-                                break;
+                            var key = prop.Key;
+                            var val = prop.Value.Value?.ToString();
+                            switch (key)
+                            {
+                                case "Type": profileType = val; break;
+                                case "Hollow": isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase); break;
+                                case "offsetX": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX); break;
+                                case "offsetY": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY); break;
+                                case "DXFPath": dxfPath = val; break;
+                                case "RawCSV": rawCsv = val; break;
+                                default:
+                                    if (key.StartsWith("Construct_"))
+                                        profileData[key.Substring("Construct_".Length)] = val;
+                                    break;
+                            }
                         }
+                        if (string.IsNullOrEmpty(profileType))
+                            continue;
+
+                        var storedDc = template.Curves.OfType<DesignCurve>()
+                                          .FirstOrDefault(dc => dc.Shape is CurveSegment);
+                        if (storedDc?.Shape is not CurveSegment segOrig)
+                            continue;
+
+                        var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
+                        var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
+
+                        Vector segDir = (origEnd - origStart).Direction.ToVector();
+                        var newStart = origStart - segDir * extendAmount;
+                        var newEnd = origEnd + segDir * extendAmount;
+                        var segThis = CurveSegment.Create(newStart, newEnd);
+
+                        Vector localUp = forcedLocalUp.Magnitude > tol ? forcedLocalUp : Vector.Create(0, 1, 0);
+                        if (Math.Abs(Vector.Dot(localUp, Vector.Create(0, 1, 0))) > tol && Vector.Dot(localUp, Vector.Create(0, 1, 0)) < 0) localUp = -localUp;
+
+                        List<ITrimmedCurve> contours = null;
+                        if (profileType == "DXF" && !string.IsNullOrEmpty(dxfPath))
+                        {
+                            if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
+                                continue;
+                        }
+                        else if (profileType == "CSV" && !string.IsNullOrEmpty(rawCsv))
+                        {
+                            contours = new List<ITrimmedCurve>();
+                            foreach (var loop in rawCsv.Split('&'))
+                                foreach (var chunk in loop.Trim().Split(' '))
+                                    if (!string.IsNullOrEmpty(chunk))
+                                        contours.Add(DXFImportHelper.CurveFromString(chunk));
+                        }
+
+                        ProfileModule.ExtrudeProfile(
+                            Window.ActiveWindow,
+                            profileType,
+                            segThis,
+                            isHollow,
+                            profileData,
+                            offsetX,
+                            offsetY,
+                            localUp,
+                            dxfFilePath: profileType == "DXF" ? dxfPath : null,
+                            dxfContours: contours,
+                            reuseComponent: component
+                        );
                     }
-                    if (string.IsNullOrEmpty(profileType)) continue;
-
-                    // --- Grab stored construction curve (unextended) ---
-                    var storedDc = template.Curves.OfType<DesignCurve>().FirstOrDefault();
-                    if (storedDc?.Shape is not CurveSegment segOrig) continue;
-
-                    // --- Reconstruct the local segment at origin ---
-                    var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
-                    var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
-                    var delta = origStart;
-                    var originSeg = CurveSegment.Create(
-                        Point.Create(0, 0, 0),
-                        Point.Create(origEnd.X - delta.X, origEnd.Y - delta.Y, origEnd.Z - delta.Z)
-                    );
-
-                    // --- Stabilize localUp ---
-                    Vector localUp = forcedLocalUp.Magnitude > tol
-                                   ? forcedLocalUp
-                                   : Vector.Create(0, 1, 0);
-                    Vector WY = Vector.Create(0, 1, 0), WX = Vector.Create(1, 0, 0), WZ = Vector.Create(0, 0, 1);
-                    if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0) localUp = -localUp;
-                    else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
-                    else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
-
-                    // --- Branch to rebuild DXF or CSV curves ---
-                    List<ITrimmedCurve> contours = null;
-                    if (string.Equals(profileType, "DXF", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(dxfPath))
+                    catch (Exception ex)
                     {
-                        // re-import from the DXFPath
-                        if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
-                            continue; // bail if contours fail
-                    }
-                    else if (string.Equals(profileType, "CSV", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(rawCsv))
-                    {
-                        // parse the saved profile string
-                        contours = new List<ITrimmedCurve>();
-                        foreach (var loop in rawCsv.Split('&'))
-                            foreach (var chunk in loop.Trim().Split(' '))
-                                if (!string.IsNullOrEmpty(chunk))
-                                    contours.Add(DXFImportHelper.CurveFromString(chunk));
-                    }
-
-                    // --- Finally, re-extrude into the old component ---
-                    ProfileModule.ExtrudeProfile(
-                        Window.ActiveWindow,
-                        profileType,
-                        originSeg,
-                        isHollow,
-                        profileData,
-                        offsetX,
-                        offsetY,
-                        localUp,
-                        dxfFilePath: profileType == "DXF" ? dxfPath : null,
-                        dxfContours: contours,
-                        reuseComponent: component
-                    );
-                }
-            });
-        }
-
-
-
-        //public static void ResetComponentGeometryAndExtend(
-        //    List<Component> components,
-        //    Vector forcedLocalUp,
-        //    List<DesignCurve> allCurves = null,
-        //    string connectionSideOld = ""
-        //)
-        //{
-        //    WriteBlock.ExecuteTask("ResetComponentGeometryAndExtend", () =>
-        //    {
-        //        //Logger.Log("ResetComponentGeometryAndExtend: Resetting and extending multiple components");
-        //        const double tol = 1e-6;
-        //        const double extendAmount = 200.0;
-
-        //        // 1) Gather all construction curves if not provided
-        //        if (allCurves == null)
-        //            allCurves = components
-        //                .SelectMany(c => c.Template?.Curves.OfType<DesignCurve>() ?? Enumerable.Empty<DesignCurve>())
-        //                .ToList();
-
-        //        foreach (var component in components)
-        //        {
-        //            //Logger.Log($"  Processing '{component.Name}'");
-        //            var template = component.Template;
-        //            if (template == null)
-        //            {
-        //                //Logger.Log("    ERROR – No template found. Skipping.");
-        //                continue;
-        //            }
-
-        //            // --- pull profile metadata ---
-        //            string profileType = null;
-        //            bool isHollow = false;
-        //            double offsetX = 0, offsetY = 0;
-        //            var profileData = new Dictionary<string, string>();
-        //            foreach (var prop in template.CustomProperties)
-        //            {
-        //                switch (prop.Key)
-        //                {
-        //                    case "Type":
-        //                        profileType = prop.Value.Value?.ToString();
-        //                        break;
-        //                    case "Hollow":
-        //                        isHollow = prop.Value.Value?.ToString() == "true";
-        //                        break;
-        //                    case "offsetX":
-        //                        offsetX = (double)prop.Value.Value;
-        //                        break;
-        //                    case "offsetY":
-        //                        offsetY = (double)prop.Value.Value;
-        //                        break;
-        //                    default:
-        //                        if (prop.Key.StartsWith("Construct_"))
-        //                            profileData[prop.Key.Substring("Construct_".Length)] = prop.Value.Value?.ToString();
-        //                        break;
-        //                }
-        //            }
-        //            if (string.IsNullOrEmpty(profileType))
-        //            {
-        //                //Logger.Log("    ERROR – No profileType found. Skipping.");
-        //                continue;
-        //            }
-
-        //            // 2) Grab the stored (local) construction curve
-        //            var storedDc = template.Curves.OfType<DesignCurve>().FirstOrDefault();
-        //            if (storedDc?.Shape is not CurveSegment segOrig)
-        //            {
-        //                //Logger.Log("    ERROR – No valid stored construction CurveSegment. Skipping.");
-        //                continue;
-        //            }
-        //            Point origStart = Point.Create(
-        //                segOrig.StartPoint.X + offsetX,
-        //                segOrig.StartPoint.Y + offsetY,
-        //                segOrig.StartPoint.Z
-        //            );
-        //            Point origEnd = Point.Create(
-        //                segOrig.EndPoint.X + offsetX,
-        //                segOrig.EndPoint.Y + offsetY,
-        //                segOrig.EndPoint.Z
-        //            );
-        //            //Logger.Log($"    [ORIGINAL] start={PointToString(origStart)}, end={PointToString(origEnd)}");
-
-        //            // 3) **EXTEND BOTH DIRECTIONS** by 200 in local space
-        //            Vector segDir = (origEnd - origStart).Direction.ToVector();
-        //            Point newStart = origStart - segDir * extendAmount;
-        //            Point newEnd = origEnd + segDir * extendAmount;
-        //            //Logger.Log($"    [EXTENDED] start={PointToString(newStart)}, end={PointToString(newEnd)}");
-        //            var segThis = CurveSegment.Create(newStart, newEnd);
-
-        //            // 4) Compute a stable localUp
-        //            Component neighbourForUp = components.FirstOrDefault(c =>
-        //            {
-        //                if (c == component) return false;
-        //                if (c.Template?.Curves.OfType<DesignCurve>().FirstOrDefault()?.Shape is not CurveSegment otherSeg)
-        //                    return false;
-        //                return (segThis.StartPoint - otherSeg.StartPoint).Magnitude < tol
-        //                    || (segThis.StartPoint - otherSeg.EndPoint).Magnitude < tol
-        //                    || (segThis.EndPoint - otherSeg.StartPoint).Magnitude < tol
-        //                    || (segThis.EndPoint - otherSeg.EndPoint).Magnitude < tol;
-        //            });
-
-        //            Vector localUp;
-        //            if (neighbourForUp != null)
-        //            {
-        //                double w = JointCurveHelper.GetProfileWidth(component);
-        //                var offs = JointCurveHelper.GetOffsetEdges(component, segThis, neighbourForUp, w, 0.0);
-        //                Vector perp = offs.perp;
-        //                Vector rawCross = Vector.Cross((segThis.EndPoint - segThis.StartPoint).Direction.ToVector(), perp);
-        //                localUp = rawCross.Magnitude > tol
-        //                          ? rawCross.Direction.ToVector()
-        //                          : Vector.Create(0, 1, 0);
-        //                //Logger.Log($"    Computed localUp from neighbour '{neighbourForUp.Name}' = {PointToString(Point.Create(localUp.X, localUp.Y, localUp.Z))}");
-        //            }
-        //            else
-        //            {
-        //                localUp = forcedLocalUp;
-        //                //Logger.Log($"    No neighbour for Up; using forcedLocalUp = {PointToString(Point.Create(localUp.X, localUp.Y, localUp.Z))}");
-        //            }
-
-        //            // 5) Hemisphere stabilization
-        //            var WY = Vector.Create(0, 1, 0);
-        //            var WX = Vector.Create(1, 0, 0);
-        //            var WZ = Vector.Create(0, 0, 1);
-        //            if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0)
-        //            {
-        //                localUp = -localUp;
-        //                //Logger.Log("    Flipped localUp to align with WY.");
-        //            }
-        //            else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0)
-        //            {
-        //                localUp = -localUp;
-        //                //Logger.Log("    Flipped localUp to align with WX.");
-        //            }
-        //            else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0)
-        //            {
-        //                localUp = -localUp;
-        //                //Logger.Log("    Flipped localUp to align with WZ.");
-        //            }
-        //            //Logger.Log($"    localUp (final) = {PointToString(Point.Create(localUp.X, localUp.Y, localUp.Z))}");
-
-        //            // 6) Extrude the profile along the fully extended segThis
-        //            //Logger.Log($"    Calling ProfileModule.ExtrudeProfile for '{component.Name}'...");
-        //            try
-        //            {
-        //                ProfileModule.ExtrudeProfile(
-        //                    Window.ActiveWindow,
-        //                    profileType,
-        //                    segThis,
-        //                    isHollow,
-        //                    profileData,
-        //                    offsetX,
-        //                    offsetY,
-        //                    localUp: localUp,
-        //                    dxfFilePath: null,
-        //                    dxfContours: null,
-        //                    reuseComponent: component
-        //                );
-        //                //Logger.Log($"    ExtrudeProfile succeeded for '{component.Name}'.");
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                //Logger.Log($"    ERROR in ExtrudeProfile for '{component.Name}': {ex.Message}");
-        //            }
-        //        }
-
-        //        //Logger.Log("ResetComponentGeometryAndExtend: All components processed");
-        //    });
-        //}
-        public static void ResetComponentGeometryAndExtend(
-            List<Component> components,
-            Vector forcedLocalUp,
-            List<DesignCurve> allCurves = null,
-            string connectionSideOld = ""
-        )
-        {
-            // Logger.Log("**ENTER** ResetComponentGeometryAndExtend");
-            const double tol = 1e-6;
-            const double extendAmount = 200.0;
-
-            if (allCurves == null)
-                allCurves = components
-                    .SelectMany(c => c.Template?.Curves.OfType<DesignCurve>() ?? Enumerable.Empty<DesignCurve>())
-                    .ToList();
-
-            foreach (var component in components)
-            {
-                // Logger.Log($"-- Component '{component.Name}' --");
-                var template = component.Template;
-                if (template == null) continue;
-
-                // --- pull profile metadata (same as above) ---
-                string profileType = null;
-                bool isHollow = false;
-                double offsetX = 0, offsetY = 0;
-                string dxfPath = null;
-                string rawCsv = null;
-                var profileData = new Dictionary<string, string>();
-
-                foreach (var prop in template.CustomProperties)
-                {
-                    var key = prop.Key;
-                    var val = prop.Value.Value?.ToString();
-                    switch (key)
-                    {
-                        case "Type": profileType = val; break;
-                        case "Hollow": isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase); break;
-                        case "offsetX": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX); break;
-                        case "offsetY": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY); break;
-                        case "DXFPath": dxfPath = val; break;
-                        case "RawCSV": rawCsv = val; break;
-                        default:
-                            if (key.StartsWith("Construct_"))
-                                profileData[key.Substring("Construct_".Length)] = val;
-                            break;
+                        MessageBox.Show(
+                            $"Error extending geometry for component '{component?.Name}':\n{ex.Message}",
+                            "JointModule Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                     }
                 }
-                if (string.IsNullOrEmpty(profileType))
-                {
-                    // Logger.Log("  ERROR: no profileType; skipping component");
-                    continue;
-                }
-
-                // --- find + extend the construction curve ---
-                var storedDc = template.Curves.OfType<DesignCurve>()
-                                  .FirstOrDefault(dc => dc.Shape is CurveSegment);
-                if (storedDc?.Shape is not CurveSegment segOrig)
-                {
-                    // Logger.Log("  ERROR: no valid construction curve; skipping");
-                    continue;
-                }
-
-                // compute world‐local original endpoints
-                var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
-                var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
-
-                // extend in both directions
-                Vector segDir = (origEnd - origStart).Direction.ToVector();
-                var newStart = origStart - segDir * extendAmount;
-                var newEnd = origEnd + segDir * extendAmount;
-                var segThis = CurveSegment.Create(newStart, newEnd);
-
-                // compute stable localUp (omitting neighbor logic for brevity)
-                Vector localUp = forcedLocalUp.Magnitude > tol ? forcedLocalUp : Vector.Create(0, 1, 0);
-                if (Math.Abs(Vector.Dot(localUp, Vector.Create(0, 1, 0))) > tol && Vector.Dot(localUp, Vector.Create(0, 1, 0)) < 0) localUp = -localUp;
-
-                // --- rebuild DXF/CSV contours exactly as above ---
-                List<ITrimmedCurve> contours = null;
-                if (profileType == "DXF" && !string.IsNullOrEmpty(dxfPath))
-                {
-                    if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
-                    {
-                        // Logger.Log("    ERROR – failed to re-import DXF contours; skipping");
-                        continue;
-                    }
-                }
-                else if (profileType == "CSV" && !string.IsNullOrEmpty(rawCsv))
-                {
-                    contours = new List<ITrimmedCurve>();
-                    foreach (var loop in rawCsv.Split('&'))
-                        foreach (var chunk in loop.Trim().Split(' '))
-                            if (!string.IsNullOrEmpty(chunk))
-                                contours.Add(DXFImportHelper.CurveFromString(chunk));
-                }
-
-                // --- call the extrusion, re-using the component in place ---
-                ProfileModule.ExtrudeProfile(
-                    Window.ActiveWindow,
-                    profileType,
-                    segThis,
-                    isHollow,
-                    profileData,
-                    offsetX,
-                    offsetY,
-                    localUp,
-                    dxfFilePath: profileType == "DXF" ? dxfPath : null,
-                    dxfContours: contours,
-                    reuseComponent: component
-                );
-
-                // Logger.Log($"-- Finished '{component.Name}' --");
             }
-
-            // Logger.Log("**EXIT** ResetComponentGeometryAndExtend");
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Unexpected error during geometry extension:\n{ex.Message}",
+                    "JointModule Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
         }
 
 
@@ -613,31 +461,6 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 : (shortLength, longLength);
         }
 
-        //public static (double forward, double backward) DetermineTExtrusionDirection(
-        //    Point curveJointPoint, Point curveFarPoint,
-        //    Plane plane,
-        //    double longLength,
-        //    double shortLength)
-        //{
-        //    // Now measure from the joint TOWARD the free end
-        //    Vector curveDirection = (curveFarPoint - curveJointPoint);
-
-        //    Vector z = plane.Frame.DirZ.ToVector();
-        //    Vector minusZ = -z;
-
-        //    double dotPlus = Vector.Dot(curveDirection, z);
-        //    double dotMinus = Vector.Dot(curveDirection, minusZ);
-
-        //    bool usePositiveZ = Math.Abs(dotPlus) >= Math.Abs(dotMinus);
-
-        //    // If the free‐end direction aligns better with +Z, +Z gets longLength (spacing),
-        //    // and –Z gets shortLength (200 through the other part), else swap.
-        //    return usePositiveZ
-        //        ? (longLength, shortLength)
-        //        : (shortLength, longLength);
-        //}
-
-
         /// <summary>
         /// Splits the ExtrudedProfile (or merged halves) at its midpoint,
         /// using `localUp` to define the cutter plane orientation.
@@ -763,13 +586,13 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
 
         public static void ResetHalfForJoint(
-    Component component,
-    string connectionSide,
-    bool extendProfile,
-    Vector _ignoredLocalUp,
-    List<DesignCurve> allCurves,
-    List<Component> selectedComponents
-)
+            Component component,
+            string connectionSide,
+            bool extendProfile,
+            Vector _ignoredLocalUp,
+            List<DesignCurve> allCurves,
+            List<Component> selectedComponents
+        )
         {
             // Logger.Log($"[ResetHalfForJoint] START for component='{component?.Name}', side='{connectionSide}', extend={extendProfile}");
             if (component?.Template == null)
@@ -903,10 +726,6 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // Logger.Log("[ResetHalfForJoint] COMPLETED successfully; final bodies: " +
             //string.Join(",", template.Bodies.Select(b => b.Name)));
         }
-
-
-
-
         private static string PointToString(Point p)
         {
             return $"({p.X:F4}, {p.Y:F4}, {p.Z:F4})";

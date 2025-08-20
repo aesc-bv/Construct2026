@@ -45,50 +45,55 @@ namespace AESCConstruct25.UI
                 var folder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "AESCConstruct", "Plates");
-                //var csvPath = Path.Combine(folder, "PlatesProperties.csv");
                 var csvPath = Settings.Default.PlatesProperties;
 
                 if (!File.Exists(csvPath))
                     throw new FileNotFoundException("PlatesProperties.csv not found", csvPath);
 
+                int lineNum = 1;
                 foreach (var line in File.ReadAllLines(csvPath).Skip(1))
                 {
-                    var cols = line.Split(';');
-                    if (cols.Length < 11)
-                        continue;
-
-                    _records.Add(new PlateRecord
+                    lineNum++;
+                    try
                     {
-                        Type = cols[0].Trim(),
-                        Name = cols[1].Trim(),
-                        L1 = cols[2].Trim(),
-                        L2 = cols[5].Trim(),
-                        Count1 = cols[4].Trim(),
-                        B1 = cols[5].Trim(),
-                        B2 = cols[6].Trim(),
-                        Count2 = cols[7].Trim(),
-                        HoleDiameter = cols[8].Trim(),
-                        Thickness = cols[9].Trim(),
-                        FilletRadius = cols[10].Trim(),
-                        InsertInMiddle = cols.Length > 11 && bool.TryParse(cols[11].Trim(), out var m) && m
-                    });
+                        var cols = line.Split(';');
+                        if (cols.Length < 11)
+                            continue;
+
+                        _records.Add(new PlateRecord
+                        {
+                            Type = cols[0].Trim(),
+                            Name = cols[1].Trim(),
+                            L1 = cols[2].Trim(),
+                            L2 = cols[5].Trim(),
+                            Count1 = cols[6].Trim(),
+                            B1 = cols[3].Trim(),
+                            B2 = cols[7].Trim(),
+                            Count2 = cols[8].Trim(),
+                            HoleDiameter = cols[9].Trim(),
+                            Thickness = cols[4].Trim(),
+                            FilletRadius = cols[10].Trim(),
+                            InsertInMiddle = cols.Length > 11 && bool.TryParse(cols[11].Trim(), out var m) && m
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            $"Error parsing PlatesProperties.csv at line {lineNum}:\n{ex.Message}",
+                            "CSV Parse Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning
+                        );
+                    }
                 }
 
-                // 2) Populate ProfileTypes
                 foreach (var t in _records.Select(r => r.Type).Distinct().OrderBy(x => x))
                     ProfileTypes.Add(t);
 
                 SelectedProfileType = ProfileTypes.FirstOrDefault();
-
-                // 3) Logging for debug
-                // Logger.Log($"[PlatesControl] Loaded {_records.Count} records from CSV.");
-                // Logger.Log($"[PlatesControl] ProfileTypes: {string.Join(", ", ProfileTypes)}");
-                // Logger.Log($"[PlatesControl] Initial SelectedProfileType: {SelectedProfileType}");
             }
             catch (Exception ex)
             {
-                // Log and alert user—no silent fallback defaults
-                // Logger.Log($"[PlatesControl] ERROR loading PlatesProperties.csv: {ex}");
                 MessageBox.Show(
                     $"Failed to load plate properties:\n{ex.Message}",
                     "Plates Data Error",
@@ -97,14 +102,11 @@ namespace AESCConstruct25.UI
                 );
             }
 
-            // 4) Even if _records is empty, wire up Size list (may be empty)
             if (SelectedProfileType != null)
-                SelectedProfileType = SelectedProfileType; // re-invoke setter to populate sizes
+                SelectedProfileType = SelectedProfileType;
 
-            // 5) Populate lower fields if possible
             PopulateBottomFields();
         }
-
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
@@ -112,7 +114,6 @@ namespace AESCConstruct25.UI
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         #endregion
 
-        // Top dropdowns
         public ObservableCollection<string> ProfileTypes { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> ProfileSizes { get; } = new ObservableCollection<string>();
 
@@ -128,7 +129,6 @@ namespace AESCConstruct25.UI
 
                 UpdatePlateImage();
 
-                // repopulate ProfileSizes
                 ProfileSizes.Clear();
                 foreach (var name in _records
                     .Where(r => r.Type == value)
@@ -140,6 +140,7 @@ namespace AESCConstruct25.UI
                 }
                 SelectedProfileSize = ProfileSizes.FirstOrDefault();
                 OnPropertyChanged(nameof(ProfileSizes));
+                UpdateFieldLabelsAndVisibility();
             }
         }
 
@@ -181,7 +182,6 @@ namespace AESCConstruct25.UI
             InsertInMiddle = rec.InsertInMiddle;
         }
 
-        // Angle (°)
         private string _angle = "0";
         public string Angle
         {
@@ -189,7 +189,6 @@ namespace AESCConstruct25.UI
             set { _angle = value; OnPropertyChanged(nameof(Angle)); }
         }
 
-        // Bottom‐field properties with notifications
         private string _l1;
         public string L1
         {
@@ -273,31 +272,146 @@ namespace AESCConstruct25.UI
             SelectedImageSource = $"/AESCConstruct25;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
         }
 
-        // Create button handler
+        private double ParseDoubleSafe(string text)
+        {
+            double val;
+            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out val) ? val : 0;
+        }
+
+        private double GetValueOrZero(string value, Visibility vis)
+        {
+            return vis == Visibility.Visible ? ParseDoubleSafe(value) : 0;
+        }
+
         private void CreateButton_Click(object sender, RoutedEventArgs e)
         {
-            // parse + convert units (mm → m)
-            double angleDeg = double.Parse(Angle, CultureInfo.InvariantCulture);
-            double l1_m = double.Parse(L1, CultureInfo.InvariantCulture) * 0.001;
-            double l2_m = double.Parse(L2, CultureInfo.InvariantCulture) * 0.001;
-            int c1 = int.Parse(Count1, CultureInfo.InvariantCulture);
-            double b1_m = double.Parse(B1, CultureInfo.InvariantCulture) * 0.001;
-            double b2_m = double.Parse(B2, CultureInfo.InvariantCulture) * 0.001;
-            int c2 = int.Parse(Count2, CultureInfo.InvariantCulture);
-            double t_m = double.Parse(Thickness, CultureInfo.InvariantCulture) * 0.001;
-            double r_m = double.Parse(FilletRadius, CultureInfo.InvariantCulture) * 0.001;
-            double d_m = double.Parse(HoleDiameter, CultureInfo.InvariantCulture) * 0.001;
+            try
+            {
+                double angleDeg = ParseDoubleSafe(Angle);
 
-            // call into your module
-            PlatesModule.CreatePlateFromUI(
-                SelectedProfileType,
-                SelectedProfileSize,
-                angleDeg,
-                l1_m, l2_m, c1,
-                b1_m, b2_m, c2,
-                t_m, r_m, d_m,
-                insertPlateMid: InsertInMiddle
-            );
+                // Always parse as double, pass 0 if hidden
+                double l1_m = GetValueOrZero(L1, L1Visible) * 0.001;
+                double l2_m = GetValueOrZero(L2, L2Visible) * 0.001;
+                double c1 = GetValueOrZero(Count1, Count1Visible);
+                double b1_m = GetValueOrZero(B1, B1Visible) * 0.001;
+                double b2_m = GetValueOrZero(B2, B2Visible) * 0.001;
+                double c2 = GetValueOrZero(Count2, Count2Visible);
+                double t_m = GetValueOrZero(Thickness, TVisible) * 0.001;
+                double r_m = GetValueOrZero(FilletRadius, RVisible) * 0.001;
+                double d_m = GetValueOrZero(HoleDiameter, DVisible) * 0.001;
+
+                PlatesModule.CreatePlateFromUI(
+                    SelectedProfileType,
+                    SelectedProfileSize,
+                    angleDeg,
+                    l1_m, l2_m, (int)c1,
+                    b1_m, b2_m, (int)c2,
+                    t_m, r_m, d_m,
+                    insertPlateMid: InsertInMiddle
+                );
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show(
+                    $"Invalid input format: {ex.Message}\nPlease check all numeric fields.",
+                    "Input Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
+            catch (OverflowException ex)
+            {
+                MessageBox.Show(
+                    $"Input value is too large or too small: {ex.Message}",
+                    "Input Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Unexpected error: {ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
         }
+
+        private void UpdateFieldLabelsAndVisibility()
+        {
+            // Default: show all, standard labels
+            L1Label = "L1"; L1Visible = Visibility.Visible;
+            L2Label = "L2"; L2Visible = Visibility.Visible;
+            Count1Label = "#"; Count1Visible = Visibility.Visible;
+            B1Label = "B1"; B1Visible = Visibility.Visible;
+            B2Label = "B2"; B2Visible = Visibility.Visible;
+            Count2Label = "#"; Count2Visible = Visibility.Visible;
+            DLabel = "D"; DVisible = Visibility.Visible;
+            TLabel = "T"; TVisible = Visibility.Visible;
+            RLabel = "R"; RVisible = Visibility.Visible;
+
+            if (SelectedProfileType == "Blind flange")
+            {
+                L1Label = "D"; L1Visible = Visibility.Visible;
+                L2Label = "l1"; L2Visible = Visibility.Visible;
+                DLabel = "d2"; DVisible = Visibility.Visible;
+                TLabel = "T"; TVisible = Visibility.Visible;
+                Count1Label = "#"; Count1Visible = Visibility.Visible;
+                // Hide all others
+                B1Visible = B2Visible = Count2Visible = RVisible = Visibility.Collapsed;
+            }
+            else if (SelectedProfileType == "Flat flange")
+            {
+                L1Label = "D"; L1Visible = Visibility.Visible;
+                L2Label = "l1"; L2Visible = Visibility.Visible;
+                DLabel = "d2"; DVisible = Visibility.Visible;
+                B1Label = "d3"; B1Visible = Visibility.Visible;
+                TLabel = "T"; TVisible = Visibility.Visible;
+                Count1Label = "#"; Count1Visible = Visibility.Visible;
+                // Hide all others
+                B2Visible = Count2Visible = RVisible = Visibility.Collapsed;
+            }
+            else if (SelectedProfileType == "UNP")
+            {
+                L1Label = "L1"; L1Visible = Visibility.Visible;
+                B1Label = "B1"; B1Visible = Visibility.Visible;
+                TLabel = "T"; TVisible = Visibility.Visible;
+                RLabel = "R"; RVisible = Visibility.Visible;
+                // Hide all others
+                L2Visible = Count1Visible = B2Visible = Count2Visible = DVisible = Visibility.Collapsed;
+            }
+
+            // Notify UI
+            OnPropertyChanged(nameof(L1Label)); OnPropertyChanged(nameof(L1Visible));
+            OnPropertyChanged(nameof(L2Label)); OnPropertyChanged(nameof(L2Visible));
+            OnPropertyChanged(nameof(Count1Label)); OnPropertyChanged(nameof(Count1Visible));
+            OnPropertyChanged(nameof(B1Label)); OnPropertyChanged(nameof(B1Visible));
+            OnPropertyChanged(nameof(B2Label)); OnPropertyChanged(nameof(B2Visible));
+            OnPropertyChanged(nameof(Count2Label)); OnPropertyChanged(nameof(Count2Visible));
+            OnPropertyChanged(nameof(DLabel)); OnPropertyChanged(nameof(DVisible));
+            OnPropertyChanged(nameof(TLabel)); OnPropertyChanged(nameof(TVisible));
+            OnPropertyChanged(nameof(RLabel)); OnPropertyChanged(nameof(RVisible));
+        }
+
+        public string L1Label { get; set; } = "L1";
+        public Visibility L1Visible { get; set; } = Visibility.Visible;
+        public string L2Label { get; set; } = "L2";
+        public Visibility L2Visible { get; set; } = Visibility.Visible;
+        public string Count1Label { get; set; } = "#";
+        public Visibility Count1Visible { get; set; } = Visibility.Visible;
+        public string B1Label { get; set; } = "B1";
+        public Visibility B1Visible { get; set; } = Visibility.Visible;
+        public string B2Label { get; set; } = "B2";
+        public Visibility B2Visible { get; set; } = Visibility.Visible;
+        public string Count2Label { get; set; } = "#";
+        public Visibility Count2Visible { get; set; } = Visibility.Visible;
+        public string DLabel { get; set; } = "D";
+        public Visibility DVisible { get; set; } = Visibility.Visible;
+        public string TLabel { get; set; } = "T";
+        public Visibility TVisible { get; set; } = Visibility.Visible;
+        public string RLabel { get; set; } = "R";
+        public Visibility RVisible { get; set; } = Visibility.Visible;
     }
 }

@@ -7,141 +7,35 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
 namespace AESCConstruct25.RibCutout.Modules
 {
     internal static class RibCutOutModule
     {
-        // -----------------------------
-        // Config - flip this to enable/disable scene debug
-        // -----------------------------
-        static class Config
+        // Parameters for half-lap joint
+        public struct HalfLapParams
         {
-            public static bool EnableDebugViz = true;       // turn on/off all debug geometry
-            public static double AxisLen = 0.01;            // ~10 mm triad, in meters
-            public static Color CutterGhostColor = Color.FromArgb(230, 60, 60);
-            public static Color WeldGhostColor = Color.FromArgb(150, 70, 200);
-            public static Color EdgeColor = Color.Orange;
-            public static Color MidPlaneColor = Color.Cyan;
-            public static Color AxisXColor = Color.Red;
-            public static Color AxisYColor = Color.LimeGreen;
-            public static Color AxisZColor = Color.Blue;
-            public static Color DirLineColor = Color.Cyan;
+            public double Width;
+            public double Length;
+            public double Thickness;
+            public double Depth;
+            public double Shoulder;
+            public double Check;
         }
 
-        // Will be set at start of ProcessPairs so helpers can add scene objects
         static Part s_part;
 
-        // -----------------------------
-        // Formatting helpers
-        // -----------------------------
-        static string F(double d) => d.ToString("0.########", CultureInfo.InvariantCulture);
-        static string P(Point p) => $"P({F(p.X)},{F(p.Y)},{F(p.Z)})";
-        static string D(Direction d) { var v = d.ToVector(); return $"D({F(v.X)},{F(v.Y)},{F(v.Z)})"; }
-        static string B(Box b) => $"Box[min={P(b.MinCorner)}, max={P(b.MaxCorner)}]";
-        static string FrameInfo(Frame f)
-        {
-            try { return $"Frame[O={P(f.Origin)}, X={D(f.DirX)}, Y={D(f.DirY)}, Z={D(f.DirZ)}]"; }
-            catch { return "Frame[unavailable]"; }
-        }
+        const double edgeOffset = 100.0;
 
-        // -----------------------------
-        // Core helpers (with logging)
-        // -----------------------------
+        static string F(double d) => d.ToString("0.########", CultureInfo.InvariantCulture);
+
         static Point CenterOf(Box box)
         {
-            try
-            {
-                var v = 0.5 * (box.MinCorner.Vector + box.MaxCorner.Vector);
-                var p = Point.Create(v.X, v.Y, v.Z);
-                Logger.Log($"CenterOf -> {P(p)}; {B(box)}");
-                return p;
-            }
-            catch (Exception ex) { Logger.Log($"CenterOf ERROR: {ex.Message}"); throw; }
+            var v = 0.5 * (box.MinCorner.Vector + box.MaxCorner.Vector);
+            return Point.Create(v.X, v.Y, v.Z);
         }
 
-        static Point ToWorld(Frame f, double lx, double ly, double lz)
-        {
-            try
-            {
-                var ox = f.Origin.X; var oy = f.Origin.Y; var oz = f.Origin.Z;
-                var vx = f.DirX.ToVector(); var vy = f.DirY.ToVector(); var vz = f.DirZ.ToVector();
-                var p = Point.Create(
-                    ox + lx * vx.X + ly * vy.X + lz * vz.X,
-                    oy + lx * vx.Y + ly * vy.Y + lz * vz.Y,
-                    oz + lx * vx.Z + ly * vy.Z + lz * vz.Z
-                );
-                Logger.Log($"ToWorld local({F(lx)},{F(ly)},{F(lz)}) -> {P(p)} in {FrameInfo(f)}");
-                return p;
-            }
-            catch (Exception ex) { Logger.Log($"ToWorld ERROR: {ex.Message}"); throw; }
-        }
-
-        // -----------------------------
-        // Owner/frame lookup & vector helpers (new)
-        // -----------------------------
-
-        // Find DesignBody that owns a Body.Shape (by reference)
-        static DesignBody TryFindOwner(Body target)
-        {
-            try
-            {
-                if (s_part == null || target == null) return null;
-                return s_part.Bodies.FirstOrDefault(db => object.ReferenceEquals(db.Shape, target));
-            }
-            catch { return null; }
-        }
-
-        // Read a body's frame without returning null (Try-pattern)
-        static bool TryGetOwnerFrame(DesignBody owner, out Frame frame)
-        {
-            frame = default;
-            if (owner == null) return false;
-
-            try
-            {
-                var t = owner.GetType();
-
-                // properties commonly seen across SpaceClaim builds
-                var prop = t.GetProperty("Frame", BindingFlags.Public | BindingFlags.Instance)
-                           ?? t.GetProperty("CoordinateSystem", BindingFlags.Public | BindingFlags.Instance)
-                           ?? t.GetProperty("PlacementFrame", BindingFlags.Public | BindingFlags.Instance);
-
-                if (prop != null)
-                {
-                    var val = prop.GetValue(owner, null);
-                    if (val is Frame fr)
-                    {
-                        frame = fr;
-                        return true;
-                    }
-                }
-
-                // methods, depending on build
-                var m = t.GetMethod("GetCoordinateSystem", BindingFlags.Public | BindingFlags.Instance)
-                      ?? t.GetMethod("GetFrame", BindingFlags.Public | BindingFlags.Instance);
-
-                if (m != null)
-                {
-                    var res = m.Invoke(owner, null);
-                    if (res is Frame fr2)
-                    {
-                        frame = fr2;
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-                // ignore and return false
-            }
-
-            return false;
-        }
-
-        // Small vector helpers
         static Vector VNorm(Vector v)
         {
             var m = Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
@@ -156,797 +50,551 @@ namespace AESCConstruct25.RibCutout.Modules
             );
         }
 
-        // Build a right-handed frame with Z = zDir, and X/Y aligned to the owner's rotation (projected to be ⟂ Z)
-        static Frame MakeAlignedFrame(Point origin, Direction zDir, DesignBody ownerOrNull, string logTag)
+        static void AddAxes(Frame f, string name, double len = 0.01)
         {
-            var z = VNorm(zDir.ToVector());
-
-            // choose owner axes if available, otherwise world axes
-            Vector xRef = Vector.Create(1, 0, 0);
-            Vector yRef = Vector.Create(0, 1, 0);
-
-            if (TryGetOwnerFrame(ownerOrNull, out var of))
-            {
-                Logger.Log($"{logTag}: owner frame -> {FrameInfo(of)} (DesignBody='{ownerOrNull?.Name}')");
-                xRef = of.DirX.ToVector();
-                yRef = of.DirY.ToVector();
-            }
-            else
-            {
-                Logger.Log($"{logTag}: owner frame not available, using world XY as reference.");
-            }
-
-            // Pick the reference axis most perpendicular to z (to avoid degeneracy)
-            var dotX = Math.Abs(Vector.Dot(xRef, z));
-            var dotY = Math.Abs(Vector.Dot(yRef, z));
-            var x0 = (dotX < dotY) ? xRef : yRef;
-
-            // Project onto plane ⟂ z and normalize
-            var xProj = x0 - Vector.Dot(x0, z) * z;
-            var x = VNorm(xProj);
-
-            // If degenerate (parallel), pick a safe fallback
-            if (Math.Sqrt(x.X * x.X + x.Y * x.Y + x.Z * x.Z) < 1e-9)
-                x = VNorm(Math.Abs(z.X) < 0.9 ? Vector.Create(1, 0, 0) : Vector.Create(0, 1, 0));
-
-            // y completes a right-handed basis
-            var y = VNorm(VCross(z, x));
-
-            var fx = Direction.Create(x.X, x.Y, x.Z);
-            var fy = Direction.Create(y.X, y.Y, y.Z);
-            var local = Frame.Create(origin, fx, fy);
-
-            return local;
-        }
-
-        static void LogOwnerRotation(string label, Body body)
-        {
-            try
-            {
-                var owner = TryFindOwner(body);
-                if (owner != null && TryGetOwnerFrame(owner, out var of))
-                    Logger.Log($"Owner rotation -> {FrameInfo(of)} (DesignBody='{owner.Name}')");
-                else
-                    Logger.Log("Owner frame not available.");
-            }
-            catch (Exception ex) { Logger.Log($"{label}: rotation log ERROR: {ex.Message}"); }
-        }
-
-        // -----------------------------
-        // Scene Debug helpers (safe no-ops if s_part is null or viz disabled)
-        // -----------------------------
-        static void AddGhostBody(Body src, string name, Color color)
-        {
-            if (!Config.EnableDebugViz || s_part == null || src == null) return;
-            try { var db = DesignBody.Create(s_part, name, src.Copy()); db.SetColor(null, color); }
-            catch (Exception ex) { Logger.Log($"DebugViz AddGhostBody ERROR: {ex.Message}"); }
+            var o = f.Origin;
+            AddPolyline(new[] { o, o + f.DirX.ToVector() * len }, $"{name}/X", Color.Red);
+            AddPolyline(new[] { o, o + f.DirY.ToVector() * len }, $"{name}/Y", Color.LimeGreen);
+            AddPolyline(new[] { o, o + f.DirZ.ToVector() * len }, $"{name}/Z", Color.Blue);
         }
 
         static void AddPolyline(IReadOnlyList<Point> pts, string name, Color color)
         {
-            if (!Config.EnableDebugViz || s_part == null || pts == null || pts.Count < 2) return;
-            try
-            {
-                for (int i = 0; i < pts.Count - 1; i++)
-                {
-                    var seg = CurveSegment.Create(pts[i], pts[i + 1]);
-                    var dc = DesignCurve.Create(s_part, seg);
-                    dc.Name = name;
-                    dc.SetColor(null, color);
-                }
+            if (s_part == null || pts == null || pts.Count < 2) {
+                return;
             }
-            catch (Exception ex) { Logger.Log($"DebugViz AddPolyline ERROR: {ex.Message}"); }
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                var seg = CurveSegment.Create(pts[i], pts[i + 1]);
+                var dc = DesignCurve.Create(s_part, seg);
+                dc.Name = name;
+                dc.SetColor(null, color);
+            }
         }
 
-        static void AddAxes(Frame f, string name, double len)
+        static Frame CreateLocalFrameFromEdges(Body body)
         {
-            if (!Config.EnableDebugViz) return;
-            try
+            // 1. Gather all edge directions in world space
+            var edgeDirs = new List<Vector>();
+            var edgesProp = body.GetType().GetProperty("Edges");
+            var edgesObj = edgesProp?.GetValue(body, null) as System.Collections.IEnumerable;
+            if (edgesObj == null)
+                throw new InvalidOperationException("Body has no Edges property.");
+
+            foreach (var edgeObj in edgesObj)
             {
-                var o = f.Origin;
-                AddPolyline(new[] { o, o + f.DirX.ToVector() * len }, $"{name}/X", Config.AxisXColor);
-                AddPolyline(new[] { o, o + f.DirY.ToVector() * len }, $"{name}/Y", Config.AxisYColor);
-                AddPolyline(new[] { o, o + f.DirZ.ToVector() * len }, $"{name}/Z", Config.AxisZColor);
-            }
-            catch (Exception ex) { Logger.Log($"DebugViz Axes ERROR: {ex.Message}"); }
-        }
-
-        static void AddBoxEdges(Frame local, double x0, double y0, double z0, double x1, double y1, double z1, string name)
-        {
-            if (!Config.EnableDebugViz) return;
-            try
-            {
-                // 8 corners in local -> world
-                var p000 = ToWorld(local, x0, y0, z0);
-                var p001 = ToWorld(local, x0, y0, z1);
-                var p010 = ToWorld(local, x0, y1, z0);
-                var p011 = ToWorld(local, x0, y1, z1);
-                var p100 = ToWorld(local, x1, y0, z0);
-                var p101 = ToWorld(local, x1, y0, z1);
-                var p110 = ToWorld(local, x1, y1, z0);
-                var p111 = ToWorld(local, x1, y1, z1);
-
-                var c = Config.EdgeColor;
-
-                // edges
-                AddPolyline(new[] { p000, p100, p110, p010, p000 }, $"{name}/edge-xy(z0)", c);
-                AddPolyline(new[] { p001, p101, p111, p011, p001 }, $"{name}/edge-xy(z1)", c);
-                AddPolyline(new[] { p000, p001 }, $"{name}/edge-z0", c);
-                AddPolyline(new[] { p100, p101 }, $"{name}/edge-z1", c);
-                AddPolyline(new[] { p110, p111 }, $"{name}/edge-z2", c);
-                AddPolyline(new[] { p010, p011 }, $"{name}/edge-z3", c);
-
-                // also log for debugging
-                Logger.Log($"{name}/corners: " +
-                           $"p000={P(p000)}, p001={P(p001)}, p010={P(p010)}, p011={P(p011)}, " +
-                           $"p100={P(p100)}, p101={P(p101)}, p110={P(p110)}, p111={P(p111)}");
-            }
-            catch (Exception ex) { Logger.Log($"DebugViz BoxEdges ERROR: {ex.Message}"); }
-        }
-
-        static void AddMidPlaneRect(Frame local, double x0, double x1, double y0, double y1, string name)
-        {
-            if (!Config.EnableDebugViz) return;
-            try
-            {
-                // draw rectangle on local z=0 (split plane)
-                var a = ToWorld(local, x0, y0, 0);
-                var b = ToWorld(local, x1, y0, 0);
-                var c = ToWorld(local, x1, y1, 0);
-                var d = ToWorld(local, x0, y1, 0);
-                AddPolyline(new[] { a, b, c, d, a }, $"{name}/midZ", Config.MidPlaneColor);
-                Logger.Log($"{name}/midZ: a={P(a)} b={P(b)} c={P(c)} d={P(d)}");
-            }
-            catch (Exception ex) { Logger.Log($"DebugViz MidPlane ERROR: {ex.Message}"); }
-        }
-
-        // -----------------------------
-        // Solid constructors
-        // -----------------------------
-
-        // Rectangular prism cutter in a local frame where Z = "forward" (cut direction)
-        static Body MakeRectPrismCutter(Frame local, double x0, double y0, double z0, double x1, double y1, double z1)
-        {
-            try
-            {
-                Logger.Log($"MakeRectPrismCutter: local={FrameInfo(local)}; x0={F(x0)}, y0={F(y0)}, z0={F(z0)}, x1={F(x1)}, y1={F(y1)}, z1={F(z1)}");
-
-                // Base rectangle on plane z=z0 in local frame
-                var p0 = ToWorld(local, x0, y0, z0);
-                var p1 = ToWorld(local, x1, y0, z0);
-                var p2 = ToWorld(local, x1, y1, z0);
-                var p3 = ToWorld(local, x0, y1, z0);
-
-                var baseOrigin = ToWorld(local, 0, 0, z0);
-                var baseFrame = Frame.Create(baseOrigin, local.DirX, local.DirY); // normal=local.DirZ
-                var plane = Plane.Create(baseFrame);
-
-                // sanity check distances along normal
-                var n = local.DirZ.ToVector();
-                double d0 = Vector.Dot((p0 - baseOrigin), n);
-                double d1 = Vector.Dot((p1 - baseOrigin), n);
-                double d2 = Vector.Dot((p2 - baseOrigin), n);
-                double d3 = Vector.Dot((p3 - baseOrigin), n);
-                Logger.Log($"MakeRectPrismCutter: plane-z0 checks d0={F(d0)} d1={F(d1)} d2={F(d2)} d3={F(d3)}");
-
-                var segs = new[]
-                {
-                    CurveSegment.Create(p0, p1),
-                    CurveSegment.Create(p1, p2),
-                    CurveSegment.Create(p2, p3),
-                    CurveSegment.Create(p3, p0),
-                };
-
-                var profile = new Profile(plane, segs);
-
-                double height = Math.Max(0, z1 - z0);
-                var body = Body.ExtrudeProfile(profile, height);
-
-                Logger.Log($"MakeRectPrismCutter: height={F(height)}; result volume={F(body.Volume)}");
-                return body;
-            }
-            catch (Exception ex) { Logger.Log($"MakeRectPrismCutter ERROR: {ex.Message}"); throw; }
-        }
-
-        // Cylinder extruded along a chosen LOCAL axis ('X','Y','Z'), base at the corresponding min value
-        static Body MakeAxisCylinder(Frame local, char axis, double cx, double cy, double cz, double radius, double height, int sides = 24)
-        {
-            try
-            {
-                radius = Math.Max(0, radius);
-                height = Math.Max(0, height);
-
-                // Pick a profile plane whose normal = requested axis
-                Frame circleFrame;
-                switch (char.ToUpperInvariant(axis))
-                {
-                    case 'X': circleFrame = Frame.Create(ToWorld(local, cx, cy, cz), local.DirY, local.DirZ); break; // normal X
-                    case 'Y': circleFrame = Frame.Create(ToWorld(local, cx, cy, cz), local.DirZ, local.DirX); break; // normal Y
-                    default: circleFrame = Frame.Create(ToWorld(local, cx, cy, cz), local.DirX, local.DirY); break; // normal Z
-                }
-
-                var plane = Plane.Create(circleFrame);
-                var circle = Circle.Create(circleFrame, radius);
-                var loop = new[] { CurveSegment.Create(circle) };
-                var prof = new Profile(plane, loop);
-
-                var body = Body.ExtrudeProfile(prof, height);
-                Logger.Log($"MakeAxisCylinder(axis={axis}): centerLocal=({F(cx)},{F(cy)},{F(cz)}), r={F(radius)}, h={F(height)}; vol={F(body.Volume)}");
-                return body;
-            }
-            catch (Exception ex) { Logger.Log($"MakeAxisCylinder ERROR: {ex.Message}"); throw; }
-        }
-
-        // Try to get endpoints of an edge, across API variants.
-        static bool TryGetEdgeEndpoints(Edge e, out Point p0, out Point p1)
-        {
-            p0 = default; p1 = default;
-            try
-            {
-                // common pattern: StartVertex/EndVertex -> Position
-                var t = e.GetType();
-                var svProp = t.GetProperty("StartVertex") ?? t.GetProperty("Start");
-                var evProp = t.GetProperty("EndVertex") ?? t.GetProperty("End");
-                if (svProp != null && evProp != null)
-                {
-                    var sv = svProp.GetValue(e, null);
-                    var ev = evProp.GetValue(e, null);
-                    if (sv != null && ev != null)
-                    {
-                        var vt = sv.GetType();
-                        var posProp = vt.GetProperty("Position") ?? vt.GetProperty("Point");
-                        if (posProp != null)
-                        {
-                            p0 = (Point)posProp.GetValue(sv, null);
-                            p1 = (Point)posProp.GetValue(ev, null);
-                            return true;
-                        }
-                    }
-                }
-
-                // sometimes edges expose StartPoint / EndPoint directly
+                // Try to get start and end points of the edge
+                var t = edgeObj.GetType();
                 var sp = t.GetProperty("StartPoint") ?? t.GetProperty("PointStart");
                 var ep = t.GetProperty("EndPoint") ?? t.GetProperty("PointEnd");
                 if (sp != null && ep != null)
                 {
-                    p0 = (Point)sp.GetValue(e, null);
-                    p1 = (Point)ep.GetValue(e, null);
-                    return true;
+                    var p0 = (Point)sp.GetValue(edgeObj, null);
+                    var p1 = (Point)ep.GetValue(edgeObj, null);
+                    var dir = p1 - p0;
+                    if (dir.Magnitude > 1e-8)
+                        edgeDirs.Add(VNorm(dir));
                 }
             }
-            catch { /* ignore */ }
-            return false;
-        }
 
-        // Build a local frame whose X is along a given vector (used for the probe tube)
-        static Frame MakeFrameWithX(Point origin, Direction xDir)
-        {
-            var x = VNorm(xDir.ToVector());
-            // pick a safe ref that is not parallel to X
-            var refZ = (Math.Abs(x.Z) < 0.9) ? Vector.Create(0, 0, 1) : Vector.Create(0, 1, 0);
-            var z = VNorm(VCross(x, refZ));          // z ⟂ x
-            if (Math.Sqrt(z.X * z.X + z.Y * z.Y + z.Z * z.Z) < 1e-9)
-                z = VNorm(VCross(x, Vector.Create(0, 1, 0)));
-            var y = VNorm(VCross(z, x));             // right-handed
-            return Frame.Create(origin,
-                Direction.Create(x.X, x.Y, x.Z),
-                Direction.Create(y.X, y.Y, y.Z));
-        }
+            if (edgeDirs.Count < 3)
+                throw new InvalidOperationException("Not enough unique edges found.");
 
-        // Probe whether an edge (as a thin cylinder) intersects 'other' body
-        static bool EdgeIntersectsBody(Point a, Point b, Body other, out double score)
-        {
-            score = 0;
-            try
+            // 2. Cluster edge directions (rectangular body: 3 unique directions)
+            // Use a tolerance to group similar directions (opposite directions are considered the same)
+            double tol = 1e-3;
+            var uniqueDirs = new List<Vector>();
+            foreach (var dir in edgeDirs)
             {
-                var v = b - a;
-                var len = Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-                if (len < 1e-6) return false;
-
-                var mid = Point.Create((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5, (a.Z + b.Z) * 0.5);
-                var xDir = Direction.Create(v.X, v.Y, v.Z);
-                var f = MakeFrameWithX(mid, xDir);
-
-                // build a very thin tube centered on the edge, along local X
-                var tube = MakeAxisCylinder(f, 'X', 0, 0, 0, 0.0005, len, 16);
-
-                var test = other.Copy();
-                test.Intersect(new[] { tube });
-                score = test.Volume;              // larger = stronger intersection
-                return score > 1e-12;
-            }
-            catch { return false; }
-        }
-
-        // Find a good Y direction from 'source' that intersects 'other'.
-        // Returns true and sets yDir if found.
-        static bool TryPickIntersectingY(Body source, Body other, out Direction yDir, string logTag)
-        {
-            yDir = default;
-            try
-            {
-                // Enumerate edges via reflection-friendly path
-                var edgesProp = source.GetType().GetProperty("Edges", BindingFlags.Public | BindingFlags.Instance);
-                var edgesObj = edgesProp?.GetValue(source, null) as System.Collections.IEnumerable;
-                if (edgesObj == null)
+                bool found = false;
+                foreach (var u in uniqueDirs)
                 {
-                    Logger.Log($"{logTag}: source body has no Edges enumerable.");
-                    return false;
-                }
-
-                double bestScore = 0;
-                Vector bestVec = default;
-                foreach (var eo in edgesObj)
-                {
-                    if (eo is Edge e && TryGetEdgeEndpoints(e, out var p0, out var p1))
+                    if (Math.Abs(Vector.Dot(dir, u)) > 1 - tol)
                     {
-                        if (EdgeIntersectsBody(p0, p1, other, out var s))
-                        {
-                            var v = p1 - p0;
-                            if (s > bestScore && Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z) > 1e-6)
-                            {
-                                bestScore = s;
-                                bestVec = VNorm(v);
-                            }
-                        }
+                        found = true;
+                        break;
                     }
                 }
-
-                if (bestScore > 0)
-                {
-                    yDir = Direction.Create(bestVec.X, bestVec.Y, bestVec.Z);
-                    Logger.Log($"{logTag}: picked Y from intersecting edge (score={F(bestScore)}) -> {D(yDir)}");
-                    return true;
-                }
-
-                Logger.Log($"{logTag}: no intersecting edge found.");
-                return false;
+                if (!found)
+                    uniqueDirs.Add(dir);
             }
-            catch (Exception ex)
+
+            if (uniqueDirs.Count != 3)
+                throw new InvalidOperationException($"Expected 3 unique edge directions, found {uniqueDirs.Count}.");
+
+            // 3. For each direction, compute the total length of all edges in that direction
+            var dirLengths = new double[3];
+            for (int i = 0; i < 3; i++)
             {
-                Logger.Log($"{logTag}: TryPickIntersectingY ERROR: {ex.Message}");
-                return false;
+                double sum = 0;
+                foreach (var edgeObj in edgesObj)
+                {
+                    var t = edgeObj.GetType();
+                    var sp = t.GetProperty("StartPoint") ?? t.GetProperty("PointStart");
+                    var ep = t.GetProperty("EndPoint") ?? t.GetProperty("PointEnd");
+                    if (sp != null && ep != null)
+                    {
+                        var p0 = (Point)sp.GetValue(edgeObj, null);
+                        var p1 = (Point)ep.GetValue(edgeObj, null);
+                        var dir = p1 - p0;
+                        var norm = VNorm(dir);
+                        if (Math.Abs(Vector.Dot(norm, uniqueDirs[i])) > 1 - tol)
+                            sum += dir.Magnitude;
+                    }
+                }
+                dirLengths[i] = sum;
             }
+
+            // 4. Assign axes: X = longest, Z = shortest, Y = remaining (right-hand rule)
+            int xIdx = Array.IndexOf(dirLengths, dirLengths.Max());
+            int zIdx = Array.IndexOf(dirLengths, dirLengths.Min());
+            int yIdx = 3 - xIdx - zIdx;
+
+            Vector xDir = uniqueDirs[xIdx];
+            Vector zDir = uniqueDirs[zIdx];
+            Vector yDir = VNorm(VCross(zDir, xDir)); // right-hand rule
+
+            // 5. Use the center of the bounding box as the origin
+            var bb = body.GetBoundingBox(Matrix.Identity, true);
+            var center = CenterOf(bb);
+
+            return Frame.Create(center,
+                Direction.Create(xDir.X, xDir.Y, xDir.Z),
+                Direction.Create(yDir.X, yDir.Y, yDir.Z)
+            );
         }
 
-        // -----------------------------
-        // Main entry
-        // -----------------------------
-        public static void ProcessPairs(
+        static Body MakeRectPrism(Frame local, double x0, double y0, double z0, double x1, double y1, double z1, double toleranceMM, bool middleTolerance, bool perpendicularCut)
+        {
+            // Apply tolerance in X and Z directions (widen symmetrically)
+            double minX = perpendicularCut ? Math.Min(x0, x1) - toleranceMM / 1000.0 : Math.Min(x0, x1) - toleranceMM;
+            double maxX = perpendicularCut ? Math.Max(x0, x1) + toleranceMM / 1000.0 : Math.Max(x0, x1) + toleranceMM;
+            double minZ = Math.Min(z0, z1) - toleranceMM / 1000.0;
+            double maxZ = Math.Max(z0, z1) + toleranceMM / 1000.0;
+            double minY = middleTolerance ? Math.Min(y0, y1) - toleranceMM / 2000.0 : Math.Min(y0, y1);
+            double maxY = middleTolerance ? Math.Max(y0, y1) + toleranceMM / 2000.0 : Math.Max(y0, y1);
+
+            var p0 = ToWorld(local, minX, minY, minZ);
+            var p1 = ToWorld(local, maxX, minY, minZ);
+            var p2 = ToWorld(local, maxX, maxY, minZ);
+            var p3 = ToWorld(local, minX, maxY, minZ);
+
+            var baseOrigin = ToWorld(local, 0, 0, minZ);
+            var baseFrame = Frame.Create(baseOrigin, local.DirX, local.DirY);
+            var plane = Plane.Create(baseFrame);
+
+            var segs = new[]
+            {
+                CurveSegment.Create(p0, p1),
+                CurveSegment.Create(p1, p2),
+                CurveSegment.Create(p2, p3),
+                CurveSegment.Create(p3, p0),
+            };
+
+            var profile = new Profile(plane, segs);
+            double height = Math.Max(0, maxZ - minZ);
+            var body = Body.ExtrudeProfile(profile, height);
+            return body;
+        }
+
+        static Point ToWorld(Frame f, double lx, double ly, double lz)
+        {
+            var ox = f.Origin.X; var oy = f.Origin.Y; var oz = f.Origin.Z;
+            var vx = f.DirX.ToVector(); var vy = f.DirY.ToVector(); var vz = f.DirZ.ToVector();
+            var p = Point.Create(
+                ox + lx * vx.X + ly * vy.X + lz * vz.X,
+                oy + lx * vx.Y + ly * vy.Y + lz * vz.Y,
+                oz + lx * vx.Z + ly * vy.Z + lz * vz.Z
+            );
+            return p;
+        }
+
+        // Creates two cylinders on the split-side corners of 'cutter' and returns them as Body shapes.
+        // - 'local' is the frame used to create the cutter
+        // - 'yMid' is the split line (near side) in that same local frame
+        // - 'weldRoundRadius' is in millimeters (converted to meters here)
+        static List<Body> MakeCornerCylindersAtSplitSide(Body cutter, Frame local, double yMid, double weldRoundRadius, bool perpendicularCut)
+        {
+            var result = new List<Body>();
+            if (perpendicularCut)
+            {
+                if (cutter == null || weldRoundRadius <= 0) return result;
+
+                var worldToLocal = Matrix.CreateMapping(local).Inverse;
+                var bb = cutter.GetBoundingBox(worldToLocal, true);
+                double minX = bb.MinCorner.X, maxX = bb.MaxCorner.X;
+                double minY = bb.MinCorner.Y, maxY = bb.MaxCorner.Y;
+                double minZ = bb.MinCorner.Z, maxZ = bb.MaxCorner.Z;
+
+                // Pick the Y side closest to the split (yMid).
+                double yNear = (Math.Abs(minY - yMid) <= Math.Abs(maxY - yMid)) ? minY : maxY;
+                double height = Math.Max(0, maxZ - minZ);
+
+                // Build two cylinders (axis = local.DirZ), one at each X corner on the near Y side.
+                double r = weldRoundRadius / 1000.0; // mm -> m
+                foreach (double x in new[] { minX, maxX })
+                {
+                    var baseCenterWorld = ToWorld(local, x, yNear, minZ);
+                    var baseFrame = Frame.Create(baseCenterWorld, local.DirX, local.DirY);
+
+                    // Circle on the base plane, then extrude along +Z by 'height'.
+                    // (Circle + Profile + Extrude per SpaceClaim API pattern.) 
+                    var circle = Circle.Create(baseFrame, r);
+                    var plane = Plane.Create(baseFrame);
+                    var profile = new Profile(plane, new[] { CurveSegment.Create(circle) });
+                    var cyl = Body.ExtrudeProfile(profile, height);
+                    result.Add(cyl);
+                }
+            }
+            else
+            {
+                if (cutter == null || weldRoundRadius <= 0) return result;
+
+                // Angled cuts live on the local XZ plane.
+                var worldToLocal = Matrix.CreateMapping(local).Inverse;
+                var bb = cutter.GetBoundingBox(worldToLocal, true);
+                double minX = bb.MinCorner.X, maxX = bb.MaxCorner.X;
+                double minY = bb.MinCorner.Y, maxY = bb.MaxCorner.Y;
+                double minZ = bb.MinCorner.Z, maxZ = bb.MaxCorner.Z;
+
+                // Near split side in local Y
+                double yNear = (Math.Abs(minY - yMid) <= Math.Abs(maxY - yMid)) ? minY : maxY;
+
+                // Span along counterpart's X and a small overshoot amount
+                double dx = Math.Max(0, maxX - minX);
+                if (dx <= 1e-9) return result;
+
+                double r = weldRoundRadius / 1000.0;     // mm -> m
+                double over = r;                         // shift axis a little outside
+                double length = dx + 200.0;         // extrude past both ends
+
+                foreach (double x in new[] { minX, maxX })
+                {
+                    bool isMinX = Math.Abs(x - minX) < 1e-12;
+
+                    // Use diagonal near-Y corner per side to avoid overlapping the same spot
+                    double zCorner = isMinX ? minZ : maxZ;
+
+                    // Corner on the near split side
+                    var cornerW = ToWorld(local, x, yNear, zCorner);
+
+                    // Cylinder axis direction: +X for minX corner, -X for maxX corner
+                    var axisDir = isMinX ? local.DirX.ToVector() : (-local.DirX.ToVector());
+
+                    // Move the AXIS slightly OUTSIDE along its own direction, then extrude back through the body
+                    var baseOrigin = cornerW - axisDir * 10.0;
+
+                    // Build a right-handed circle plane whose normal is the axis (±X):
+                    //  - For +X normal: ex = Y, ey = Z  (Y × Z = +X)
+                    //  - For -X normal: ex = Z, ey = Y  (Z × Y = -X)
+                    Direction ex, ey;
+                    if (isMinX) { ex = local.DirY; ey = local.DirZ; }   // normal +X
+                    else { ex = local.DirZ; ey = local.DirY; }   // normal -X
+
+                    var baseFrame = Frame.Create(baseOrigin, ex, ey);
+
+                    var circle = Circle.Create(baseFrame, r);
+                    var plane = Plane.Create(baseFrame);
+                    var profile = new Profile(plane, new[] { CurveSegment.Create(circle) });
+
+                    // Extrude along the axis direction; because we shifted the start by 'over',
+                    // using (dx + 2*over) covers both sides while keeping the axis outside.
+                    var cyl = Body.ExtrudeProfile(profile, length);
+                    result.Add(cyl);
+
+                    // Debug: visualize placement and coverage
+                    //if (s_part != null)
+                    //{
+                    //    var dbg = DesignBody.Create(s_part, $"DebugWeldCyl_Angled_{Guid.NewGuid()}", cyl.Copy());
+                    //    dbg.SetColor(null, Color.FromArgb(128, 255, 165, 0));
+                    //}
+                }
+            }
+
+            return result;
+        }
+
+        public static void CreateHalfLapJoints(
             Document doc,
             List<(Body A, Body B)> pairs,
+            HalfLapParams jointParams,
             bool perpendicularCut,
-            double toleranceMM,
-            bool applyMiddleTolerance,
             bool reverseDirection,
+            double toleranceMM,
+            bool middleTolerance,
             bool addWeldRound,
-            double weldRadiusMM
+            double weldRoundRadius
         )
         {
-            var opId = Guid.NewGuid().ToString("N").Substring(0, 8);
-
-            try
+            s_part = doc?.MainPart;
+            if (s_part == null)
             {
-                var part = doc?.MainPart;
-                s_part = part;
-                if (part == null)
+                return;
+            }
+            if (pairs == null || pairs.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                var (bodyA, bodyB) = pairs[i];
+                if (bodyA == null || bodyB == null)
                 {
-                    Logger.Log($"[{opId}] ERROR: Document.MainPart is null. Aborting.");
-                    return;
+                    continue;
                 }
 
-                // Units: SpaceClaim is meters; UI is mm
-                double halfTol = Math.Max(0.0, toleranceMM) / 2000.0;   // tolerance/2 in meters
-                double weldR = Math.Max(0.0, weldRadiusMM) / 1000.0;    // radius in meters
-
-                if (pairs == null || pairs.Count == 0)
+                try
                 {
-                    Logger.Log($"[{opId}] No pairs supplied. Nothing to do.");
-                    return;
-                }
+                    var frameA = CreateLocalFrameFromEdges(bodyA);
+                    var frameB = CreateLocalFrameFromEdges(bodyB);
 
-                for (int i = 0; i < pairs.Count; i++)
-                {
-                    var (origA, origB) = pairs[i];
+                    //AddAxes(frameA, $"Pair[{i}]/A_LocalAxes");
+                    //AddAxes(frameB, $"Pair[{i}]/B_LocalAxes");
 
-                    try
+                    var overlapA = bodyA.Copy();
+                    overlapA.Intersect(new[] { bodyB.Copy() });
+
+                    var overlapB = bodyA.Copy();
+                    overlapB.Intersect(new[] { bodyB.Copy() });
+
+                    if (overlapA.Volume < 1e-12 || overlapB.Volume < 1e-12)
                     {
-                        if (origA == null || origB == null)
-                        {
-                            Logger.Log($"[{opId}] Pair[{i}] ERROR: One or both bodies are null. Skipping.");
-                            continue;
-                        }
+                        continue; // No overlap, skip
+                    }
 
-                        // Log original body "rotation" (owner frame if available)
-                        LogOwnerRotation($"[{opId}] Pair[{i}] A", origA);
-                        LogOwnerRotation($"[{opId}] Pair[{i}] B", origB);
+                    Body cutterBodyA = null;
+                    Body cutterBodyB = null;
 
-                        var bbA = origA.GetBoundingBox(Matrix.Identity, true);
-                        var bbB = origB.GetBoundingBox(Matrix.Identity, true);
+                    // We'll capture the frame used to build each cutter and the yMid corresponding to that frame.
+                    Frame cutterAFrame;
+                    double cutterAYMid = 0.0;
 
-                        // Overlap (in current world)
-                        var overlap = origA.Copy();
-                        overlap.Intersect(new[] { origB.Copy() });
+                    Frame cutterBFrame;
+                    double cutterBYMid = 0.0;
+                    // --- Cutter creation for both A and B, works for both perpendicular and angled cuts ---
+                    // Always lengthen the cutter away from the split (yMid) by at least edgeOffset (100.0) on local Y
 
-                        if (overlap.Volume <= 0)
-                        {
-                            Logger.Log($"[{opId}] Pair[{i}] No overlap. Skipping.");
-                            continue;
-                        }
+                    // For A
+                    //Body cutterBodyA = null;
+                    {
+                        var worldToLocalA = Matrix.CreateMapping(frameA).Inverse;
+                        var bbLocalA = overlapA.GetBoundingBox(worldToLocalA, true);
+                        double yMidA = 0.5 * (bbLocalA.MinCorner.Y + bbLocalA.MaxCorner.Y);
 
-                        var centerA = CenterOf(origA.GetBoundingBox(Matrix.Identity, true));
-                        var centerB = CenterOf(origB.GetBoundingBox(Matrix.Identity, true));
-                        var centerOverlap = CenterOf(overlap.GetBoundingBox(Matrix.Identity, true));
-
-                        // Local function that builds the cutter for a given target (no subtraction here).
-                        Body BuildHalfLapCutter(
-                            Body target,
-                            Body other,              // the *other* body in the pair
-                            DesignBody alignOwner,   // resolved owner for 'target'
-                            Point targetCenter,
-                            string debugPrefix
-                        )
-                        {
-                            try
-                            {
-                                // ---------------------------------------------------------------------
-                                // PERPENDICULAR CUT PATH: force cut normal to the target body's X.
-                                // ---------------------------------------------------------------------
-                                if (perpendicularCut)
-                                {
-                                    // Direction of cut (forward): from target toward overlap, optionally reversed
-                                    var dir = (centerOverlap - targetCenter).Direction;
-                                    var dirOrig = D(dir);
-                                    if (reverseDirection)
-                                    {
-                                        var v = dir.ToVector();
-                                        dir = Direction.Create(-v.X, -v.Y, -v.Z);
-                                    }
-
-                                    // Split overlap by plane through center, normal 'dir'
-                                    var splitPlane = Plane.Create(Frame.Create(centerOverlap, dir));
-                                    var overlapForTarget = overlap.Copy();
-                                    overlapForTarget.Split(splitPlane, null);
-                                    var pieces = overlapForTarget.SeparatePieces();
-
-                                    if (pieces.Count != 2)
-                                    {
-                                        Logger.Log($"[{opId}] Pair[{i}] {debugPrefix}: Unexpected piece count ({pieces.Count}). Aborting this half.");
-                                        return null;
-                                    }
-
-                                    // Choose half closer to target along -dir
-                                    Body chosen = null;
-                                    double bestDot = double.NegativeInfinity;
-                                    foreach (var piece in pieces)
-                                    {
-                                        var pc = CenterOf(piece.GetBoundingBox(Matrix.Identity, true));
-                                        var v = pc - centerOverlap;
-                                        double score = -Vector.Dot(v, dir.ToVector());
-                                        if (score > bestDot) { bestDot = score; chosen = piece; }
-                                    }
-                                    if (chosen == null)
-                                    {
-                                        Logger.Log($"[{opId}] Pair[{i}] {debugPrefix}: No chosen piece. Aborting this half.");
-                                        return null;
-                                    }
-
-                                    // Local frame: Z = cut direction, X/Y aligned with the target body's rotation
-                                    Direction yHint;
-                                    var gotY = TryPickIntersectingY(target, other, out yHint, $"[{opId}] Pair[{i}] {debugPrefix}");
-
-                                    Frame local;
-                                    if (gotY)
-                                    {
-                                        var z = VNorm(dir.ToVector());
-                                        var y0 = VNorm(yHint.ToVector());
-
-                                        // make y perpendicular to z (project off any small component)
-                                        var yProj = y0 - Vector.Dot(y0, z) * z;
-                                        var y = VNorm(yProj);
-                                        if (Math.Sqrt(y.X * y.X + y.Y * y.Y + y.Z * y.Z) < 1e-9)
-                                        {
-                                            var owner = alignOwner;
-                                            if (owner != null && TryGetOwnerFrame(owner, out var of2))
-                                            {
-                                                y0 = of2.DirY.ToVector();
-                                                yProj = y0 - Vector.Dot(y0, z) * z;
-                                                y = VNorm(yProj);
-                                            }
-                                            else
-                                            {
-                                                y = (Math.Abs(z.X) < 0.9) ? Vector.Create(1, 0, 0) : Vector.Create(0, 1, 0);
-                                                y = VNorm(y - Vector.Dot(y, z) * z);
-                                            }
-                                        }
-
-                                        var x = VNorm(VCross(y, z));       // X = Y × Z
-                                        y = VNorm(VCross(z, x));           // re-orthonormalize Y
-
-                                        local = Frame.Create(
-                                            centerOverlap,
-                                            Direction.Create(x.X, x.Y, x.Z),
-                                            Direction.Create(y.X, y.Y, y.Z)
-                                        );
-                                    }
-                                    else
-                                    {
-                                        // fallback: owner-aligned XY with Z≈dir
-                                        local = MakeAlignedFrame(
-                                            centerOverlap,
-                                            dir,
-                                            alignOwner,
-                                            $"[{opId}] Pair[{i}] {debugPrefix}"
-                                        );
-                                    }
-
-                                    // Correct world->local mapping
-                                    Matrix localToWorld, worldToLocal;
-                                    try { localToWorld = Matrix.CreateMapping(local); worldToLocal = localToWorld.Inverse; }
-                                    catch { localToWorld = Matrix.CreateMapping(local); worldToLocal = localToWorld.Inverse; }
-
-                                    // Oriented bbox in local coords (do not mutate geometry)
-                                    var bbLocal = chosen.GetBoundingBox(worldToLocal, true);
-                                    var min = bbLocal.MinCorner; var max = bbLocal.MaxCorner;
-
-                                    // Spans (informational for weld logic)
-                                    double sx = max.X - min.X, sy = max.Y - min.Y, sz = max.Z - min.Z;
-
-                                    // For welds only (tolerance is now independent)
-                                    char perpAxis = (sy <= sx) ? 'Y' : 'X';
-                                    char sideAxis = (perpAxis == 'X') ? 'Y' : 'X';
-
-                                    // Start extents (no tol)
-                                    double x0a = min.X, x1a = max.X;
-                                    double y0a = min.Y, y1a = max.Y; // keep your current "huge Y" behavior
-                                    double z0a = min.Z, z1a = max.Z;
-
-                                    // TOLERANCE (updated): X±halfTol, Z+halfTol only if checkbox
-                                    y0a -= halfTol * 2.0;
-                                    y1a += halfTol * 2.0;
-
-                                    double fwdExtraA = applyMiddleTolerance ? halfTol : 0.0;
-                                    if (!reverseDirection)
-                                    {
-                                        z1a += fwdExtraA;  // forward = +Z
-                                    }
-                                    else
-                                    {
-                                        z1a += fwdExtraA;  // forward = -Z
-                                        z0a -= 200.0;
-                                    }
-
-                                    // Build cutter prism
-                                    var cutter = MakeRectPrismCutter(local, x0a, y0a, z0a, x1a, y1a, z1a);
-
-                                    if (addWeldRound && weldR > 0)
-                                    {
-                                        // Always place holes on the z1 face (the face touching the body),
-                                        // regardless of reverseDirection. Reverse only changes how deep we extend z0a.
-                                        double zFaceForHoles = z1a;
-
-                                        // Sweep along local X across the full width
-                                        double hX = Math.Max(0.0, x1a - x0a);
-
-                                        // Two opposite corners at (y0a, z1a) and (y1a, z1a), sweep +X from x0a → x1a
-                                        var cX1 = MakeAxisCylinder(local, 'X', x0a, y0a, zFaceForHoles, weldR, hX);
-                                        var cX3 = MakeAxisCylinder(local, 'X', x0a, y1a, zFaceForHoles, weldR, hX);
-
-                                        cutter.Unite(new[] { cX1, cX3 });
-                                    }
-
-                                    return cutter;
-                                }
-                                // ---------------------------------------------------------------------
-                                // ANGLED CUT PATH (original logic)
-                                // ---------------------------------------------------------------------
-                                else
-                                {
-                                    // Direction of cut (forward): from target toward overlap, optionally reversed
-                                    var dir = (centerOverlap - targetCenter).Direction;
-                                    var dirOrig = D(dir);
-                                    if (reverseDirection)
-                                    {
-                                        var v = dir.ToVector();
-                                        dir = Direction.Create(-v.X, -v.Y, -v.Z);
-                                    }
-
-                                    // Split overlap by plane through center, normal 'dir'
-                                    var splitPlane = Plane.Create(Frame.Create(centerOverlap, dir));
-                                    var overlapForTarget = overlap.Copy();
-                                    overlapForTarget.Split(splitPlane, null);
-                                    var pieces = overlapForTarget.SeparatePieces();
-
-                                    if (pieces.Count != 2)
-                                    {
-                                        Logger.Log($"[{opId}] Pair[{i}] {debugPrefix}: Unexpected piece count ({pieces.Count}). Aborting this half.");
-                                        return null;
-                                    }
-
-                                    // Choose half closer to target along -dir
-                                    Body chosen = null;
-                                    double bestDot = double.NegativeInfinity;
-                                    foreach (var piece in pieces)
-                                    {
-                                        var pc = CenterOf(piece.GetBoundingBox(Matrix.Identity, true));
-                                        var v = pc - centerOverlap;
-                                        double score = -Vector.Dot(v, dir.ToVector());
-                                        if (score > bestDot) { bestDot = score; chosen = piece; }
-                                    }
-                                    if (chosen == null)
-                                    {
-                                        Logger.Log($"[{opId}] Pair[{i}] {debugPrefix}: No chosen piece. Aborting this half.");
-                                        return null;
-                                    }
-
-                                    // Local frame: Z = cut direction, X/Y aligned with the target body's rotation
-                                    Direction yHint;
-                                    var gotY = TryPickIntersectingY(target, other, out yHint, $"[{opId}] Pair[{i}] {debugPrefix}");
-
-                                    Frame local;
-                                    if (gotY)
-                                    {
-                                        var z = VNorm(dir.ToVector());
-                                        var y0 = VNorm(yHint.ToVector());
-
-                                        // make y perpendicular to z (project off any small component)
-                                        var yProj = y0 - Vector.Dot(y0, z) * z;
-                                        var y = VNorm(yProj);
-                                        if (Math.Sqrt(y.X * y.X + y.Y * y.Y + y.Z * y.Z) < 1e-9)
-                                        {
-                                            var owner = alignOwner;
-                                            if (owner != null && TryGetOwnerFrame(owner, out var of2))
-                                            {
-                                                y0 = of2.DirY.ToVector();
-                                                yProj = y0 - Vector.Dot(y0, z) * z;
-                                                y = VNorm(yProj);
-                                            }
-                                            else
-                                            {
-                                                y = (Math.Abs(z.X) < 0.9) ? Vector.Create(1, 0, 0) : Vector.Create(0, 1, 0);
-                                                y = VNorm(y - Vector.Dot(y, z) * z);
-                                            }
-                                        }
-
-                                        var x = VNorm(VCross(y, z));
-                                        y = VNorm(VCross(z, x));
-
-                                        local = Frame.Create(
-                                            centerOverlap,
-                                            Direction.Create(x.X, x.Y, x.Z),
-                                            Direction.Create(y.X, y.Y, y.Z)
-                                        );
-                                    }
-                                    else
-                                    {
-                                        // fallback: owner-aligned XY with Z≈dir
-                                        local = MakeAlignedFrame(
-                                            centerOverlap,
-                                            dir,
-                                            alignOwner,
-                                            $"[{opId}] Pair[{i}] {debugPrefix}"
-                                        );
-                                    }
-
-                                    // Correct world->local mapping
-                                    Matrix localToWorld, worldToLocal;
-                                    try { localToWorld = Matrix.CreateMapping(local); worldToLocal = localToWorld.Inverse; }
-                                    catch { localToWorld = Matrix.CreateMapping(local); worldToLocal = localToWorld.Inverse; }
-
-                                    // Oriented bbox in local coords (do not mutate geometry)
-                                    var bbLocal = chosen.GetBoundingBox(worldToLocal, true);
-                                    var min = bbLocal.MinCorner; var max = bbLocal.MaxCorner;
-
-                                    // Spans (informational for weld logic)
-                                    double sx = max.X - min.X, sy = max.Y - min.Y, sz = max.Z - min.Z;
-
-                                    // For welds only (tolerance is now independent)
-                                    char perpAxis = (sy <= sx) ? 'Y' : 'X';
-                                    char sideAxis = (perpAxis == 'X') ? 'Y' : 'X';
-
-                                    // Start extents (no tol)
-                                    double x0a = min.X, x1a = max.X;
-                                    double y0a = min.Y * 1000.0, y1a = max.Y * 1000.0; // keep your current "huge Y" behavior
-                                    double z0a = min.Z, z1a = max.Z;
-
-                                    // TOLERANCE (updated): X±halfTol, Z+halfTol only if checkbox
-                                    x0a -= halfTol * 2.0;
-                                    x1a += halfTol * 2.0;
-
-                                    double fwdExtraA = applyMiddleTolerance ? halfTol : 0.0;
-
-                                    if (!reverseDirection)
-                                    {
-                                        z1a += fwdExtraA;  // forward = +Z
-                                    }
-                                    else
-                                    {
-                                        z1a += fwdExtraA;  // forward = -Z
-                                        z0a -= 200.0;
-                                    }
-
-                                    // Build cutter prism
-                                    var cutter = MakeRectPrismCutter(local, x0a, y0a, z0a, x1a, y1a, z1a);
-
-                                    // Optional weld-round reliefs (unchanged)
-                                    if (addWeldRound && weldR > 0)
-                                    {
-                                        // Sweep along Y from y0a -> y1a (full edge length)
-                                        double hY = Math.Max(0.0, y1a - y0a);
-
-                                        // Build at the far Z face (z1a), aligned with the Y-parallel edges at x=x0a and x=x1a
-                                        double zFaceY = z1a;
-                                        double yBase = y0a;   // base at min Y, extrusion goes +Y for hY
-
-                                        // Left and right Y-edges on the z1 face
-                                        var cYLeft = MakeAxisCylinder(local, 'Y', x0a, yBase, zFaceY, weldR, hY);
-                                        var cYRight = MakeAxisCylinder(local, 'Y', x1a, yBase, zFaceY, weldR, hY);
-
-                                        // Unite into cutter
-                                        cutter.Unite(new[] { cYLeft, cYRight });
-                                    }
-
-                                    return cutter;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Log($"[{opId}] Pair[{i}] {debugPrefix}: BuildHalfLapCutter ERROR: {ex.Message}");
-                                return null;
-                            }
-                        }
-
-                        // Build BOTH cutters
-                        var ownerA = TryFindOwner(origA);
-                        var ownerB = TryFindOwner(origB);
-                        Body cutterA;
-                        Body cutterB;
                         if (perpendicularCut)
                         {
-                            cutterA = BuildHalfLapCutter(origB, origA, ownerA, centerA, "A");
-                            cutterB = BuildHalfLapCutter(origA, origB, ownerB, centerB, "B");
+                            // --- DO NOT CHANGE THIS BLOCK ---
+                            double y0A, y1A;
+                            if (reverseDirection)
+                            {
+                                y0A = bbLocalA.MinCorner.Y - edgeOffset;
+                                y1A = yMidA;
+                            }
+                            else
+                            {
+                                y0A = yMidA;
+                                y1A = bbLocalA.MaxCorner.Y + edgeOffset;
+                            }
+
+                            var halfA = MakeRectPrism(
+                                frameA,
+                                bbLocalA.MinCorner.X, y0A, bbLocalA.MinCorner.Z,
+                                bbLocalA.MaxCorner.X, y1A, bbLocalA.MaxCorner.Z,
+                                toleranceMM, middleTolerance, perpendicularCut
+                            );
+                            if (halfA != null && halfA.Volume > 1e-12)
+                                cutterBodyA = halfA;
+
+                            if (halfA != null && halfA.Volume > 1e-12)
+                            {
+                                cutterBodyA = halfA;
+                                cutterAFrame = frameA;
+                                cutterAYMid = yMidA;
+                            }
                         }
                         else
                         {
-                            cutterA = BuildHalfLapCutter(origA, origB, ownerA, centerA, "A");
-                            cutterB = BuildHalfLapCutter(origB, origA, ownerB, centerB, "B");
+                            // --- LENGTHEN THE CUTTER ON Y AXIS BY edgeOffset ---
+                            var worldToLocalB = Matrix.CreateMapping(frameB).Inverse;
+                            var bbLocalB = overlapA.GetBoundingBox(worldToLocalB, true);
+                            double yMidB = 0.5 * (bbLocalB.MinCorner.Y + bbLocalB.MaxCorner.Y);
+
+                            double y0B = reverseDirection ? bbLocalB.MinCorner.Y - edgeOffset : yMidB;
+                            double y1B = reverseDirection ? yMidB : bbLocalB.MaxCorner.Y + edgeOffset;
+
+                            var overlapA2 = overlapA.Copy();
+                            var boxB = Box.Create(
+                                Point.Create(bbLocalB.MinCorner.X, y0B, bbLocalB.MinCorner.Z),
+                                Point.Create(bbLocalB.MaxCorner.X, y1B, bbLocalB.MaxCorner.Z)
+                            );
+                            var cutterB = MakeRectPrism(frameB, boxB.MinCorner.X, boxB.MinCorner.Y, boxB.MinCorner.Z, boxB.MaxCorner.X, boxB.MaxCorner.Y, boxB.MaxCorner.Z, toleranceMM, middleTolerance, perpendicularCut);
+                            cutterBodyA = cutterB;
+                            cutterAFrame = frameB;     // built in B's frame
+                            cutterAYMid = yMidB;
                         }
+                    }
 
-                        // -----------------------------
-                        //   - cutterA is applied to body B
-                        //   - cutterB is applied to body A
-                        // -----------------------------
-                        void ApplySubtraction(Body target, Body cutter, string applyTag)
+                    // For B
+                    //Body cutterBodyB = null;
+                    {
+                        var worldToLocalB = Matrix.CreateMapping(frameB).Inverse;
+                        var bbLocalB = overlapB.GetBoundingBox(worldToLocalB, true);
+                        double yMidB = 0.5 * (bbLocalB.MinCorner.Y + bbLocalB.MaxCorner.Y);
+
+                        if (perpendicularCut)
                         {
-                            if (target == null || cutter == null) return;
-
-                            try
+                            // --- DO NOT CHANGE THIS BLOCK ---
+                            double y0B, y1B;
+                            if (reverseDirection)
                             {
-                                var cutterDb = DesignBody.Create(s_part, $"{applyTag}_Cutter", cutter.Copy());
-                                cutterDb.SetColor(null, Color.Red);
+                                y0B = yMidB;
+                                y1B = bbLocalB.MaxCorner.Y + edgeOffset;
+                            }
+                            else
+                            {
+                                y0B = bbLocalB.MinCorner.Y - edgeOffset;
+                                y1B = yMidB;
+                            }
 
-                                var volBefore = target.Volume;
-                                target.Subtract(new[] { cutterDb.Shape });
-                                var volAfter = target.Volume;
+                            var halfB = MakeRectPrism(
+                                frameB,
+                                bbLocalB.MinCorner.X, y0B, bbLocalB.MinCorner.Z,
+                                bbLocalB.MaxCorner.X, y1B, bbLocalB.MaxCorner.Z, toleranceMM, middleTolerance, perpendicularCut
+                            );
+                            if (halfB != null && halfB.Volume > 1e-12)
+                                cutterBodyB = halfB;
 
+                            if (halfB != null && halfB.Volume > 1e-12)
+                            {
+                                cutterBodyB = halfB;
+                                cutterBFrame = frameB;
+                                cutterBYMid = yMidB;
+                            }
+                        }
+                        else
+                        {
+                            // --- LENGTHEN THE CUTTER ON Y AXIS BY edgeOffset ---
+                            var worldToLocalA = Matrix.CreateMapping(frameA).Inverse;
+                            var bbLocalA = overlapB.GetBoundingBox(worldToLocalA, true);
+                            double yMidA = 0.5 * (bbLocalA.MinCorner.Y + bbLocalA.MaxCorner.Y);
+
+                            double y0A = reverseDirection ? yMidA : bbLocalA.MinCorner.Y - edgeOffset;
+                            double y1A = reverseDirection ? bbLocalA.MaxCorner.Y + edgeOffset : yMidA;
+
+                            var overlapB2 = overlapB.Copy();
+                            var boxA = Box.Create(
+                                Point.Create(bbLocalA.MinCorner.X, y0A, bbLocalA.MinCorner.Z),
+                                Point.Create(bbLocalA.MaxCorner.X, y1A, bbLocalA.MaxCorner.Z)
+                            );
+                            var cutterA = MakeRectPrism(frameA, boxA.MinCorner.X, boxA.MinCorner.Y, boxA.MinCorner.Z, boxA.MaxCorner.X, boxA.MaxCorner.Y, boxA.MaxCorner.Z, toleranceMM, middleTolerance, perpendicularCut);
+                            cutterBodyB = cutterA;
+                            cutterBFrame = frameA;     // built in A's frame
+                            cutterBYMid = yMidA;
+                        }
+                    }
+
+                    //Debug overlap body(optional, only one for clarity)
+                    //var overlapDb = DesignBody.Create(s_part, $"Pair[{i}]_Overlap", overlapA.Copy());
+                    //overlapDb.SetColor(null, Color.FromArgb(128, 0, 200, 255));
+                    //Logger.Log($"CreateHalfLapJoints: Created debug overlap body for pair {i}");
+
+                    //if (cutterBodyA != null)
+                    //{
+                    //    var debugCutterA = DesignBody.Create(s_part, $"Pair[{i}]_DebugCutterA", cutterBodyA.Copy());
+                    //    debugCutterA.SetColor(null, Color.FromArgb(128, 255, 0, 0)); // Semi-transparent red
+                    //    Logger.Log($"Debug: Created debug cutter body A for pair {i} (offset {edgeOffset})");
+                    //}
+                    //if (cutterBodyB != null)
+                    //{
+                    //    var debugCutterB = DesignBody.Create(s_part, $"Pair[{i}]_DebugCutterB", cutterBodyB.Copy());
+                    //    debugCutterB.SetColor(null, Color.FromArgb(128, 0, 255, 0)); // Semi-transparent green
+                    //    Logger.Log($"Debug: Created debug cutter body B for pair {i} (offset {edgeOffset})");
+                    //}
+
+                    // Subtract lower half from bodyA
+                    if (cutterBodyA != null)
+                    {
+                        var tempCutterA = DesignBody.Create(s_part, $"Pair[{i}]_TempCutterA_{Guid.NewGuid()}", cutterBodyA.Copy());
+                        try
+                        {
+                            bodyA.Subtract(new[] { tempCutterA.Shape });
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"CreateHalfLapJoints: Subtract exception (A): {ex} (tempCutterA.IsDeleted={tempCutterA.IsDeleted})");
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log($"CreateHalfLapJoints: Lower half prism for bodyA in pair {i} is null or has zero volume, skipping subtraction.");
+                    }
+
+                    // Subtract upper half from bodyB
+                    if (cutterBodyB != null)
+                    {
+                        var tempCutterB = DesignBody.Create(s_part, $"Pair[{i}]_TempCutterB_{Guid.NewGuid()}", cutterBodyB.Copy());
+                        try
+                        {
+                            bodyB.Subtract(new[] { tempCutterB.Shape });
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"CreateHalfLapJoints: Subtract exception (B): {ex} (tempCutterB.IsDeleted={tempCutterB.IsDeleted})");
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log($"CreateHalfLapJoints: Upper half prism for bodyB in pair {i} is null or has zero volume, skipping subtraction.");
+                    }
+
+                    if (addWeldRound && weldRoundRadius > 0)
+                    {
+                        // For A
+                        if (cutterBodyA != null && cutterAFrame != null)
+                        {
+                            var cylsA = MakeCornerCylindersAtSplitSide(cutterBodyA, cutterAFrame, cutterAYMid, weldRoundRadius, perpendicularCut);
+                            foreach (var cyl in cylsA)
+                            {
+                                var tmp = DesignBody.Create(s_part, $"Pair[{i}]_TempWeldCylA_{Guid.NewGuid()}", cyl);
                                 try
                                 {
-                                    var owner = s_part.Bodies.FirstOrDefault(db => object.ReferenceEquals(db.Shape, target));
+                                    bodyA.Subtract(new[] { tmp.Shape });
                                 }
-                                catch (Exception exOwn) { Logger.Log($"[{opId}] {applyTag}: Owner lookup ERROR: {exOwn.Message}"); }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log($"CreateHalfLapJoints: Weld round subtract exception (A): {ex}");
+                                }
                             }
-                            catch (Exception exBool) { Logger.Log($"[{opId}] {applyTag}: Boolean subtract ERROR: {exBool.Message}"); }
                         }
 
-                        ApplySubtraction(origB, cutterA, $"Pair[{i}] Apply cutterA->B");
-                        ApplySubtraction(origA, cutterB, $"Pair[{i}] Apply cutterB->A");
+                        // For B
+                        if (cutterBodyB != null && cutterBFrame != null)
+                        {
+                            var cylsB = MakeCornerCylindersAtSplitSide(cutterBodyB, cutterBFrame, cutterBYMid, weldRoundRadius, perpendicularCut);
+                            foreach (var cyl in cylsB)
+                            {
+                                var tmp = DesignBody.Create(s_part, $"Pair[{i}]_TempWeldCylB_{Guid.NewGuid()}", cyl);
+                                try
+                                {
+                                    bodyB.Subtract(new[] { tmp.Shape });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log($"CreateHalfLapJoints: Weld round subtract exception (B): {ex}");
+                                }
+                            }
+                        }
                     }
-                    catch (Exception exPair) { Logger.Log($"[{opId}] Pair[{i}] ERROR (outer): {exPair.Message}"); }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"CreateHalfLapJoints: Exception in pair {i}: {ex}");
+                    continue;
                 }
             }
-            catch (Exception ex) { Logger.Log($"[{opId}] RibCutOut.ProcessPairs FATAL: {ex.Message}"); }
 
-            finally { s_part = null; }
+            s_part = null;
         }
     }
 }

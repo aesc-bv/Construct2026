@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Width="300"
-             Height="530"
+             Height="540"
              Background="White"
              xmlns:local="clr-namespace:AESCConstruct25.UI">
     <UserControl.Resources>
@@ -13,159 +13,200 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Header row: section title (optional) -->
-            <RowDefinition Height="Auto"/>
-            <!-- Top inputs -->
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <!-- Drawing area -->
-            <RowDefinition Height="Auto"/>
-            <!-- Parameter inputs -->
-            <RowDefinition Height="Auto"/>
-            <!-- Create button -->
-        </Grid.RowDefinitions>
-        
-        <TextBlock Grid.Row="0"
-                   Style="{StaticResource TitleTextStyle}"
-                   Tag="PlateHeader"
-                   Text="Plate"
-                   Width="230"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,0" />
-        <!-- 1) Top selectors -->
-        <Grid Grid.Row="1" Margin="0,10,0,10">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Margin="0">
+        <Grid Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <ComboBox ItemsSource="{Binding ProfileTypes}"
-                  SelectedItem="{Binding SelectedProfileType}"
-                          Style="{StaticResource ComboBoxFlatStyle}"
-                  Width="130"/>
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
-                       Width="25"
-                       Height="25"
-                       Margin="0,0,5,0" />
-                <TextBox Text="{Binding Angle}"
-                         Width="40" />
-            </StackPanel>
-            <StackPanel Grid.Row="1">
-                <ComboBox ItemsSource="{Binding ProfileSizes}"
-                  SelectedItem="{Binding SelectedProfileSize}"
-                          Style="{StaticResource ComboBoxFlatStyle}"
-                          Width="130"/>
-            </StackPanel>
-            
-            <!--<StackPanel>
-                <CheckBox Tag="PlaceInMiddle"
-                      Content="Place in middle"
-                      IsChecked="{Binding InsertInMiddle}"
-                      VerticalAlignment="Bottom"/>
-            </StackPanel>-->
-        </Grid>
 
-        <!-- 2) Illustration -->
-        <Border Width="200" Grid.Row="2" Margin="0,0,0,0"> 
-            <Grid>
-                <Image Source="{Binding SelectedImageSource}"
-                       Stretch="Uniform" />
+            <TextBlock Grid.Row="0"
+                       Style="{StaticResource TitleTextStyle}"
+                       Tag="PlateHeader"
+                       Text="Plate"
+                       Width="230"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,0" />
+            <!-- 1) Top selectors -->
+            <Grid Grid.Row="1"
+                  Margin="0,10,0,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <ComboBox ItemsSource="{Binding ProfileTypes}"
+                              SelectedItem="{Binding SelectedProfileType}"
+                              Style="{StaticResource ComboBoxFlatStyle}"
+                              Width="130" />
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Radius.png"
+                           Width="25"
+                           Height="25"
+                           Margin="0,0,5,0" />
+                    <TextBox Text="{Binding Angle}"
+                             Width="40" />
+                </StackPanel>
+                <StackPanel Grid.Row="1">
+                    <ComboBox ItemsSource="{Binding ProfileSizes}"
+                              SelectedItem="{Binding SelectedProfileSize}"
+                              Style="{StaticResource ComboBoxFlatStyle}"
+                              Width="130" />
+                </StackPanel>
+
+                <!--<StackPanel>
+                    <CheckBox Tag="PlaceInMiddle"
+                          Content="Place in middle"
+                          IsChecked="{Binding InsertInMiddle}"
+                          VerticalAlignment="Bottom"/>
+                </StackPanel>-->
             </Grid>
-        </Border>
 
-        <!-- 3) Parameter inputs -->
-        <UniformGrid Grid.Row="3" Columns="4" Margin="0,0,0,10" HorizontalAlignment="Center">
-            <!-- Row 1 labels -->
-            <TextBlock Text="L1"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding L1}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="L2"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding L2}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="#"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding Count1}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="B1"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding B1}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="B2"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding B2}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="#"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding Count2}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
+            <!-- 2) Illustration -->
+            <Border Width="200"
+                    Grid.Row="2"
+                    Margin="0,0,0,0">
+                <Grid>
+                    <Image Source="{Binding SelectedImageSource}"
+                           Stretch="Uniform" />
+                </Grid>
+            </Border>
 
-            <!-- Row 3 labels -->
-            <TextBlock Text="D"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding HoleDiameter}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="T"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-            <TextBox Text="{Binding Thickness}"
-                     Width="60"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            <TextBlock Text="R"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-            <TextBox Text="{Binding FilletRadius}"
-                     Width="60"
-                     HorizontalAlignment="Center" />
-        </UniformGrid>
+            <!-- 3) Parameter inputs -->
+            <UniformGrid Grid.Row="3"
+                         Columns="4"
+                         Margin="0,0,0,10"
+                         HorizontalAlignment="Center">
+                <!-- L1 -->
+                <TextBlock Text="{Binding L1Label}"
+                           Width="60"
+                           Visibility="{Binding L1Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding L1}"
+                         Width="60"
+                         Visibility="{Binding L1Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- L2 -->
+                <TextBlock Text="{Binding L2Label}"
+                           Width="60"
+                           Visibility="{Binding L2Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding L2}"
+                         Width="60"
+                         Visibility="{Binding L2Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- Count1 -->
+                <TextBlock Text="{Binding Count1Label}"
+                           Width="60"
+                           Visibility="{Binding Count1Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding Count1}"
+                         Width="60"
+                         Visibility="{Binding Count1Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- B1 -->
+                <TextBlock Text="{Binding B1Label}"
+                           Width="60"
+                           Visibility="{Binding B1Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding B1}"
+                         Width="60"
+                         Visibility="{Binding B1Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- B2 -->
+                <TextBlock Text="{Binding B2Label}"
+                           Width="60"
+                           Visibility="{Binding B2Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding B2}"
+                         Width="60"
+                         Visibility="{Binding B2Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- Count2 -->
+                <TextBlock Text="{Binding Count2Label}"
+                           Width="60"
+                           Visibility="{Binding Count2Visible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding Count2}"
+                         Width="60"
+                         Visibility="{Binding Count2Visible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- D -->
+                <TextBlock Text="{Binding DLabel}"
+                           Width="60"
+                           Visibility="{Binding DVisible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding HoleDiameter}"
+                         Width="60"
+                         Visibility="{Binding DVisible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- T -->
+                <TextBlock Text="{Binding TLabel}"
+                           Width="60"
+                           Visibility="{Binding TVisible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding Thickness}"
+                         Width="60"
+                         Visibility="{Binding TVisible}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+                <!-- R -->
+                <TextBlock Text="{Binding RLabel}"
+                           Width="60"
+                           Visibility="{Binding RVisible}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBox Text="{Binding FilletRadius}"
+                         Width="60"
+                         Visibility="{Binding RVisible}"
+                         HorizontalAlignment="Center" />
+            </UniformGrid>
 
-        <!-- 4) Create button -->
-        <UniformGrid Columns="2" Grid.Row="4">
-            <Button Tag="CreatePlate"
-                    Content="Create"
-                    Style="{StaticResource FooterButtonStyle}"
-                    Width="100"
-                    HorizontalAlignment="Left"
-                    Click="CreateButton_Click"
-                    Margin="0,5,0,5" />
-            <CheckBox Tag="PlaceInMiddle"
-                      Content="Add to middle"
-                      IsChecked="{Binding InsertInMiddle}"
-                      VerticalAlignment="Center"/>
-        </UniformGrid>
-    </Grid>
+            <!-- 4) Create button -->
+            <UniformGrid Columns="2"
+                         Grid.Row="4">
+                <Button Tag="CreatePlate"
+                        Content="Create"
+                        Style="{StaticResource FooterButtonStyle}"
+                        Width="100"
+                        HorizontalAlignment="Left"
+                        Click="CreateButton_Click"
+                        Margin="0,5,0,5" />
+                <CheckBox Tag="PlaceInMiddle"
+                          Content="Add to middle"
+                          IsChecked="{Binding InsertInMiddle}"
+                          VerticalAlignment="Center" />
+            </UniformGrid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

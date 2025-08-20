@@ -48,14 +48,25 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         public ProfileSelectionControl()
         {
-            InitializeComponent();
-            //RectangularProfileButton.IsChecked = true;
-            Localization.Language.Translate("ConstructGroup");
-            LocalizeUI();
-            LoadUserProfiles();
-            WireProfileButtonHandlers();
-            WireJointButtonHandlers();
-            UpdateGenerateButtons();
+            try
+            {
+                InitializeComponent();
+                Localization.Language.Translate("ConstructGroup");
+                LocalizeUI();
+                LoadUserProfiles();
+                WireProfileButtonHandlers();
+                WireJointButtonHandlers();
+                UpdateGenerateButtons();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to initialize ProfileSelectionControl:\n{ex.Message}",
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
         }
 
         public double GetRotationAngle()
@@ -318,38 +329,27 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         private void LoadPresetSizes(string profileType)
         {
-            // construct the full path under ProgramData
-            //string filePath = Path.Combine(
-            //    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            //    "AESCConstruct",
-            //    "Profiles",
-            //    $"Profiles_{profileType}.csv"
-            //);
             string filePath = GetProfileCsvPathFromSettings(profileType);
             if (filePath == null || !File.Exists(filePath))
             {
-                // Logger.Log($"ERROR: Could not resolve CSV for profile type {profileType}");
+                MessageBox.Show(
+                    $"Could not find CSV for profile type '{profileType}'.",
+                    "CSV Not Found",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
                 return;
             }
 
-            // reset
             csvRowNames.Clear();
             SizeComboBox.Items.Clear();
             csvFieldNames.Clear();
             csvDataRows.Clear();
 
-            if (!File.Exists(filePath))
-            {
-                File.AppendAllText(logPath,
-                    $"AESCConstruct25: ERROR - CSV file not found: {filePath}\n");
-                return;
-            }
-
             try
             {
                 using (var reader = new StreamReader(filePath))
                 {
-                    // read header line exactly as before
                     var headerLine = reader.ReadLine();
                     if (!string.IsNullOrEmpty(headerLine))
                     {
@@ -358,12 +358,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                             .Skip(1)
                             .Select(f => f.Trim().Replace(" ", ""))
                             .ToList();
-
-                        // Logger.Log(
-                        //$"AESCConstruct25: Loaded CSV fields: {string.Join(", ", csvFieldNames)}\n");
                     }
 
-                    // now read each data row
                     while (!reader.EndOfStream)
                     {
                         var line = reader.ReadLine();
@@ -375,20 +371,20 @@ namespace AESCConstruct25.FrameGenerator.UI
                             .Select(v => v.Trim())
                             .ToArray();
 
-                        // must have exactly (1 name + N fields)
                         if (values.Length == csvFieldNames.Count + 1)
                         {
-                            // **capture the name** for this row
                             csvRowNames.Add(values[0]);
-
-                            // then the rest of your logic…
                             csvDataRows.Add(values.Skip(1).ToArray());
                             SizeComboBox.Items.Add(values[0]);
                         }
                         else
                         {
-                            File.AppendAllText(logPath,
-                                $"AESCConstruct25: WARNING - Mismatched CSV row: {line}\n");
+                            MessageBox.Show(
+                                $"Mismatched CSV row:\n{line}",
+                                "CSV Format Warning",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning
+                            );
                         }
                     }
 
@@ -398,11 +394,14 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                File.AppendAllText(logPath,
-                    $"AESCConstruct25: ERROR - Failed to load CSV: {filePath} ({ex.Message})\n");
+                MessageBox.Show(
+                    $"Failed to load CSV:\n{ex.Message}",
+                    "CSV Load Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
             }
         }
-
 
         private void SizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -782,9 +781,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 bitmap.Freeze();
                                 imageControl.Source = bitmap;
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
-                                // Logger.Log($"Failed to load image: {ex.Message}");
+                                MessageBox.Show(
+                                    $"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}",
+                                    "Profile Image Error",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning
+                                );
                             }
                         }
                     }
@@ -851,13 +855,23 @@ namespace AESCConstruct25.FrameGenerator.UI
                         if (confirm != MessageBoxResult.Yes)
                             return;
 
-                        // Remove the CSV row
-                        var updated = File.ReadAllLines(csvPath)
-                                          .Where(l => !l.StartsWith(prof.Name + ";"))
-                                          .ToArray();
-                        File.WriteAllLines(csvPath, updated);
+                        try
+                        {
+                            var updated = File.ReadAllLines(csvPath)
+                                              .Where(l => !l.StartsWith(prof.Name + ";"))
+                                              .ToArray();
+                            File.WriteAllLines(csvPath, updated);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(
+                                $"Failed to update CSV when deleting profile:\n{ex.Message}",
+                                "Profile Delete Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning
+                            );
+                        }
 
-                        // Delete associated PNG if it exists
                         if (!string.IsNullOrEmpty(prof.ImgString))
                         {
                             string imgPath = Path.Combine(userFolder, prof.ImgString);
@@ -867,9 +881,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 {
                                     File.Delete(imgPath);
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    // Logger.Log($"WARNING: Failed to delete image for profile \"{prof.Name}\": {ex.Message}");
+                                    MessageBox.Show(
+                                        $"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}",
+                                        "Profile Delete Error",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Warning
+                                    );
                                 }
                             }
                         }
@@ -886,9 +905,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                     UserProfilesGrid.Children.Add(container);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Logger.Log($"Error in LoadUserProfiles(): {ex}\n");
+                MessageBox.Show(
+                    $"Error loading user profiles:\n{ex.Message}",
+                    "Profile Load Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
             }
         }
 
@@ -1435,6 +1459,11 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                 }
             }
+        }
+
+        private void RotationAngleTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
         }
     }
 }

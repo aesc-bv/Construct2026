@@ -137,6 +137,13 @@
 							size="large"/>
 				</group>
 
+				<group id="AESCConstruct25.ConnectorGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.ConnectorSidebarBtn"
+							command="AESCConstruct25.ConnectorSidebar"
+							getLabel="GetRibbonLabel"
+							size="large"/>
+				</group>
+
 				<group id="AESCConstruct25.UI" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.DockBtn"
 						command="AESCConstruct25.DockCmd"

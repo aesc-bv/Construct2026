@@ -220,7 +220,8 @@
                                          Height="25"
                                          Text="0"
                                          Margin="0"
-                                         HorizontalAlignment="Right" />
+                                         HorizontalAlignment="Right"
+                                         TextChanged="RotationAngleTextBox_TextChanged" />
                             </StackPanel>
 
                             <CheckBox x:Name="HollowCheckBox"

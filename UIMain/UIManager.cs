@@ -24,7 +24,7 @@ namespace AESCConstruct25.UIMain
 
         // Docked hosts and controls
         private static ElementHost _profileHost, _settingsHost, _plateHost, _fastenerHost,
-                                  _ribCutOutHost, _customPropertiesHost, _engravingHost;
+                                  _ribCutOutHost, _customPropertiesHost, _engravingHost, _connectorHost;
         private static ProfileSelectionControl _profileControl;
         private static SettingsControl _settingsControl;
         private static PlatesControl _plateControl;
@@ -32,12 +32,7 @@ namespace AESCConstruct25.UIMain
         private static RibCutOutControl _ribCutOutControl;
         private static CustomComponentControl _customPropertiesControl;
         private static EngravingControl _engravingControl;
-
-        // Floating window and host
-        private static Form _mainWindow;
-        private static ElementHost _elementHost;
-        private static System.Windows.Controls.UserControl _currentControl;
-        private static int _toggleCount;
+        private static ConnectorControl _connectorControl;
 
         // Command names
         public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
@@ -47,6 +42,7 @@ namespace AESCConstruct25.UIMain
         public const string RibCutOutCommand = "AESCConstruct25.RibCutOut";
         public const string CustomPropertiesCommand = "AESCConstruct25.CustomProperties";
         public const string EngravingCommand = "AESCConstruct25.EngravingControl";
+        public const string ConnectorCommand = "AESCConstruct25.ConnectorSidebar";
         public const string DockToggleCommand = "AESCConstruct25.DockCmd";
 
         private static Thread _floatingThread;
@@ -58,27 +54,19 @@ namespace AESCConstruct25.UIMain
         static Bitmap _dock = new Bitmap(new MemoryStream(Resources.Menu_Dock));
         public static void RegisterAll()
         {
-            bool valid = LicenseSpot.LicenseSpot.State.Valid;// DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
-            //Register(ProfileCommand, "Frame Generator", "Open the profile selection sidebar", Resources.FrameGen, () => Show(ProfileCommand), valid);
-            //Register(SettingsCommand, "Settings", "Open the settings sidebar", Resources.settings, () => Show(SettingsCommand), valid);
-            //Register(PlateCommand, "Plate", "Open the plate-creation pane", Resources.InsertPlate, () => Show(PlateCommand), valid);
-            //Register(FastenerCommand, "Fastener", "Open the fastener insertion pane", Resources.Fasteners, () => Show(FastenerCommand), valid);
-            //Register(RibCutOutCommand, "Rib Cut-Out", "Open the rib cut-out pane", Resources.ribCutout, () => Show(RibCutOutCommand), valid);
-            //Register(CustomPropertiesCommand, "Custom Properties", "Open the custom-properties pane", Resources.Custom_Properties, () => Show(CustomPropertiesCommand), valid);
-            //Register(EngravingCommand, "Engraving", "Open the engraving pane", Resources.Engraving, () => Show(EngravingCommand), valid);
-            //Register(DockToggleCommand, "Float", "Toggle between docked panel and floating window", Resources.Menu_Undock, () => ToggleMode(), true);
+            bool valid = LicenseSpot.LicenseSpot.State.Valid;
             Register(
-        ProfileCommand,
-        AESCConstruct25.Localization.Language.Translate("Ribbon.Button.FrameGenerator"),
-        "Open the profile selection sidebar",
-        Resources.FrameGen,
-        () => Show(ProfileCommand),
-        valid
-    );
+                ProfileCommand,
+                Localization.Language.Translate("Ribbon.Button.FrameGenerator"),
+                "Open the profile selection sidebar",
+                Resources.FrameGen,
+                () => Show(ProfileCommand),
+                valid
+            );
 
             Register(
                 SettingsCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Settings"),
+                Localization.Language.Translate("Ribbon.Button.Settings"),
                 "Open the settings sidebar",
                 Resources.settings,
                 () => Show(SettingsCommand),
@@ -87,7 +75,7 @@ namespace AESCConstruct25.UIMain
 
             Register(
                 PlateCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Plate"),
+                Localization.Language.Translate("Ribbon.Button.Plate"),
                 "Open the plate-creation pane",
                 Resources.InsertPlate,
                 () => Show(PlateCommand),
@@ -96,7 +84,7 @@ namespace AESCConstruct25.UIMain
 
             Register(
                 FastenerCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Fastener"),
+                Localization.Language.Translate("Ribbon.Button.Fastener"),
                 "Open the fastener insertion pane",
                 Resources.Fasteners,
                 () => Show(FastenerCommand),
@@ -105,7 +93,7 @@ namespace AESCConstruct25.UIMain
 
             Register(
                 RibCutOutCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.RibCutOut"),
+                Localization.Language.Translate("Ribbon.Button.RibCutOut"),
                 "Open the rib cut-out pane",
                 Resources.ribCutout,
                 () => Show(RibCutOutCommand),
@@ -114,7 +102,7 @@ namespace AESCConstruct25.UIMain
 
             Register(
                 CustomPropertiesCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.CustomProperties"),
+                Localization.Language.Translate("Ribbon.Button.CustomProperties"),
                 "Open the custom-properties pane",
                 Resources.Custom_Properties,
                 () => Show(CustomPropertiesCommand),
@@ -123,7 +111,7 @@ namespace AESCConstruct25.UIMain
 
             Register(
                 EngravingCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Engraving"),
+                Localization.Language.Translate("Ribbon.Button.Engraving"),
                 "Open the engraving pane",
                 Resources.Engraving,
                 () => Show(EngravingCommand),
@@ -131,8 +119,17 @@ namespace AESCConstruct25.UIMain
             );
 
             Register(
+                ConnectorCommand,
+                Localization.Language.Translate("Ribbon.Button.Connector"),
+                "Open the connector pane",
+                Resources.Engraving,
+                () => Show(ConnectorCommand),
+                valid
+            );
+
+            Register(
                 DockToggleCommand,
-                AESCConstruct25.Localization.Language.Translate("Ribbon.Button.Float"),
+                Localization.Language.Translate("Ribbon.Button.Float"),
                 "Toggle between docked panel and floating window",
                 Resources.Menu_Undock,
                 () => ToggleMode(),
@@ -165,7 +162,7 @@ namespace AESCConstruct25.UIMain
                 DockToggleCommandHolder.Image = _floatingMode ? _dock : _undock;
 
                 // translated label: Dock when floating, Float when docked
-                DockToggleCommandHolder.Text = AESCConstruct25.Localization.Language.Translate(
+                DockToggleCommandHolder.Text = Localization.Language.Translate(
                     _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
                 );
             }
@@ -183,11 +180,6 @@ namespace AESCConstruct25.UIMain
 
         private static void Show(string panelKey)
         {
-            // Logger.Log($"Show() called for '{panelKey}', floatingMode={_floatingMode}");
-            //MessageBox.Show(
-            //    $"Show() -> panelKey={panelKey}\nMode={(_floatingMode ? "Floating" : "Docked")}",
-            //    "UIManager Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
             _lastPanelKey = panelKey;
             if (_floatingMode)
             {
@@ -257,8 +249,9 @@ namespace AESCConstruct25.UIMain
             var win = new WpfWindow
             {
                 Title = "AESC Construct",
-                Width = 320,
+                //Width = 320,
                 //Height = 600,
+                SizeToContent = System.Windows.SizeToContent.WidthAndHeight,
                 Content = CreateControl(key),
                 Tag = key,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen
@@ -308,11 +301,11 @@ namespace AESCConstruct25.UIMain
 
         private static void ShowDocked(string key)
         {
-            if (_mainWindow != null && !_mainWindow.IsDisposed && _floatingMode)
-            {
-                _mainWindow.Hide();
-                // Logger.Log("Hid floating window before docking");
-            }
+            //if (_mainWindow != null && !_mainWindow.IsDisposed && _floatingMode)
+            //{
+            //    _mainWindow.Hide();
+            //    // Logger.Log("Hid floating window before docking");
+            //}
             // Logger.Log($"ShowDocked start for '{key}'");
             switch (key)
             {
@@ -330,6 +323,8 @@ namespace AESCConstruct25.UIMain
                     EnsureCustomProperties(); Application.AddPanelContent(Command.GetCommand(key), _customPropertiesHost, Panel.Options); break;
                 case EngravingCommand:
                     EnsureEngraving(); Application.AddPanelContent(Command.GetCommand(key), _engravingHost, Panel.Options); break;
+                case ConnectorCommand:
+                    EnsureConnector(); Application.AddPanelContent(Command.GetCommand(key), _connectorHost, Panel.Options); break;
             }
             // Logger.Log("ShowDocked end");
         }
@@ -348,6 +343,7 @@ namespace AESCConstruct25.UIMain
                 case RibCutOutCommand: return new RibCutOutControl();
                 case CustomPropertiesCommand: return new CustomComponentControl();
                 case EngravingCommand: return new EngravingControl();
+                case ConnectorCommand: return new ConnectorControl();
                 default: return null;
             }
         }
@@ -376,6 +372,9 @@ namespace AESCConstruct25.UIMain
             c = Command.GetCommand(EngravingCommand);
             if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Engraving");
 
+            c = Command.GetCommand(ConnectorCommand);
+            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Connector");
+
             // Float/Dock toggle
             if (DockToggleCommandHolder != null)
             {
@@ -393,6 +392,7 @@ namespace AESCConstruct25.UIMain
         private static void EnsureRibCutOut() { if (_ribCutOutControl == null) { _ribCutOutControl = new RibCutOutControl(); _ribCutOutHost = new ElementHost { Dock = DockStyle.Fill, Child = _ribCutOutControl }; } }
         private static void EnsureCustomProperties() { if (_customPropertiesControl == null) { _customPropertiesControl = new CustomComponentControl(); _customPropertiesHost = new ElementHost { Dock = DockStyle.Fill, Child = _customPropertiesControl }; } }
         private static void EnsureEngraving() { if (_engravingControl == null) { _engravingControl = new EngravingControl(); _engravingHost = new ElementHost { Dock = DockStyle.Fill, Child = _engravingControl }; } }
+        private static void EnsureConnector() { if (_connectorControl == null) { _connectorControl = new ConnectorControl(); _connectorHost = new ElementHost { Dock = DockStyle.Fill, Child = _connectorControl }; } }
 
         private static Image LoadImage(byte[] bytes)
         {

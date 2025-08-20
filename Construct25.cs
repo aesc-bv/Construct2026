@@ -217,39 +217,6 @@ namespace AESCConstruct25
             }
         }
 
-        private void Profile_Executing(object sender, EventArgs e)
-        {
-            //Logger.Log("AESCConstruct25: Profile Command Executing");
-
-            Window activeWindow = Window.ActiveWindow;
-            if (activeWindow == null)
-            {
-                //Logger.Log("AESCConstruct25: ERROR - No active window detected.");
-                MessageBox.Show("No active SpaceClaim window found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            List<ITrimmedCurve> selectedCurves = ProfileSelectionHelper.GetSelectedCurves(activeWindow);
-
-            bool hasComponentOrBodySelected = activeWindow.ActiveContext.Selection
-                .OfType<IDocObject>()
-                .Any(obj => obj is Component || obj is DesignBody);
-
-            if (selectedCurves.Count == 0 && !hasComponentOrBodySelected)
-            {
-                //Logger.Log("AESCConstruct25: ERROR - No valid lines or bodies selected.");
-                MessageBox.Show("Please select at least one valid line, edge, body or component before opening the profile selection window.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            //ProfileSelectionWindow profileWindow = new ProfileSelectionWindow();
-            //profileWindow.ShowDialog();
-        }
-
-        //
-        // ─── DXF COMMAND HANDLERS ───────────────────────────────────────────────────────
-        //
-
         private void ImportDXFContours_Execute(object sender, EventArgs e)
         {
             // Prompt user to pick a .dxf file
@@ -389,9 +356,10 @@ namespace AESCConstruct25
                     return Localization.Language.Translate("Ribbon.Button.Fastener");
                 case "AESCConstruct25.RibCutOut":
                     return Localization.Language.Translate("Ribbon.Button.RibCutOut");
-
                 case "AESCConstruct25.SettingsSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Settings");
+                case "AESCConstruct25.ConnectorSidebarBtn":
+                    return Localization.Language.Translate("Ribbon.Button.Connector");
 
                 case "AESCConstruct25.DockBtn":
                     // Reflect current toggle state by reading the command’s Text,

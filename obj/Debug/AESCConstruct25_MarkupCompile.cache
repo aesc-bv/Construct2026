@@ -10,11 +10,11 @@ none
 false
 DEBUG;TRACE
 
-7-1157475658
+8-498211693
 
-542044696994
+57-450203980
 24-1818332598
-CustomComponent\UI\CustomComponentControl.xaml;Engraving\UI\EngravingControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;UIMain\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;
+Connector\UI\ConnectorControl.xaml;CustomComponent\UI\CustomComponentControl.xaml;Engraving\UI\EngravingControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;UIMain\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;
 
 False
 

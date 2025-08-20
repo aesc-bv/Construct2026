@@ -14,259 +14,263 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Margin="0">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Tag="Settings_Title"
-                   Grid.Row="0"
-                   Style="{StaticResource TitleTextStyle}"
-                   Text="Settings"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,10" />
+            <!-- Title -->
+            <TextBlock Tag="Settings_Title"
+                       Grid.Row="0"
+                       Style="{StaticResource TitleTextStyle}"
+                       Text="Settings"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,10" />
 
-        <StackPanel Grid.Row="1"
-                    Orientation="Vertical"
-                    VerticalAlignment="Top">
+            <StackPanel Grid.Row="1"
+                        Orientation="Vertical"
+                        VerticalAlignment="Top">
 
-            <!-- Part naming -->
-            <Expander Tag="Expander_PartNaming"
-                      Header="Part naming"
-                      IsExpanded="False">
-                <GroupBox Tag="Group_NamingScheme"
-                          Header="Naming scheme"
-                          Margin="0,10">
-                    <StackPanel Margin="4">
-                        <StackPanel Orientation="Horizontal"
-                                    Margin="0,0,0,10">
-                            <TextBlock Tag="Label_PartNaming"
-                                       Text="Part naming:"
-                                       VerticalAlignment="Center" />
-                            <TextBox x:Name="PartNameTextBox"
-                                     Width="200"
-                                     Height="30" />
+                <!-- Part naming -->
+                <Expander Tag="Expander_PartNaming"
+                          Header="Part naming"
+                          IsExpanded="False">
+                    <GroupBox Tag="Group_NamingScheme"
+                              Header="Naming scheme"
+                              Margin="0,10">
+                        <StackPanel Margin="4">
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="0,0,0,10">
+                                <TextBlock Tag="Label_PartNaming"
+                                           Text="Part naming:"
+                                           VerticalAlignment="Center" />
+                                <TextBox x:Name="PartNameTextBox"
+                                         Width="200"
+                                         Height="30" />
+                            </StackPanel>
+                            <DataGrid x:Name="TypesDataGrid"
+                                      AutoGenerateColumns="False"
+                                      HeadersVisibility="Column"
+                                      Height="150">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn x:Name="Column_Type"
+                                                        Header="Type"
+                                                        Binding="{Binding Type}"
+                                                        Width="*" />
+                                    <DataGridTextColumn x:Name="Column_Name"
+                                                        Header="Name"
+                                                        Binding="{Binding Name}"
+                                                        Width="*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </StackPanel>
-                        <DataGrid x:Name="TypesDataGrid"
-                                  AutoGenerateColumns="False"
-                                  HeadersVisibility="Column"
-                                  Height="150">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn x:Name="Column_Type"
-                                                    Header="Type"
-                                                    Binding="{Binding Type}"
-                                                    Width="*" />
-                                <DataGridTextColumn x:Name="Column_Name"
-                                                    Header="Name"
-                                                    Binding="{Binding Name}"
-                                                    Width="*" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
-                </GroupBox>
-            </Expander>
+                    </GroupBox>
+                </Expander>
 
-            <!-- BOM placement -->
-            <Expander Tag="Expander_BOMPlacement"
-                      Header="BOM placement"
-                      IsExpanded="False">
-                <GroupBox Tag="Group_CoordinatesOrigin"
-                          Header="Coordinates and origin"
-                          Margin="0,10">
-                    <Grid Margin="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition />
-                            <RowDefinition />
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Tag="Label_AnchorX"
-                                   Grid.Row="0"
-                                   Grid.Column="0"
-                                   Text="Anchor X:" />
-                        <TextBox x:Name="AnchorXTextBox"
-                                 Grid.Row="0"
-                                 Grid.Column="1" />
-
-                        <TextBlock Tag="Label_AnchorY"
-                                   Grid.Row="1"
-                                   Grid.Column="0"
-                                   Text="Anchor Y:" />
-                        <TextBox x:Name="AnchorYTextBox"
-                                 Grid.Row="1"
-                                 Grid.Column="1" />
-
-                        <TextBlock Tag="Label_Corner"
-                                   Grid.Row="0"
-                                   Grid.Column="2"
-                                   Margin="10,0"
-                                   Text="Corner:" />
-                        <ComboBox x:Name="CornerComboBox"
-                                  Grid.Row="0"
-                                  Grid.Column="3"
-                                  ItemsSource="{Binding CornerOptions}"
-                                  Style="{StaticResource ComboBoxFlatStyle}" />
-                    </Grid>
-                </GroupBox>
-            </Expander>
-
-            <!-- Material options -->
-            <Expander Tag="Expander_MaterialOptions"
-                      Header="Material options"
-                      IsExpanded="False">
-                <GroupBox Tag="Group_MaterialInclusion"
-                          Header="Material Inclusion"
-                          Margin="0,10">
-                    <StackPanel Margin="4">
-                        <CheckBox x:Name="Checkbox_ExcelMaterial"
-                                  Tag="Checkbox_ExcelMaterial"
-                                  Content="Include material in Excel" />
-                        <CheckBox x:Name="Checkbox_BOMMaterial"
-                                  Tag="Checkbox_BOMMaterial"
-                                  Content="Include material in BOM" />
-                        <CheckBox x:Name="Checkbox_STEPMaterial"
-                                  Tag="Checkbox_STEPMaterial"
-                                  Content="Include material in STEP filename" />
-                    </StackPanel>
-                </GroupBox>
-            </Expander>
-            <Expander Tag="Expander_Language"
-                      Header="Language"
-                      IsExpanded="False">
-                <StackPanel Margin="8">
-                    <TextBlock Tag="Label_SelectLanguage"
-                               Text="Select language:"
-                               Margin="0,0,0,4" />
-                    <ComboBox x:Name="ComboBox_Language"
-                              Width="120"
-                              SelectionChanged="ComboBox_Language_SelectionChanged"
-                              Style="{StaticResource ComboBoxFlatStyle}" />
-                </StackPanel>
-            </Expander>
-
-            <!-- Language -->
-
-            <Expander Header="CSV File Paths"
-                      Tag="CSVFilePaths"
-                      Name="CsvFileExpander"
-                      IsExpanded="False">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Height="250">
-                    <!-- Adjust height as needed -->
-                    <StackPanel x:Name="CsvPathsPanel"
-                                Margin="0,8,0,6">
-                        <!-- Rows will be added dynamically -->
-                    </StackPanel>
-                </ScrollViewer>
-            </Expander>
-
-            <!-- License -->
-            <Expander Tag="Expander_License"
-                      Header="License"
-                      IsExpanded="False">
-                <StackPanel Margin="0,8,0,8">
-                    <Grid HorizontalAlignment="Center"
-                          Width="260">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="55" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition />
-                            <RowDefinition />
-                        </Grid.RowDefinitions>
-                        <Image Grid.Row="0"
-                               Grid.Column="0"
-                               Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
-                               Width="55"
-                               Margin="0" />
-                        <Grid Margin="0"
-                              Grid.Row="0"
-                              Grid.Column="1">
+                <!-- BOM placement -->
+                <Expander Tag="Expander_BOMPlacement"
+                          Header="BOM placement"
+                          IsExpanded="False">
+                    <GroupBox Tag="Group_CoordinatesOrigin"
+                              Header="Coordinates and origin"
+                              Margin="0,10">
+                        <Grid Margin="4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition />
                                 <RowDefinition />
-                                <RowDefinition />
-                                <RowDefinition />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Tag="Label_AnchorX"
+                                       Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="Anchor X:" />
+                            <TextBox x:Name="AnchorXTextBox"
+                                     Grid.Row="0"
+                                     Grid.Column="1" />
+
+                            <TextBlock Tag="Label_AnchorY"
+                                       Grid.Row="1"
+                                       Grid.Column="0"
+                                       Text="Anchor Y:" />
+                            <TextBox x:Name="AnchorYTextBox"
+                                     Grid.Row="1"
+                                     Grid.Column="1" />
+
+                            <TextBlock Tag="Label_Corner"
+                                       Grid.Row="0"
+                                       Grid.Column="2"
+                                       Margin="10,0"
+                                       Text="Corner:" />
+                            <ComboBox x:Name="CornerComboBox"
+                                      Grid.Row="0"
+                                      Grid.Column="3"
+                                      ItemsSource="{Binding CornerOptions}"
+                                      Style="{StaticResource ComboBoxFlatStyle}" />
+                        </Grid>
+                    </GroupBox>
+                </Expander>
+
+                <!-- Material options -->
+                <Expander Tag="Expander_MaterialOptions"
+                          Header="Material options"
+                          IsExpanded="False">
+                    <GroupBox Tag="Group_MaterialInclusion"
+                              Header="Material Inclusion"
+                              Margin="0,10">
+                        <StackPanel Margin="4">
+                            <CheckBox x:Name="Checkbox_ExcelMaterial"
+                                      Tag="Checkbox_ExcelMaterial"
+                                      Content="Include material in Excel" />
+                            <CheckBox x:Name="Checkbox_BOMMaterial"
+                                      Tag="Checkbox_BOMMaterial"
+                                      Content="Include material in BOM" />
+                            <CheckBox x:Name="Checkbox_STEPMaterial"
+                                      Tag="Checkbox_STEPMaterial"
+                                      Content="Include material in STEP filename" />
+                        </StackPanel>
+                    </GroupBox>
+                </Expander>
+                <Expander Tag="Expander_Language"
+                          Header="Language"
+                          IsExpanded="False">
+                    <StackPanel Margin="8">
+                        <TextBlock Tag="Label_SelectLanguage"
+                                   Text="Select language:"
+                                   Margin="0,0,0,4" />
+                        <ComboBox x:Name="ComboBox_Language"
+                                  Width="120"
+                                  SelectionChanged="ComboBox_Language_SelectionChanged"
+                                  Style="{StaticResource ComboBoxFlatStyle}" />
+                    </StackPanel>
+                </Expander>
+
+                <!-- Language -->
+
+                <Expander Header="CSV File Paths"
+                          Tag="CSVFilePaths"
+                          Name="CsvFileExpander"
+                          IsExpanded="False">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Height="250">
+                        <!-- Adjust height as needed -->
+                        <StackPanel x:Name="CsvPathsPanel"
+                                    Margin="0,8,0,6">
+                            <!-- Rows will be added dynamically -->
+                        </StackPanel>
+                    </ScrollViewer>
+                </Expander>
+
+                <!-- License -->
+                <Expander Tag="Expander_License"
+                          Header="License"
+                          IsExpanded="False">
+                    <StackPanel Margin="0,8,0,8">
+                        <Grid HorizontalAlignment="Center"
+                              Width="260">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="55" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
                                 <RowDefinition />
                                 <RowDefinition />
                             </Grid.RowDefinitions>
+                            <Image Grid.Row="0"
+                                   Grid.Column="0"
+                                   Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
+                                   Width="55"
+                                   Margin="0" />
+                            <Grid Margin="0"
+                                  Grid.Row="0"
+                                  Grid.Column="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0"
-                                       Grid.Column="0"
-                                       Text="AESC Construct" />
-                            <TextBlock Tag="Label_Version"
-                                       Grid.Row="1"
-                                       Grid.Column="0"
-                                       Text="Version 2025.0.1"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Tag="Label_LicenseStatus"
-                                       Grid.Row="2"
-                                       Grid.Column="0"
-                                       Text="License Status:"
-                                       VerticalAlignment="Center" />
-                            <TextBlock x:Name="LicenseStatusValue"
-                                       Grid.Row="2"
-                                       Grid.Column="1"
-                                       Tag="Label_LicenseStatusValue"
-                                       Text=""
-                                       VerticalAlignment="Center" />
-                            <TextBlock Tag="Label_LicenseDetails"
-                                       Grid.Row="3"
-                                       Grid.Column="0"
-                                       Text="License Details:"
-                                       VerticalAlignment="Center" />
-                            <TextBlock x:Name="LicenseDetailsValue"
-                                       Grid.Row="3"
-                                       Grid.Column="1"
-                                       Tag="Label_LicenseDetailsValue"
-                                       Text=""
-                                       VerticalAlignment="Center" />
-                            <TextBlock Tag="Label_SerialNumber"
-                                       Grid.Row="4"
-                                       Grid.Column="0"
-                                       Text="Serial Number:"
-                                       VerticalAlignment="Center" />
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Text="AESC Construct" />
+                                <TextBlock Tag="Label_Version"
+                                           Grid.Row="1"
+                                           Grid.Column="0"
+                                           Text="Version 2025.0.1"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Tag="Label_LicenseStatus"
+                                           Grid.Row="2"
+                                           Grid.Column="0"
+                                           Text="License Status:"
+                                           VerticalAlignment="Center" />
+                                <TextBlock x:Name="LicenseStatusValue"
+                                           Grid.Row="2"
+                                           Grid.Column="1"
+                                           Tag="Label_LicenseStatusValue"
+                                           Text=""
+                                           VerticalAlignment="Center" />
+                                <TextBlock Tag="Label_LicenseDetails"
+                                           Grid.Row="3"
+                                           Grid.Column="0"
+                                           Text="License Details:"
+                                           VerticalAlignment="Center" />
+                                <TextBlock x:Name="LicenseDetailsValue"
+                                           Grid.Row="3"
+                                           Grid.Column="1"
+                                           Tag="Label_LicenseDetailsValue"
+                                           Text=""
+                                           VerticalAlignment="Center" />
+                                <TextBlock Tag="Label_SerialNumber"
+                                           Grid.Row="4"
+                                           Grid.Column="0"
+                                           Text="Serial Number:"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBox x:Name="SerialNumberTextBox"
+                                     Grid.Row="1"
+                                     Grid.Column="1"
+                                     Width="194"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Left"
+                                     Margin="1,0,0,0" />
                         </Grid>
-                        <TextBox x:Name="SerialNumberTextBox"
-                                 Grid.Row="1"
-                                 Grid.Column="1"
-                                 Width="194"
-                                 VerticalAlignment="Center"
-                                 HorizontalAlignment="Left"
-                                 Margin="1,0,0,0" />
-                    </Grid>
-                    <Button Tag="Button_ActivateLicense"
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Style="{StaticResource FooterButtonStyle}"
-                            Content="Activate"
-                            Click="ActivateLicenseButton_Click"
-                            Width="70" />
-                </StackPanel>
-            </Expander>
-        </StackPanel>
+                        <Button Tag="Button_ActivateLicense"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Style="{StaticResource FooterButtonStyle}"
+                                Content="Activate"
+                                Click="ActivateLicenseButton_Click"
+                                Width="70" />
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
 
-        <!-- Save button -->
-        <Button Tag="Button_Save"
-                Grid.Row="2"
-                Content="Save"
-                Style="{StaticResource FooterButtonStyle}"
-                HorizontalAlignment="Center"
-                Margin="0,10"
-                Click="SaveButton_Click" />
-    </Grid>
+            <!-- Save button -->
+            <Button Tag="Button_Save"
+                    Grid.Row="2"
+                    Content="Save"
+                    Style="{StaticResource FooterButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="0,10"
+                    Click="SaveButton_Click" />
+        </Grid>
+    </ScrollViewer>
 </UserControl>

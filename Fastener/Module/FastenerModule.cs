@@ -25,15 +25,6 @@ namespace AESCConstruct25.Fastener.Module
             var basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                "AESCConstruct", "Fasteners");
-            //string csvPath = Settings.Default.profiles;
-            //_bolts = File.ReadAllLines(Path.Combine(basePath, "Bolt.csv"))
-            //             .Skip(1).Select(Bolt.FromCsv).ToList();
-
-            //_washers = File.ReadAllLines(Path.Combine(basePath, "Washer.csv"))
-            //                .Skip(1).Select(Washer.FromCsv).ToList();
-
-            //_nuts = File.ReadAllLines(Path.Combine(basePath, "Nut.csv"))
-            //             .Skip(1).Select(Nut.FromCsv).ToList();
             _bolts = File.ReadAllLines(Settings.Default.Bolt)
                          .Skip(1).Select(Bolt.FromCsv).ToList();
 
@@ -44,10 +35,6 @@ namespace AESCConstruct25.Fastener.Module
                          .Skip(1).Select(Nut.FromCsv).ToList();
         }
 
-        // top-level lists for your “Type” ComboBoxes
-        //public IEnumerable<string> BoltTypes => _bolts.Select(b => b.type).Distinct();
-        //public IEnumerable<string> WasherTypes => _washers.Select(w => w.type).Distinct();
-        //public IEnumerable<string> NutTypes => _nuts.Select(n => n.type).Distinct();
         public IEnumerable<string> BoltNames => _bolts.Select(b => b.Name).Distinct();
         public IEnumerable<string> WasherNames => _washers.Select(w => w.Name).Distinct();
         public IEnumerable<string> NutNames => _nuts.Select(n => n.Name).Distinct();
@@ -63,16 +50,6 @@ namespace AESCConstruct25.Fastener.Module
         public string GetNutTypeByName(string name) =>
         _nuts.FirstOrDefault(n => n.Name == name)?.type
         ?? throw new InvalidOperationException($"Unknown nut name '{name}'");
-
-        // called when the user picks a type, to fill the “Size” list
-        //public IEnumerable<string> BoltSizesFor(string type) =>
-        //    _bolts.Where(b => b.type == type).Select(b => b.size).Distinct();
-
-        //public IEnumerable<string> WasherSizesFor(string type) =>
-        //    _washers.Where(w => w.type == type).Select(w => w.size).Distinct();
-
-        //public IEnumerable<string> NutSizesFor(string type) =>
-        //    _nuts.Where(n => n.type == type).Select(n => n.size).Distinct();
 
         public IEnumerable<string> BoltSizesFor(string selectedName)
         {
@@ -136,36 +113,59 @@ namespace AESCConstruct25.Fastener.Module
 
         private Part GetWasherPart(Document doc, string name, Washer washer, out Component component)
         {
-            // Logger.Log($"[GetWasherPart] START name={name}, d1={washer.d1}, d2={washer.d2}, s={washer.s}");
-
-            // Always create new part
+            // Reuse by washer template name (not a unique GUID per instance)
+            Part washerPart = doc.Parts.FirstOrDefault(p => p.DisplayName == name);
             Part fastenersPart = GetFastenersPart(doc);
-            string uniqueName = $"{name}_{Guid.NewGuid():N}";
-            // Logger.Log($"[GetWasherPart] Creating new Part '{uniqueName}' under 'Fasteners'");
-            Part part = Part.Create(doc, uniqueName);
-            component = Component.Create(fastenersPart, part);
 
-            // Create geometry
-            Body body;
-            try
+            if (washerPart is null)
             {
-                body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
+                // Create template part and geometry
+                washerPart = Part.Create(doc, name);
+                component = Component.Create(fastenersPart, washerPart);
+
+                Body body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
+                DesignBody db = DesignBody.Create(washerPart, name, body);
+
+                // First time: lock according to current toggle
+                foreach (var b in washerPart.GetDescendants<DesignBody>())
+                    b.IsLocked = _lockDistance;
+
+                CustomPartProperty.Create(washerPart, "AESC_Construct", true);
             }
-            catch (Exception)
+            else
             {
-                // Logger.Log($"[GetWasherPart] ERROR in createWasher: {ex}");
-                throw;
+                // Reuse existing template
+                component = Component.Create(fastenersPart, washerPart);
+
+                if (_lockDistance)
+                {
+                    bool anyUnlocked = false;
+                    foreach (var b in washerPart.GetDescendants<DesignBody>())
+                    {
+                        if (!b.IsLocked) { anyUnlocked = true; break; }
+                    }
+
+                    if (anyUnlocked)
+                    {
+                        var res = MessageBox.Show(
+                            $"The fastener template '{name}' will be reused, but its bodies are not locked.\n\nLock the original now?",
+                            "Lock reused fastener template?",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (res == DialogResult.Yes)
+                        {
+                            foreach (var b in washerPart.GetDescendants<DesignBody>())
+                                b.IsLocked = true;
+                        }
+                    }
+                }
             }
-            // Logger.Log($"[GetWasherPart] Body created; calling DesignBody.Create");
 
-            DesignBody db = DesignBody.Create(part, name, body);
-            db.IsLocked = _lockDistance;
-            // Logger.Log($"[GetWasherPart] DesignBody created, attaching property");
-            CustomPartProperty.Create(part, "AESC_Construct", true);
-
-            // Logger.Log($"[GetWasherPart] COMPLETE for '{uniqueName}'");
-            return part;
+            return washerPart;
         }
+
+
 
         public static List<PlacementData> GetPlacementDataSelection(ICollection<IDocObject> selection, ICollection<IDocObject> secondSelection)
         {
@@ -549,63 +549,116 @@ namespace AESCConstruct25.Fastener.Module
 
         private Part GetBoltPart(Document doc, string name, string boltType, Bolt _bolt, double parBoltL, out Component component)
         {
-            // Try to find an existing “Fasteners” part
-            Part boltPart = doc.Parts
-                .FirstOrDefault(p => p.DisplayName == name);
-
-
-            // Logger.Log("getboltpart");
-            // Create Fasteners Part if not existing
+            Part boltPart = doc.Parts.FirstOrDefault(p => p.DisplayName == name);
             Part fastenersPart = GetFastenersPart(doc);
+
             if (boltPart is null)
             {
-
-                // if not found, create it and hook it up
+                // Create template part and geometry
                 boltPart = Part.Create(doc, name);
                 component = Component.Create(fastenersPart, boltPart);
 
-                // Create body
                 Body bodyBolt = createFasteners.Create_Bolt(boltType, _bolt, parBoltL);
                 DesignBody dbBolt = DesignBody.Create(boltPart, name, bodyBolt);
-                dbBolt.IsLocked = _lockDistance;
+
+                // First time: lock according to current toggle
+                foreach (var db in boltPart.GetDescendants<DesignBody>())
+                    db.IsLocked = _lockDistance;
+
                 CustomPartProperty.Create(boltPart, "AESC_Construct", true);
             }
             else
             {
-                // Create a copy of the original component
+                // Reuse existing template
                 component = Component.Create(fastenersPart, boltPart);
+
+                if (_lockDistance)
+                {
+                    // Check if original is already fully locked
+                    bool anyUnlocked = false;
+                    foreach (var db in boltPart.GetDescendants<DesignBody>())
+                    {
+                        if (!db.IsLocked) { anyUnlocked = true; break; }
+                    }
+
+                    if (anyUnlocked)
+                    {
+                        var res = MessageBox.Show(
+                            $"The fastener template '{name}' will be reused, but its bodies are not locked.\n\nLock the original now?",
+                            "Lock reused fastener template?",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (res == DialogResult.Yes)
+                        {
+                            foreach (var db in boltPart.GetDescendants<DesignBody>())
+                                db.IsLocked = true; // _lockDistance is true here
+                        }
+                        // No -> continue without locking
+                    }
+                    // Already locked -> nothing extra
+                }
+                // _lockDistance == false -> nothing extra
             }
+
             return boltPart;
         }
 
+
+
         private Part GetNutPart(Document doc, string name, string type, Nut nut, out Component component)
         {
-            // Try to find an existing “Fasteners” part
-            Part part = doc.Parts
-                .FirstOrDefault(p => p.DisplayName == name);
-
-            // Create Fasteners Part if not existing
+            Part part = doc.Parts.FirstOrDefault(p => p.DisplayName == name);
             Part fastenersPart = GetFastenersPart(doc);
+
             if (part is null)
             {
-
-                // if not found, create it and hook it up
+                // Create template part and geometry
                 part = Part.Create(doc, name);
                 component = Component.Create(fastenersPart, part);
 
-                // Create body
                 Body body = createFasteners.Create_Nut(boltType, nut);
                 DesignBody designBody = DesignBody.Create(part, name, body);
-                designBody.IsLocked = _lockDistance;
+
+                // First time: lock according to current toggle
+                foreach (var db in part.GetDescendants<DesignBody>())
+                    db.IsLocked = _lockDistance;
+
                 CustomPartProperty.Create(part, "AESC_Construct", true);
             }
             else
             {
-                // Create a copy of the original component
+                // Reuse existing template
                 component = Component.Create(fastenersPart, part);
+
+                if (_lockDistance)
+                {
+                    bool anyUnlocked = false;
+                    foreach (var db in part.GetDescendants<DesignBody>())
+                    {
+                        if (!db.IsLocked) { anyUnlocked = true; break; }
+                    }
+
+                    if (anyUnlocked)
+                    {
+                        var res = MessageBox.Show(
+                            $"The fastener template '{name}' will be reused, but its bodies are not locked.\n\nLock the original now?",
+                            "Lock reused fastener template?",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (res == DialogResult.Yes)
+                        {
+                            foreach (var db in part.GetDescendants<DesignBody>())
+                                db.IsLocked = true;
+                        }
+                    }
+                }
             }
+
             return part;
         }
+
 
         public static bool CheckSelectedCircle(Window window, bool singleSelection = false)
         {
@@ -701,26 +754,5 @@ namespace AESCConstruct25.Fastener.Module
 
             return radiusMM;
         }
-
-
-        //public static void CheckSize()
-        //{
-
-        //    Window window = Window.ActiveWindow;
-        //    Document doc = window.Document;
-        //    Part rootPart = doc.MainPart;
-
-        //    if (!CheckSelectedCircle(window, true))
-        //        return;
-
-        //    double radiusMM = GetSizeCircle(window, out double depthMM);
-        //   // Logger.Log($"radiusMM - {radiusMM}");
-
-        //    if (radiusMM == 0)
-        //        return;
-
-        //    //// Apply filter to the Sizes of all comboboxes
-
-        //}
     }
 }
