@@ -1,31 +1,35 @@
 ﻿// SpaceClaim APIs
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Display;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms.Integration;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
-// Aliases matching your legacy code
 using Application = SpaceClaim.Api.V242.Application;
+using CheckBox = System.Windows.Controls.CheckBox;
 using Component = SpaceClaim.Api.V242.Component;
-// IMPORTANT: your Connector class is in the global namespace
 using ConnectorModel = global::Connector;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
+using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using Line = SpaceClaim.Api.V242.Geometry.Line;
 using MessageBox = System.Windows.MessageBox;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
+using RadioButton = System.Windows.Controls.RadioButton;
+using Settings = AESCConstruct25.Properties.Settings;
+using TextBox = System.Windows.Controls.TextBox;
+using UserControl = System.Windows.Controls.UserControl;
 using WF = System.Windows.Forms;
 using Window = SpaceClaim.Api.V242.Window;
-using System.Windows.Threading;
-
 
 namespace AESCConstruct25.UI
 {
@@ -34,6 +38,32 @@ namespace AESCConstruct25.UI
         private WF.PictureBox picDrawing;
         private readonly TimeSpan UiDebounceInterval = TimeSpan.FromMilliseconds(150);
         private DispatcherTimer _uiDebounce;
+        private class ConnectorPresetRecord
+        {
+            public string Name { get; set; } = "";
+            public double? Height { get; set; }
+            public double? Width1 { get; set; }
+            public double? Width2 { get; set; }
+            public double? Tolerance { get; set; }
+            public double? RadiusChamfer { get; set; }
+            public string Location { get; set; } = "";
+
+            public bool? UseCustom { get; set; }
+            public bool? DynamicHeight { get; set; }
+            public bool? CornerCutout { get; set; }
+            public double? CornerCutoutValue { get; set; }
+            public bool? CornerCutoutRadiusEnabled { get; set; }
+            public double? CornerCutoutRadius { get; set; }
+            public bool? ClickLocation { get; set; }
+            public bool? ShowTolerance { get; set; }
+            public bool? Straight { get; set; }
+
+            // "Radius" or "Chamfer"
+            public string CornerStyle { get; set; } = "";
+        }
+
+
+        private readonly List<ConnectorPresetRecord> _presets = new List<ConnectorPresetRecord>();
         public ConnectorControl()
         {
             try
@@ -104,12 +134,10 @@ namespace AESCConstruct25.UI
         // === Legacy field (now strongly-typed via alias) ===
         private ConnectorModel connector;
 
-        // === Legacy "drawConnector" adapted: no WinForms PictureBox ===
         private void drawConnector()
         {
             try
             {
-                // try to build from UI; if it fails, use defaults so we still draw
                 connector = ConnectorModel.CreateConnector(this);
                 InvalidateDrawing();
             }
@@ -151,9 +179,204 @@ namespace AESCConstruct25.UI
         {
             try {
                 WireUiChangeHandlers();
+                LoadConnectorPresets();
                 drawConnector(); 
             }
             catch (Exception ex) { Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
+        }
+
+        private void LoadConnectorPresets()
+        {
+            try
+            {
+                string csvPath = Settings.Default.ConnectorProperties;
+                if (string.IsNullOrWhiteSpace(csvPath) || !File.Exists(csvPath))
+                {
+                    // Fallback: CommonApplicationData\AESCConstruct\Connector\ConnectorProperties.csv
+                    var fallback = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        "AESCConstruct", "Connector", "ConnectorProperties.csv");
+                    csvPath = File.Exists(csvPath) ? csvPath : fallback;
+                }
+
+                if (!File.Exists(csvPath))
+                    throw new FileNotFoundException("ConnectorProperties.csv not found", csvPath);
+
+                _presets.Clear();
+
+                using var sr = new StreamReader(csvPath, DetectEncoding(csvPath));
+                if (sr.EndOfStream)
+                    throw new InvalidDataException("ConnectorProperties.csv is empty.");
+
+                var headerLine = sr.ReadLine();
+                if (headerLine == null)
+                    throw new InvalidDataException("ConnectorProperties.csv header row missing.");
+
+                char delimiter = headerLine.Contains(';') ? ';' : ',';
+                var headers = headerLine.Split(delimiter)
+                                        .Select((h, i) => new { h = h.Trim(), i })
+                                        .ToDictionary(x => x.h, x => x.i, StringComparer.OrdinalIgnoreCase);
+
+                string line;
+                int lineNum = 1;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    lineNum++;
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var cols = SplitCsv(line, delimiter);
+
+                    // Only read these columns: Height, Width1, Width2, RadiusButton, Radius, Tolerance (+ optional Name for display)
+                    var p = new ConnectorPresetRecord
+                    {
+                        Name = Get<string>(headers, cols, "Name", ""),
+                        Height = GetDouble(headers, cols, "Height"),
+                        Width1 = GetDouble(headers, cols, "Width1"),
+                        Width2 = GetDouble(headers, cols, "Width2"),
+                        // CSV uses "Radius" (not "RadiusChamfer"); map to the existing Radius/Chamfer textbox
+                        RadiusChamfer = GetDouble(headers, cols, "Radius"),
+                        Tolerance = GetDouble(headers, cols, "Tolerance"),
+                    };
+
+                    // Interpret "RadiusButton": Y/1/true => Radius radio, N/0/false => Chamfer radio
+                    var radiusBtn = GetBool(headers, cols, "RadiusButton");
+                    if (radiusBtn.HasValue)
+                        p.CornerStyle = radiusBtn.Value ? "radius" : "chamfer";
+                    else
+                        p.CornerStyle = ""; // leave as-is if not provided
+
+                    // Keep rows that at least have one meaningful value
+                    if (p.Height.HasValue || p.Width1.HasValue || p.Width2.HasValue || p.RadiusChamfer.HasValue || p.Tolerance.HasValue || !string.IsNullOrWhiteSpace(p.Name))
+                        _presets.Add(p);
+                }
+
+                // Bind to existing combobox. Use Name when present; otherwise show a compact synthesized label.
+                if (ConnectorShapeCombobox != null)
+                {
+                    string Label(ConnectorPresetRecord r)
+                    {
+                        if (!string.IsNullOrWhiteSpace(r.Name)) return r.Name;
+                        string f(double? v) => v.HasValue ? v.Value.ToString("0.###", CultureInfo.InvariantCulture) : "";
+                        return $"H{f(r.Height)} W1{f(r.Width1)} W2{f(r.Width2)} R{f(r.RadiusChamfer)} T{f(r.Tolerance)}".Trim();
+                    }
+
+                    var items = _presets.Select(Label).ToList();
+                    ConnectorShapeCombobox.ItemsSource = items;
+
+                    // Rewire handler
+                    ConnectorShapeCombobox.SelectionChanged -= ConnectorPresetCombo_SelectionChanged;
+                    ConnectorShapeCombobox.SelectionChanged += ConnectorPresetCombo_SelectionChanged;
+
+                    if (ConnectorShapeCombobox.Items.Count > 0 && ConnectorShapeCombobox.SelectedIndex < 0)
+                        ConnectorShapeCombobox.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"LoadConnectorPresets failed: {ex}");
+                MessageBox.Show($"Failed to load connector presets:\n{ex.Message}",
+                    "Connector Presets", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
+        private void ConnectorPresetCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                var name = ConnectorShapeCombobox?.SelectedItem as string;
+                if (string.IsNullOrWhiteSpace(name)) return;
+
+                var preset = _presets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (preset == null) return;
+
+                // Temporarily stop debounce while we overwrite many fields
+                _uiDebounce?.Stop();
+
+                ApplyPresetToUi(preset);
+
+                // Force immediate redraw from final state
+                drawConnector();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"ConnectorPresetCombo_SelectionChanged failed: {ex}");
+            }
+        }
+
+        private void ApplyPresetToUi(ConnectorPresetRecord p)
+        {
+            string F(double? v) => v.HasValue ? v.Value.ToString("0.###", CultureInfo.InvariantCulture) : "";
+
+            // Only overwrite the requested fields from CSV
+            if (p.Height.HasValue) connectorHeight.Text = F(p.Height);
+            if (p.Width1.HasValue) connectorWidth1.Text = F(p.Width1);
+            if (p.Width2.HasValue) connectorWidth2.Text = F(p.Width2);
+            if (p.Tolerance.HasValue) connectorTolerance.Text = F(p.Tolerance);
+
+            // Radius/Chamfer: set the shared value textbox and the radio choice
+            if (p.RadiusChamfer.HasValue) connectorRadiusChamfer.Text = F(p.RadiusChamfer);
+
+            var style = (p.CornerStyle ?? "").Trim().ToLowerInvariant();
+            if (style == "radius")
+            {
+                connectorRadius.IsChecked = true;
+                connectorChamfer.IsChecked = false;
+            }
+            else if (style == "chamfer")
+            {
+                connectorRadius.IsChecked = false;
+                connectorChamfer.IsChecked = true;
+            }
+
+            // Do NOT touch Location or any other controls here
+        }
+
+        // Helpers for CSV parsing
+        private static Encoding DetectEncoding(string path)
+        {
+            using var fs = File.OpenRead(path);
+            using var br = new BinaryReader(fs, Encoding.UTF8, true);
+            var bom = br.ReadBytes(4);
+            if (bom.Length >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) return Encoding.UTF8;
+            if (bom.Length >= 2 && bom[0] == 0xFF && bom[1] == 0xFE) return Encoding.Unicode;
+            if (bom.Length >= 2 && bom[0] == 0xFE && bom[1] == 0xFF) return Encoding.BigEndianUnicode;
+            if (bom.Length >= 4 && bom[0] == 0xFF && bom[1] == 0xFE && bom[2] == 0x00 && bom[3] == 0x00) return Encoding.UTF32;
+            return new UTF8Encoding(false);
+        }
+
+        private static string[] SplitCsv(string line, char delimiter)
+        {
+            // simple split (fields expected to be plain values)
+            return line.Split(delimiter).Select(s => s.Trim()).ToArray();
+        }
+
+        private static T Get<T>(Dictionary<string, int> headers, string[] cols, string key, T fallback)
+        {
+            if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return fallback;
+            var s = cols[i];
+            if (typeof(T) == typeof(string)) return (T)(object)s;
+            try
+            {
+                return (T)Convert.ChangeType(s, typeof(T), CultureInfo.InvariantCulture);
+            }
+            catch { return fallback; }
+        }
+
+        private static double? GetDouble(Dictionary<string, int> headers, string[] cols, string key)
+        {
+            if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return null;
+            if (double.TryParse(cols[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return v;
+            return null;
+        }
+
+        private static bool? GetBool(Dictionary<string, int> headers, string[] cols, string key)
+        {
+            if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return null;
+            var s = (cols[i] ?? "").Trim().ToLowerInvariant();
+            if (bool.TryParse(s, out var b)) return b;
+            if (s == "1" || s == "y" || s == "yes") return true;
+            if (s == "0" || s == "n" || s == "no") return false;
+            return null;
         }
 
         private static IDesignBody createIndependentDesignBody(IDesignBody iDesignBody)
@@ -184,7 +407,6 @@ namespace AESCConstruct25.UI
                 {
                     if (idb.Parent.Master.DisplayName == newName)
                     {
-                        idb.Parent.Master.Name = part.DisplayName;
                         return idb;
                     }
                 }
@@ -193,10 +415,7 @@ namespace AESCConstruct25.UI
             {
                 return iDesignBody;
             }
-
-
             return null;
-
         }
 
         private static void getFacesFromSelection(IDesignEdge selectedEdge, out DesignFace bigFace, out DesignFace smallFace)
@@ -227,28 +446,15 @@ namespace AESCConstruct25.UI
 
         private void createConnector()
         {
-            Logger.Log("createconnector");
             try
             {
-
-                var updated = ConnectorModel.CreateConnector(this);
-                if (updated == null)
-                {
-                    MessageBox.Show("Please enter valid numeric values in all connector fields.",
-                        "Input Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                connector = updated;
-
-                var activeWindow = Window.ActiveWindow;
+                Window activeWindow = Window.ActiveWindow;
                 if (activeWindow == null)
                     return;
 
-                Logger.Log("createconnector1");
                 InteractionContext context = activeWindow.ActiveContext;
                 Document doc = activeWindow.Document;
                 Part mainPart = doc.MainPart;
-                Logger.Log("createconnector2");
 
                 DesignEdge desEdge = null;
 
@@ -257,7 +463,6 @@ namespace AESCConstruct25.UI
                     //SC.reportStatus("Please select an edge");
                     return;
                 }
-                Logger.Log("createconnector3");
 
                 if (context.Selection.Count > 1)
                 {
@@ -265,7 +470,8 @@ namespace AESCConstruct25.UI
                     return;
                 }
 
-                Logger.Log("createconnector4");
+
+
 
                 List<DesignBody> selDBodyList = new List<DesignBody> { };
                 List<Point> selPointList = new List<Point> { };
@@ -275,14 +481,13 @@ namespace AESCConstruct25.UI
                 List<IDesignBody> selIDBodyList = new List<IDesignBody> { };
                 List<IDesignEdge> selIDesignEdges = new List<IDesignEdge> { };
 
-                Logger.Log("createconnector5");
                 #region Checking the selection
                 foreach (IDocObject sel in context.Selection)
                 {
-                    Logger.Log("createconnector foreach");
                     var de = sel as DesignEdge;
                     if (de != null)
                         desEdge = de;
+
 
                     var ide = sel as IDesignEdge;
                     if (ide != null)
@@ -296,17 +501,14 @@ namespace AESCConstruct25.UI
                         return;
                     }
 
-                    Logger.Log("createconnector5.1");
                     bool correctCurve = checkDesignEdge(ide, connector.ClickPosition, out Point selPoint);
 
-                    Logger.Log("createconnector5.2");
                     if (!correctCurve)
                     {
                         //SC.reportStatus("Selection geometry is not supported. Please select edges only.");
                         return;
                     }
 
-                    Logger.Log("createconnector5.3");
                     // Check if it fits on the line
                     if (!checkFitsLine(ide, connector))
                     {
@@ -314,7 +516,6 @@ namespace AESCConstruct25.UI
                         return;
                     }
 
-                    Logger.Log("createconnector5.4");
                     // Check if selected body in component or single body
                     Part part = null;
                     if (mainPart.GetDescendants<IDesignBody>().Count > 1)
@@ -329,8 +530,8 @@ namespace AESCConstruct25.UI
                     else
                         part = mainPart;
 
-                    Logger.Log("createconnector5.5");
                     selPointList.Add(selPoint);
+
 
                     selParts.Add(part);
                     selEdges.Add(desEdge);
@@ -339,20 +540,25 @@ namespace AESCConstruct25.UI
                     if (ide != null)
                         selIDBodyList.Add(ide.Parent);
 
-                    Logger.Log("createconnector5.6");
+                    //if (selDBodyList.Count != selIDBodyList.Count)
+                    //    SC.reportStatus("Nr DB != Nr IDB");
 
+
+                    //WriteBlock.ExecuteTask("connector", () =>
+                    //{
+                    //    DatumPoint.Create(mainPart, "selPoint", selPoint);
+                    //});
+
+                    // CHeck sheet metal
                     bool suspendSheetMetal = false;
                     if (part.SheetMetal != null || part.IsSheetMetalSuspended)
                         suspendSheetMetal = true;
 
-                    Logger.Log("createconnector5.7");
 
                     if (suspendSheetMetal)
                         suspendSheetMetalParts.Add(part);
-                    Logger.Log("createconnector5.8");
                 }
 
-                Logger.Log("createconnector6");
                 #endregion
 
                 if (selEdges.Count == 0)
@@ -360,9 +566,8 @@ namespace AESCConstruct25.UI
                     //SC.reportStatus("No connectors to be created");
                     return;
                 }
-                Logger.Log("createconnector7");
 
-                // Convert & proceed with the freshly rebuilt 'connector'
+                // Get parameters
                 double width1 = 0.001 * connector.Width1;
                 double width2 = 0.001 * connector.Width2;
                 double tolerance = 0.001 * connector.Tolerance;
@@ -374,40 +579,35 @@ namespace AESCConstruct25.UI
                 bool dynamicHeight = connector.DynamicHeight;
                 bool ClickPosition = connector.ClickPosition;
 
-                Logger.Log("createconnector8");
+                bool CylinderStraightCut = false; // To add in interface if needed
+
 
                 // Iterate through all selected edges
                 for (int i = 0; i < selEdges.Count; i++)
                 {
-                    Logger.Log("createconnector for");
                     Point pCenter = selPointList[i];
                     DesignBody designBody = selDBodyList[i];
                     IDesignBody iDesignBody = selIDBodyList[i];
                     IDesignEdge ide = selIDesignEdges[i];
 
-                    Logger.Log("createconnector 8.1");
                     getFacesFromSelection(ide, out DesignFace bigFace, out DesignFace smallFace);
                     if (bigFace == null || smallFace == null)
                         continue;
 
-                    Logger.Log("createconnector 8.2");
                     var bigFacePlane = bigFace.Shape.Geometry as Plane;
                     var bigFaceCylinder = bigFace.Shape.Geometry as Cylinder;
 
                     bool isPlane = bigFacePlane != null;
                     bool isCylinder = bigFaceCylinder != null;
 
-                    Logger.Log("createconnector 8.3");
                     if (!isPlane && !isCylinder)
                     {
                         //SC.reportStatus("Select a planar or cylindrical surface");
                         continue;
                     }
 
-                    Logger.Log("createconnector 8.4");
                     DesignFace oppositeFace = getOppositeFace(smallFace, bigFace, isPlane, out double thickness, out Direction dirY2);
 
-                    Logger.Log("createconnector 8.5");
 
                     if (oppositeFace == null)
                     {
@@ -415,31 +615,28 @@ namespace AESCConstruct25.UI
                         continue;
                     }
 
-                    Logger.Log("createconnector 8.6");
 
                     List<IDesignBody> nrBodies = getIDesignBodiesFromBody(mainPart, designBody.Shape);
                     bool allBodies = true; // Default to modifying only the selected body
                     // Check if there are more than one body
                     if (nrBodies.Count > 1)
                     {
-                        var result = MessageBox.Show(
-                            $"There are more than one bodies ({nrBodies.Count}) which have geometry added for the connector. Do you want to modify all identical bodies",
-                            "Modify Bodies",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question);
+                        // Prompt the user with a message box
+                        //DialogResult result = MessageBox.Show($"The selected file exists multiple times in the design ({nrBodies.Count}). Do you want to modify all identical parts? If not, only the selected part is affected.",
+                        //                                      "Modify Bodies", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                        if (result == MessageBoxResult.No)
-                        {
-                            allBodies = false;
-                        }
+                        // If user clicks 'Yes', set allBodies to true
+                        //if (result == DialogResult.No)
+                        //{
+                        //    allBodies = false;
+                        //}
                     }
-                    Logger.Log("createconnector 8.7");
 
 
                     // check faces (small face must be planar)
 
 
-                    Point pX1, pX2;
+                    //Point pX1, pX2;
                     Body connectorBody = null;
                     Body cutBody = null;
                     Body collisionBody = null;
@@ -447,7 +644,6 @@ namespace AESCConstruct25.UI
 
                     WriteBlock.ExecuteTask("connector", () =>
                     {
-                        Logger.Log("createconnector WriteBlock");
                         if (isPlane)
                         {
                             // if only the selected body needs modification, make it distinct
@@ -457,40 +653,32 @@ namespace AESCConstruct25.UI
                                 designBody = iDesignBody.Master;
                                 getFacesFromSelection(ide, out bigFace, out smallFace);
                             }
-                            Logger.Log("createconnector 8.1.1");
 
                             // get Directions
+
                             Direction dirX = desEdge.Shape.ProjectPoint(pCenter).Derivative.Direction;
                             Direction dirY = getNormalDirectionPlanarFace(bigFace.Shape);
                             Direction dirZ = getNormalDirectionPlanarFace(smallFace.Shape);
 
-                            Logger.Log("createconnector 8.1.2");
-                            Logger.Log($"createconnector dynamicHeight{dynamicHeight}");
                             // Check the max height
                             if (dynamicHeight)
                             {
                                 double dynheigth = connector.GetDynamicHeigth(designBody.Parent, dirX, dirY, dirZ, pCenter, height, thickness);
-                                Logger.Log("createconnector 8.1.2.1");
                                 if (dynheigth > 0)
                                     height = Math.Min(height, dynheigth);
 
-                                Logger.Log("createconnector 8.1.2.2");
                                 return;
                             }
 
-                            Logger.Log("createconnector 8.1.2.3");
                             connector.CreateGeometry(designBody.Parent, dirX, dirY, dirZ, pCenter, height, thickness, out connectorBody, out cutBodiesSource, out cutBody, out collisionBody, false);
                             //Collision body is used to check for collisions, if there is a collision, the cutBody is subtracted. cutBodiesSource is used for the Corner Cutouts
 
-                            Logger.Log("createconnector 8.1.3");
                         }
                         else
                         {
-                            Logger.Log("createconnector 8.2.1");
                             // Check if there is an inner/outer cylindrical face with same axis
                             var (innerFace, outerFace, thickness1, outerRadius, axis) = CylInfo.GetCoaxialCylPair(iDesignBody, bigFace);
 
-                            Logger.Log("createconnector 8.2.2");
 
                             if (innerFace == null || outerFace == null)
                             {
@@ -498,18 +686,25 @@ namespace AESCConstruct25.UI
                                 Application.ReportStatus($"No inner/outer Face found", StatusMessageType.Information, null);
                                 return;
                             }
+                            if (outerRadius * 2 < width1)
+                            {
+                                Application.ReportStatus($"Too wide, width should be less than: {outerRadius * 2000} mm", StatusMessageType.Information, null);
+                                return;
+                            }
 
-                            Logger.Log("createconnector 8.2.3");
+                            double distSelectionPoint2Axis = (axis.ProjectPoint(pCenter).Point - pCenter).Magnitude;
+                            bool selectedInnerFace = outerRadius - distSelectionPoint2Axis > 1e-5;
+                            DesignFace selectedFace = selectedInnerFace ? innerFace : outerFace;
+
                             // Derive all points for drawing the inner and outer profile
                             Point pAxis = axis.ProjectPoint(pCenter).Point;
                             Direction dirPoint2Axis = (pAxis - pCenter).Direction;
                             Direction dirZ = axis.Direction;
                             // Check Correct Direction;
                             Point pTest = pCenter + 0.00001 * dirZ;
-                            if (outerFace.Shape.ContainsPoint(pTest))
+                            if (selectedFace.Shape.ContainsPoint(pTest))
                                 dirZ = -dirZ;
 
-                            Logger.Log("createconnector 8.2.4");
                             Direction dirX = Direction.Cross(dirPoint2Axis, dirZ);
                             double maxWidth = Math.Max(width1, width2);
                             double distWidth = Math.Sqrt(outerRadius * outerRadius - (0.5 * maxWidth) * (0.5 * maxWidth));
@@ -517,8 +712,8 @@ namespace AESCConstruct25.UI
                             Point pWidth_A = pAxis - distWidth * dirPoint2Axis + 0.5 * maxWidth * dirX;
                             Point pWidth_B = pAxis - distWidth * dirPoint2Axis - 0.5 * maxWidth * dirX;
 
-                            Direction dir_A = (pAxis - pWidth_A).Direction;
-                            Direction dir_B = (pAxis - pWidth_B).Direction;
+                            Direction dir_A = CylinderStraightCut ? dirPoint2Axis : (pAxis - pWidth_A).Direction;
+                            Direction dir_B = CylinderStraightCut ? dirPoint2Axis : (pAxis - pWidth_B).Direction;
                             Point pInner_A = pWidth_A + thickness1 * dir_A;
                             Point pInner_B = pWidth_B + thickness1 * dir_B;
 
@@ -532,7 +727,6 @@ namespace AESCConstruct25.UI
                             Point pOuter_A = pAxis - distOuter * dir_A;
                             Point pOuter_B = pAxis - distOuter * dir_B;
 
-                            Logger.Log("createconnector 8.2.5");
 
                             //// Check the inner and outer edges closest to the connecter on the inner and outer face
                             var (success, innerEdge, outerEdge) = CylInfo.GetEdges(innerFace, p_InnerFace, outerFace, p_OuterFace);
@@ -542,7 +736,6 @@ namespace AESCConstruct25.UI
                             var (successOuterA, p_OuterEdge_A) = CylInfo.GetClosestPoint(outerEdge, pWidth_A, dirZ);
                             var (successOuterB, p_OuterEdge_B) = CylInfo.GetClosestPoint(outerEdge, pWidth_B, dirZ);
 
-                            Logger.Log("createconnector 8.2.6");
                             double maxDistanceBottom = 0;
                             if (successInnerA && (pInner_A - p_InnerEdge_A).Direction == dirZ)
                                 maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_A - p_InnerEdge_A).Magnitude);
@@ -554,17 +747,14 @@ namespace AESCConstruct25.UI
                                 maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_B - p_OuterEdge_B).Magnitude);
 
 
-                            Logger.Log("createconnector 8.2.7");
                             // Create planes
                             Plane planeInner = Plane.Create(Frame.Create(pInnerMid, dirX, dirZ));
-                            Plane planeOuter = Plane.Create(Frame.Create(pCenter, dirX, dirZ));
+                            Plane planeOuter = Plane.Create(Frame.Create(p_OuterFace, dirX, dirZ));
 
-                            Logger.Log("createconnector 8.2.8");
                             // Check difference in width
-                            double WidthDifferenceInner = (pWidth_A - pWidth_B).Magnitude - (pInner_A - pInner_B).Magnitude;
-                            double WidthDifferenceOuter = (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
+                            double WidthDifferenceInner = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pInner_A - pInner_B).Magnitude;
+                            double WidthDifferenceOuter = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
 
-                            Logger.Log("createconnector 8.2.9");
 
                             // For debugging, draw all points and planes
 
@@ -597,10 +787,9 @@ namespace AESCConstruct25.UI
 
                             }
 
-                            var boundary_Outer = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, pCenter, WidthDifferenceOuter, maxDistanceBottom);
+                            var boundary_Outer = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, p_OuterFace, WidthDifferenceOuter, maxDistanceBottom);
                             var boundary_Inner = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, pInnerMid, WidthDifferenceInner, maxDistanceBottom);
 
-                            Logger.Log("createconnector 8.2.10");
                             if (false)
                             {
                                 foreach (ITrimmedCurve curve in boundary_Outer)
@@ -621,13 +810,11 @@ namespace AESCConstruct25.UI
                             connectorBody.Subtract(cylinder);
                             connectorBody.Subtract(cylinder2);
 
-                            Logger.Log("createconnector 8.2.11");
 
                             collisionBody = connectorBody.Copy();
                             cutBody = connectorBody.Copy();
                             cutBody.OffsetFaces(cutBody.Faces, connector.Tolerance * 0.001);
 
-                            Logger.Log("createconnector 8.2.12");
                             if (false)
                             {
 
@@ -643,7 +830,6 @@ namespace AESCConstruct25.UI
                         DesignBody.Create(desBodyMaster.Parent, "connectorBody", connectorBody);
                         desBodyMaster.Shape.Unite(connectorBody);
 
-                        Logger.Log("createconnector 8.3");
                         if (cutBodiesSource.Count > 0)
                         {
                             foreach (Body cb in cutBodiesSource)
@@ -652,12 +838,10 @@ namespace AESCConstruct25.UI
                                 desBodyMaster.Shape.Subtract(cb);
                             }
                         }
-                        Logger.Log("createconnector 8.4");
 
                         DesignBody.Create(desBodyMaster.Parent, "collisionBody", collisionBody);
                         DesignBody.Create(desBodyMaster.Parent, "cutBody", cutBody);
 
-                        Logger.Log("createconnector 8.5");
 
                         List<IDesignBody> _listIDB = mainPart.GetDescendants<IDesignBody>().ToList();
                         List<IDesignBody> listIDBCollisionBody = new List<IDesignBody> { };
@@ -673,13 +857,11 @@ namespace AESCConstruct25.UI
                                 listIDBCutBody.Add(idb);
                             }
                         }
-                        Logger.Log("createconnector 8.6");
 
                         // Subtract listIDBCutBody from _listIDB
                         _listIDB = _listIDB.Except(listIDBCollisionBody).ToList();
                         _listIDB = _listIDB.Except(listIDBCutBody).ToList();
 
-                        Logger.Log("createconnector 8.7");
                         foreach (IDesignBody idb in _listIDB)
                         {
                             if (idb.Master == desBodyMaster)
@@ -710,8 +892,6 @@ namespace AESCConstruct25.UI
                             }
                         }
 
-                        Logger.Log("createconnector 8.8");
-
                         foreach (IDesignBody idb in listIDBCollisionBody)
                         {
                             if (!idb.IsDeleted)
@@ -722,39 +902,13 @@ namespace AESCConstruct25.UI
                             if (!idb.IsDeleted)
                                 idb.Delete();
                         }
-
-                        Logger.Log("createconnector 8.9");
-
-
                     });
-
-
-
-
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString());
             }
-        }
-
-        private static Matrix getPathToRoot(IDesignBody idb)
-        {
-            Matrix returnMatrix = Matrix.Identity;
-
-            IPart parent = idb.Parent;
-            IInstance test = parent.Parent;
-            IDocObject test2 = parent.Parent.Parent;
-            int a = 1;
-            //while (parent != null)
-            //{
-            //    returnMatrix = returnMatrix * parent.TransformToMaster;
-            //    parent = parent.Parent.Parent;
-            //}
-
-            return returnMatrix;
-
         }
 
         private static List<IDesignBody> getIDesignBodiesFromBody(Part part, Body body)
@@ -764,16 +918,6 @@ namespace AESCConstruct25.UI
             {
                 if (idb.Master.Shape == body)
                     list.Add(idb);
-            }
-            return list;
-        }
-        private static List<Matrix> getMatrixFromBody(Part part, Body body)
-        {
-            List<Matrix> list = new List<Matrix> { };
-            foreach (IDesignBody idb in part.GetDescendants<IDesignBody>())
-            {
-                if (idb.Master.Shape == body)
-                    list.Add(idb.TransformToMaster);
             }
             return list;
         }
@@ -789,51 +933,6 @@ namespace AESCConstruct25.UI
             Direction planeNormal = plane.Frame.DirZ;
             return reversed ? -planeNormal : planeNormal;
         }
-        private static double DotProduct(Point point, Direction direction)
-        {
-            return point.X * direction.X + point.Y * direction.Y + point.Z * direction.Z;
-        }
-
-        public static List<double> FindLowestHighestAndFurthestPoint(Direction direction, List<Point> points)
-        {
-            if (points == null || points.Count == 0)
-                throw new ArgumentException("Points list cannot be null or empty");
-
-            Point lowestPoint = points[0];
-            Point highestPoint = points[0];
-            double minProjection = DotProduct(lowestPoint, direction);
-            double maxProjection = minProjection;
-            List<double> result = new List<double>();
-
-            foreach (var point in points)
-            {
-                double projection = DotProduct(point, direction);
-                result.Add(projection);
-                if (projection < minProjection)
-                {
-                    minProjection = projection;
-                    lowestPoint = point;
-                }
-                if (projection > maxProjection)
-                {
-                    maxProjection = projection;
-                    highestPoint = point;
-                }
-            }
-
-            double maxDistance = maxProjection - minProjection;
-
-            List<double> result1 = new List<double>();
-            for (int i = 0; i < result.Count; i++)
-                result1.Add(maxProjection - result[i]);
-
-
-
-            return result1;
-        }
-
-
-
 
         private DesignFace getOppositeFace(DesignFace smallFace, DesignFace bigFace, bool isPlanar, out double thickness, out Direction direction)
         {
@@ -917,7 +1016,7 @@ namespace AESCConstruct25.UI
                 midPoint = line.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
             }
             double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
-            Application.ReportStatus($"minDist: {minDist}", StatusMessageType.Information, null);
+            //Application.ReportStatus($"minDist: {minDist}", StatusMessageType.Information, null);
             return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
 
         }
@@ -954,15 +1053,15 @@ namespace AESCConstruct25.UI
                 double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
                 double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
 
-                //if (true)
-                //{
-                //    WriteBlock.ExecuteTask("connector", () =>
-                //    {
-                //        DatumPoint.Create(desEdge.Parent.Parent, "StartPoint", desEdge.Shape.StartPoint);
-                //        DatumPoint.Create(desEdge.Parent.Parent, "EndPoint", desEdge.Shape.EndPoint);
-                //    });
+                if (false)
+                {
+                    WriteBlock.ExecuteTask("connector", () =>
+                    {
+                        DatumPoint.Create(desEdge.Parent.Parent, "StartPoint", desEdge.Shape.StartPoint);
+                        DatumPoint.Create(desEdge.Parent.Parent, "EndPoint", desEdge.Shape.EndPoint);
+                    });
 
-                //}
+                }
 
                 if (test != null)
                 {
@@ -986,7 +1085,7 @@ namespace AESCConstruct25.UI
                 }
                 else if (test4 != null)
                     midPoint = test4.Evaluate(0.5).Point;
-
+                /* TODO add location paramater support */
             }
 
 
@@ -994,313 +1093,6 @@ namespace AESCConstruct25.UI
             return !(test == null && test1 == null && test2 == null && test3 == null && test4 == null);
 
         }
-
-        //private void createConnector1()
-        //{
-        //    try
-        //    {
-        //        var activeWindow = Window.ActiveWindow;
-        //        if (activeWindow == null)
-        //            return;
-
-        //        InteractionContext context = activeWindow.ActiveContext;
-        //        Document doc = activeWindow.Document;
-        //        Part mainPart = doc.MainPart;
-
-        //        DesignEdge selectedEdge = null;
-
-        //        DesignEdge desEdge = null;
-
-        //        if (context.Selection.Count == 0)
-        //        {
-        //            //SC.reportStatus("Please select an edge");
-        //            return;
-        //        }
-
-        //        List<DesignBody> selDBodyList = new List<DesignBody> { };
-        //        List<Point> selPointList = new List<Point> { };
-        //        List<Part> selParts = new List<Part> { };
-        //        List<DesignEdge> selEdges = new List<DesignEdge>();
-        //        List<Part> suspendSheetMetalParts = new List<Part> { };
-
-        //        #region Checking the selection
-        //        foreach (IDocObject sel in context.Selection)
-        //        {
-        //            var de = sel as DesignEdge;
-        //            if (de != null)
-        //                desEdge = de;
-
-        //            try
-        //            {
-        //                var de1 = sel.Master as DesignEdge;
-        //                if (de1 != null)
-        //                    desEdge = de1;
-        //            }
-        //            catch { }
-
-        //            if (desEdge == null)
-        //            {
-        //                //SC.reportStatus("Please select an edge");
-        //                continue;
-        //            }
-
-        //            // Check if line or circle or ellipse or nurbscurve
-        //            var test = desEdge.Shape.Geometry as Line;
-        //            var test1 = desEdge.Shape.Geometry as Circle;
-        //            var test2 = desEdge.Shape.Geometry as NurbsCurve;
-        //            var test3 = desEdge.Shape.Geometry as Ellipse;
-
-        //            Point selPoint = Point.Origin;
-        //            if (test != null)
-        //                selPoint = test.Evaluate(0.5 * desEdge.Shape.Length).Point;
-        //            else if (test1 != null)
-        //                selPoint = test1.Evaluate(0.5).Point;
-        //            else if (test2 != null)
-        //                selPoint = test2.Evaluate(0.5).Point;
-        //            else if (test3 != null)
-        //                selPoint = test3.Evaluate(0.5).Point;
-
-
-        //            if (test == null && test1 == null && test2 == null && test3 == null)
-        //            {
-        //                //SC.reportStatus("Selection geometry is not supported. Please select edges only.");
-        //                continue;
-        //            }
-
-        //            // Check if in component or single body
-        //            Part part = null;
-        //            if (mainPart.GetDescendants<IDesignBody>().Count > 1)
-        //            {
-        //                part = de.Parent.Parent;
-        //                if (mainPart == part)
-        //                {
-        //                    //SC.reportStatus("Selected body is not within a component.");
-        //                    continue;
-        //                }
-        //            }
-        //            else
-        //                part = mainPart;
-
-        //            selPointList.Add(selPoint);
-
-
-        //            selParts.Add(part);
-        //            selEdges.Add(de);
-        //            selDBodyList.Add(de.Parent);
-
-
-        //            //WriteBlock.ExecuteTask("connector", () =>
-        //            //{
-        //            //    DatumPoint.Create(mainPart, "selPoint", selPoint);
-        //            //});
-        //            // CHeck sheet metal
-        //            bool suspendSheetMetal = false;
-        //            if (part.SheetMetal != null || part.IsSheetMetalSuspended)
-        //                suspendSheetMetal = true;
-
-
-        //            if (suspendSheetMetal)
-        //                suspendSheetMetalParts.Add(part);
-        //        }
-
-        //        #endregion
-
-        //        if (selEdges.Count == 0)
-        //        {
-        //            //SC.reportStatus("No connectors to be created");
-        //            return;
-        //        }
-
-        //        // Get parameters
-        //        double width1 = 0.001 * connector.Width1;
-        //        double width2 = 0.001 * connector.Width2;
-        //        double tolerance = 0.001 * connector.Tolerance;
-        //        double height = 0.001 * connector.Height;
-        //        double radius = 0.001 * connector.Radius;
-        //        bool hasRounding = connector.HasRounding;
-        //        bool hasCornerCutout = connector.HasCornerCutout;
-        //        double cornerCutoutRadius = 0.001 * connector.CornerCutoutRadius;
-        //        bool dynamicHeight = connector.DynamicHeight;
-
-
-        //        for (int i = 0; i < selEdges.Count; i++)
-        //        {
-        //            Point pCenter = selPointList[i];
-        //            // Determine biggest face
-        //            DesignFace bigFace = null;
-        //            DesignFace smallFace = null;
-
-        //            DesignFace face0 = desEdge.Faces.ElementAt(0);
-        //            DesignFace face1 = desEdge.Faces.ElementAt(1);
-
-        //            if (desEdge.Faces.Count != 2)
-        //                continue;
-
-        //            if (face0.Area > face1.Area)
-        //            {
-        //                bigFace = face0;
-        //                smallFace = face1;
-        //            }
-        //            else if (face0.Area < face1.Area)
-        //            {
-        //                bigFace = face1;
-        //                smallFace = face0;
-        //            }
-        //            else
-        //                return;
-
-        //            // check faces (small face must be planar)
-
-        //            // get Directions
-        //            Direction dirZ = smallFace.Shape.ProjectPoint(pCenter).Normal;
-        //            Direction dirY = bigFace.Shape.ProjectPoint(pCenter).Normal;
-        //            Direction dirX = Direction.Cross(dirY, dirZ);
-
-
-        //            // Additional values
-        //            double tol2 = 0.0001;
-        //            double alpha = Math.Atan(height / (0.5 * width2 - 0.5 * width1));
-        //            double alphaDegree = alpha / Math.PI * 180;
-        //            double dX = 0;
-        //            double dY = 0;
-
-        //            if (connector.HasCornerCutout)
-        //            {
-        //                dX = Math.Abs((cornerCutoutRadius * Math.Cos(alpha)));
-        //                dY = -Math.Abs((cornerCutoutRadius * Math.Sin(alpha)));
-
-        //                if (width1 > width2)
-        //                {
-        //                    dX = -dX;
-        //                }
-        //            }
-
-        //            // Define points
-
-        //            // outer contours without roundings/cutouts
-        //            Point B0 = pCenter - (0.5 * width1) * dirX;
-        //            Point B3 = pCenter + (0.5 * width2) * dirX;
-        //            Point B1 = pCenter - (0.5 * width2) * dirX + height * dirZ;
-        //            Point B2 = pCenter + (0.5 * width1) * dirX + height * dirZ;
-
-        //            Point p0 = pCenter - (0.5 * width1 + tol2) * dirX;
-        //            Point p1 = pCenter - (0.5 * width1) * dirX;
-        //            Point p9 = p0 - tol2 * dirZ;
-        //            Point p7 = pCenter + (0.5 * width1 + tol2) * dirX;
-        //            Point p6 = pCenter + (0.5 * width1) * dirX;
-        //            Point p8 = p7 - tol2 * dirZ;
-
-        //            Point p2 = B1;
-        //            Point p3 = B1;
-        //            Point p4 = B2;
-        //            Point p5 = B2;
-
-        //            if (radius > 0)
-        //            {
-        //                double dX2 = radius;
-
-        //                if (width1 <= width2)
-        //                {
-        //                    if (connector.HasRounding)
-        //                        dX2 = (radius / Math.Tan(alpha / 2));
-
-        //                    double dX1 = (dX2 * Math.Sin(Math.PI * 0.5 - alpha));
-        //                    double dY1 = (dX2 * Math.Cos(Math.PI * 0.5 - alpha));
-
-        //                    p2 = B1 + dX1 * dirX - dY1 * dirZ;
-        //                    p3 = B1 + dX2 * dirX;
-        //                    p4 = B2 - dX2 * dirX;
-        //                    p5 = B2 - dX1 * dirX - dY1 * dirZ;
-        //                }
-        //                else
-        //                {
-        //                    double beta = Math.PI + alpha;
-        //                    if (connector.HasRounding)
-        //                        dX2 = (radius * Math.Tan(0.5 * (Math.PI - beta)));
-
-        //                    double dX1 = ((dX2 * Math.Sin(beta - Math.PI * 0.5)));
-        //                    double dY1 = ((dX2 * Math.Cos(beta - Math.PI * 0.5)));
-
-        //                    p2 = B1 + dX1 * dirX - dY1 * dirZ;
-        //                    p3 = B1 + dX2 * dirX;
-        //                    p4 = B2 - dX2 * dirX;
-        //                    p5 = B2 - dX1 * dirX - dY1 * dirZ;
-        //                }
-        //            }
-
-
-        //            Frame frame = Frame.Create(pCenter, dirX, dirZ);
-        //            Plane plane = Plane.Create(frame);
-
-        //            // create curves for the addBody
-        //            List<ITrimmedCurve> boundaryAddBody = new List<ITrimmedCurve>
-        //            {
-        //                CurveSegment.Create(p0, p1),
-        //                CurveSegment.Create(p1, p2),
-        //                CurveSegment.Create(p2, p3),
-        //                CurveSegment.Create(p3, p4),
-        //                CurveSegment.Create(p4, p5),
-        //                CurveSegment.Create(p5, p6),
-        //                CurveSegment.Create(p6, p7),
-        //                CurveSegment.Create(p7, p8),
-        //                CurveSegment.Create(p8, p9),
-        //                CurveSegment.Create(p9, p0),
-        //            };
-        //            int direction = 1;
-        //            if (plane.Frame.DirZ != dirZ)
-        //                direction = -1;
-
-        //            WriteBlock.ExecuteTask("connector", () =>
-        //            {
-
-        //                DesignCurve.Create(mainPart, CurveSegment.Create(B0, B1));
-        //                DesignCurve.Create(mainPart, CurveSegment.Create(B1, B2));
-        //                DesignCurve.Create(mainPart, CurveSegment.Create(B2, B3));
-        //                DesignCurve.Create(mainPart, CurveSegment.Create(B3, B0));
-        //                //    DatumPoint.Create(mainPart, "B0", B0);
-        //                //    DatumPoint.Create(mainPart, "B1", B1);
-        //                //    DatumPoint.Create(mainPart, "B2", B2);
-        //                //    DatumPoint.Create(mainPart, "B3", B3);
-        //                DatumPoint.Create(mainPart, "p0", p0);
-        //                DatumPoint.Create(mainPart, "p1", p1);
-        //                DatumPoint.Create(mainPart, "p3", p3);
-        //                DatumPoint.Create(mainPart, "p2", p2);
-        //                DatumPoint.Create(mainPart, "p4", p4);
-        //                DatumPoint.Create(mainPart, "p5", p5);
-        //                DatumPoint.Create(mainPart, "p6", p6);
-        //                DatumPoint.Create(mainPart, "p7", p7);
-        //                DatumPoint.Create(mainPart, "p8", p8);
-        //                DatumPoint.Create(mainPart, "p9", p9);
-
-
-        //                try
-        //                {
-        //                    Body addBody = Body.ExtrudeProfile(new Profile(plane, boundaryAddBody), direction * height);
-        //                    DesignBody.Create(mainPart, "addBody", addBody);
-        //                }
-        //                catch
-        //                {
-        //                    foreach (ITrimmedCurve itc in boundaryAddBody)
-        //                    {
-        //                        try
-        //                        {
-        //                            DesignCurve dc = DesignCurve.Create(mainPart, itc);
-        //                            //dc.SetColor(null, Color.Red);
-        //                        }
-        //                        catch { }
-        //                    }
-        //                }
-
-
-        //            });
-
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(ex.ToString());
-        //    }
-        //}
 
         private void WireUiChangeHandlers()
         {
@@ -1330,7 +1122,7 @@ namespace AESCConstruct25.UI
 
             var checkBoxes = new CheckBox[]
             {
-                connectorUseCustom,
+                //connectorUseCustom,
                 connectorDynamicHeight,
                 connectorCornerCutout,
                 connectorCornerCutoutRadius,
@@ -1369,17 +1161,11 @@ namespace AESCConstruct25.UI
             }
         }
 
-
-        private void OnUiChanged(object sender, RoutedEventArgs e)
-        {
-            DebouncedRedraw();
-        }
-
         private void OnTextChanged(object sender, TextChangedEventArgs e) => DebouncedRedraw();
         private void OnRoutedChanged(object sender, RoutedEventArgs e) => DebouncedRedraw();
         private void OnSelectionChanged(object sender, SelectionChangedEventArgs e) => DebouncedRedraw();
 
-        private void OnTextBoxKeyDown(object sender, KeyEventArgs e)
+        private void OnTextBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
@@ -1404,22 +1190,13 @@ namespace AESCConstruct25.UI
             _uiDebounce.Start();
         }
 
-
-        private void picDrawing_Paint(object sender, WF.PaintEventArgs e)
-        {
-            if (connector != null)
-            {
-                DrawConnector(e.Graphics, connector);
-            }
-        }
-
-        private void DrawConnector(System.Drawing.Graphics g, ConnectorModel connector)
+        private void DrawConnector(Graphics g, ConnectorModel connector)
         {
             try
             {
                 bool showTolerance = connectorShowTolerance.IsChecked == true;
 
-                // NOTE: PictureBox client size (avoid Width/Height properties because of borders)
+                // NOTE: PictureBox client size (avoid Width/Height properties because of borders) > TODO implement tolerance height/width based on height calculated from chamfer etc.
                 int canvasWidth = picDrawing.ClientSize.Width;
                 int canvasHeight = picDrawing.ClientSize.Height;
 
@@ -1589,7 +1366,7 @@ namespace AESCConstruct25.UI
                     double hypotenuse = tol / Math.Sin(a);
                     float delta = Math.Abs((float)(hypotenuse * Math.Cos(a)));
 
-                    using var pen2 = new System.Drawing.Pen(System.Drawing.Color.Gray, 2)
+                    using var pen2 = new Pen(Color.Gray, 2)
                     {
                         DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
                     };
@@ -1620,17 +1397,6 @@ namespace AESCConstruct25.UI
         {
             try { picDrawing?.Invalidate(); }
             catch (Exception ex) { Logger.Log($"InvalidateDrawing error: {ex}"); }
-        }
-
-        private void chk_CheckedChanged(object sender, EventArgs e)
-        {
-            drawConnector();
-        }
-
-        private void FormConnector_Load(object sender, EventArgs e)
-        {
-
-            drawConnector();
         }
     }
 }

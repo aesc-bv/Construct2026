@@ -49,24 +49,32 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
 
             // 1) Compute world-space start/end and sweep direction
-            Point worldStart = selectedCurve.EndPoint;
-            Point worldEnd = selectedCurve.StartPoint;
+            Point worldStart = selectedCurve.StartPoint;
+            Point worldEnd = selectedCurve.EndPoint;
 
             double length = (worldEnd - worldStart).Magnitude;
             Direction sweepZ = (worldEnd - worldStart).Direction;
 
-            // 2) Build world-space frame axes (X,Y,Z)
+            // 2) Build world-space frame axes (X, Y, Z) – deterministic, plane-agnostic
             Vector zv = sweepZ.ToVector();
-            Direction xDir = Math.Abs(Vector.Dot(zv, localUp)) > 0.99
-                           ? Vector.Create(1, 0, 0).Direction
-                           : Vector.Cross(localUp, zv).Direction;
+
+            // If localUp ≈ z, choose the world axis most orthogonal to z for x
+            Direction xDir;
+            if (Math.Abs(Vector.Dot(zv, localUp)) > 0.99)
+            {
+                xDir = MostOrthogonalWorldAxis(zv).Direction;
+            }
+            else
+            {
+                xDir = Vector.Cross(localUp, zv).Direction;
+            }
             Direction yDir = Direction.Cross(sweepZ, xDir);
 
-            Vector shift = xDir.ToVector() * offsetX
-             + yDir.ToVector() * offsetY;
+            // Apply offsets in that XY
+            Vector shift = xDir.ToVector() * offsetX + yDir.ToVector() * offsetY;
             Point shiftedStart = worldStart + shift;
 
-            // now build the world‐frame on which the component will sit
+            // Build the world frame and placement
             Frame worldFrame = Frame.Create(shiftedStart, xDir, yDir);
             Matrix compPlacement = Matrix.CreateMapping(worldFrame);
             //Logger.Log($"Computed new compPlacement (world-frame) for extrusion:\n    {MatrixToString(compPlacement)}");
@@ -176,6 +184,19 @@ namespace AESCConstruct25.FrameGenerator.Modules
             //(reuseComponent == null
             //    ? "placed in world via Component.Placement."
             //    : "body remains in component’s existing local frame."));
+        }
+
+        private static Vector MostOrthogonalWorldAxis(Vector v)
+        {
+            var axes = new[] { Vector.Create(0, 0, 1), Vector.Create(0, 1, 0), Vector.Create(1, 0, 0) };
+            Vector best = axes[0];
+            double bestScore = 1.0 - Math.Abs(Vector.Dot(v, best));
+            for (int i = 1; i < axes.Length; i++)
+            {
+                double score = 1.0 - Math.Abs(Vector.Dot(v, axes[i]));
+                if (score > bestScore) { bestScore = score; best = axes[i]; }
+            }
+            return best;
         }
 
         private static string[] GetArgs(string profileType, Dictionary<string, string> pd)

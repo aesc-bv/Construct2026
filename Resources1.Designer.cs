@@ -173,6 +173,16 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] Menu_Connector {
+            get {
+                object obj = ResourceManager.GetObject("Menu_Connector", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] Menu_Dock {
             get {
                 object obj = ResourceManager.GetObject("Menu_Dock", resourceCulture);

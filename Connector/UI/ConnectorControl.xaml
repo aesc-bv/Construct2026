@@ -73,7 +73,6 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <TextBlock Tag="ConnectorShape"
                                    x:Name="ConnectorShape"
@@ -87,20 +86,6 @@
                                   Margin="0,0,0,0"
                                   Grid.Column="1"
                                   Style="{StaticResource ComboBoxFlatStyle}" />
-                        <StackPanel Grid.Row="1"
-                                    Orientation="Horizontal"
-                                    Margin="0,5,0,0">
-                            <CheckBox x:Name="connectorUseCustom"
-                                      Tag="connectorUseCustom"
-                                      Margin="0,0,10,0"
-                                      VerticalAlignment="Center" />
-                            <TextBlock Tag="connectorUseCustomText"
-                                       x:Name="connectorUseCustomText"
-                                       Text="Use custom"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,0,10,0"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
                     </Grid>
 
                     <Grid Grid.Row="1"

@@ -70,7 +70,7 @@ namespace AESCConstruct25.UIMain
                 "Open the settings sidebar",
                 Resources.settings,
                 () => Show(SettingsCommand),
-                valid
+                true
             );
 
             Register(
@@ -122,7 +122,7 @@ namespace AESCConstruct25.UIMain
                 ConnectorCommand,
                 Localization.Language.Translate("Ribbon.Button.Connector"),
                 "Open the connector pane",
-                Resources.Engraving,
+                Resources.Menu_Connector,
                 () => Show(ConnectorCommand),
                 valid
             );
