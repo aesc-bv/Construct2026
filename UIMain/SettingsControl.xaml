@@ -16,12 +16,13 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
-                  Margin="0">
+                  Height="588">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="50" />
+                <RowDefinition Height="50" />
             </Grid.RowDefinitions>
 
             <!-- Title -->
@@ -74,51 +75,109 @@
 
                 <!-- BOM placement -->
                 <Expander Tag="Expander_BOMPlacement"
-                          Header="BOM placement"
+                          Header="BOM settings"
                           IsExpanded="False">
-                    <GroupBox Tag="Group_CoordinatesOrigin"
-                              Header="Coordinates and origin"
-                              Margin="0,10">
-                        <Grid Margin="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition />
-                                <RowDefinition />
-                            </Grid.RowDefinitions>
+                    <StackPanel>
+                        <GroupBox Tag="Group_CoordinatesOrigin"
+                                  Header="Coordinates and origin"
+                                  Margin="0,10,0,5">
+                            <StackPanel>
+                                <Grid Margin="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition />
+                                        <RowDefinition />
+                                    </Grid.RowDefinitions>
 
-                            <TextBlock Tag="Label_AnchorX"
-                                       Grid.Row="0"
-                                       Grid.Column="0"
-                                       Text="Anchor X:" />
-                            <TextBox x:Name="AnchorXTextBox"
-                                     Grid.Row="0"
-                                     Grid.Column="1" />
+                                    <TextBlock Tag="Label_AnchorX"
+                                               Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Anchor X:"
+                                               VerticalAlignment="Center" />
+                                    <TextBox x:Name="AnchorXTextBox"
+                                             Grid.Row="0"
+                                             Grid.Column="1"
+                                             Height="20"
+                                             Margin="5,0" />
 
-                            <TextBlock Tag="Label_AnchorY"
-                                       Grid.Row="1"
-                                       Grid.Column="0"
-                                       Text="Anchor Y:" />
-                            <TextBox x:Name="AnchorYTextBox"
-                                     Grid.Row="1"
-                                     Grid.Column="1" />
+                                    <TextBlock Tag="Label_AnchorY"
+                                               Grid.Row="1"
+                                               Grid.Column="0"
+                                               Text="Anchor Y:"
+                                               VerticalAlignment="Center" />
+                                    <TextBox x:Name="AnchorYTextBox"
+                                             Grid.Row="1"
+                                             Grid.Column="1"
+                                             Height="20"
+                                             Margin="5,0" />
 
-                            <TextBlock Tag="Label_Corner"
-                                       Grid.Row="0"
-                                       Grid.Column="2"
-                                       Margin="10,0"
-                                       Text="Corner:" />
-                            <ComboBox x:Name="CornerComboBox"
-                                      Grid.Row="0"
-                                      Grid.Column="3"
-                                      ItemsSource="{Binding CornerOptions}"
-                                      Style="{StaticResource ComboBoxFlatStyle}" />
-                        </Grid>
-                    </GroupBox>
+                                    <TextBlock Tag="Label_Corner"
+                                               Grid.Row="0"
+                                               Grid.Column="2"
+                                               Margin="5,0"
+                                               Text="Corner:"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox x:Name="CornerComboBox"
+                                              Grid.Row="0"
+                                              Grid.Column="3"
+                                              ItemsSource="{Binding CornerOptions}"
+                                              Style="{StaticResource ComboBoxFlatStyle}" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Tag="Label_BOMAnchor"
+                                               Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Drawing sheet anchor:"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox x:Name="Label_BOMAnchorComboBox"
+                                              Grid.Row="0"
+                                              Grid.Column="1"
+                                              ItemsSource="{Binding AnchorOptions}"
+                                              Style="{StaticResource ComboBoxFlatStyle}" />
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Tag="Group_Units"
+                                  Header="Units"
+                                  Margin="0,0,0,5">
+                            <Grid Margin="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Tag="Label_BOMLengthUnit"
+                                           Grid.Row="0"
+                                           Grid.Column="0"
+                                           Text="Unit Length:"
+                                           VerticalAlignment="Center" />
+                                <ComboBox x:Name="Label_BOMLengthUnitComboBox"
+                                          Grid.Row="0"
+                                          Grid.Column="1"
+                                          ItemsSource="{Binding UnitOptions}"
+                                          Style="{StaticResource ComboBoxFlatStyle}" />
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
                 </Expander>
 
                 <!-- Material options -->
@@ -200,12 +259,12 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition />
-                                    <RowDefinition />
-                                    <RowDefinition />
-                                    <RowDefinition />
-                                    <RowDefinition />
-                                    <RowDefinition />
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0"
@@ -230,7 +289,7 @@
                                 <TextBlock Tag="Label_LicenseDetails"
                                            Grid.Row="3"
                                            Grid.Column="0"
-                                           Text="License Details:"
+                                           Text="License Expiration:"
                                            VerticalAlignment="Center" />
                                 <TextBlock x:Name="LicenseDetailsValue"
                                            Grid.Row="3"
@@ -271,6 +330,22 @@
                     HorizontalAlignment="Center"
                     Margin="0,10"
                     Click="SaveButton_Click" />
+            <!-- Save button -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Width="260"  Grid.Row="3">
+                <Button Tag="ImportSettings"
+                        Content="Import settings"
+                        Style="{StaticResource FooterButtonStyle}"
+                        HorizontalAlignment="Center"
+                        Margin="0,10,10,10"
+                        Click="ImportSettingsButton_Click" />
+
+                <Button Tag="ExportSettings"
+                        Content="Export settings"
+                        Style="{StaticResource FooterButtonStyle}"
+                        HorizontalAlignment="Center"
+                        Margin="10,10, 0, 10"
+                        Click="ExportSettingsButton_Click" />
+            </StackPanel>
         </Grid>
     </ScrollViewer>
 </UserControl>

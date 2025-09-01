@@ -9,13 +9,13 @@
       <Value Profile="(Default)">Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U</Value>
     </Setting>
     <Setting Name="TableAnchorX" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0.02</Value>
+      <Value Profile="(Default)">15.75</Value>
     </Setting>
     <Setting Name="TableAnchorY" Type="System.Double" Scope="User">
-      <Value Profile="(Default)">0.02</Value>
+      <Value Profile="(Default)">30</Value>
     </Setting>
     <Setting Name="TableLocationPoint" Type="System.String" Scope="User">
-      <Value Profile="(Default)">BottomRightCorner</Value>
+      <Value Profile="(Default)">TopRightCorner</Value>
     </Setting>
     <Setting Name="MatInExcel" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -36,43 +36,55 @@
       <Value Profile="(Default)">EN</Value>
     </Setting>
     <Setting Name="ConnectorProperties" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Connectors\ConnectorProperties.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Connectors\ConnectorProperties.csv</Value>
     </Setting>
     <Setting Name="CompProperties" Type="System.String" Scope="User">
-      <Value Profile="(Default)">CustomProperty\CompProperties.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\CustomProperty\CompProperties.csv</Value>
     </Setting>
     <Setting Name="Bolt" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Fasteners\Bolt.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Fasteners\Bolt.csv</Value>
     </Setting>
     <Setting Name="Nut" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Fasteners\Nut.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Fasteners\Nut.csv</Value>
     </Setting>
     <Setting Name="Washer" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Fasteners\Washer.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Fasteners\Washer.csv</Value>
     </Setting>
     <Setting Name="PlatesProperties" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Plates\PlatesProperties.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Plates\PlatesProperties.csv</Value>
     </Setting>
     <Setting Name="Profiles_Circular" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_Circular.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_Circular.csv</Value>
     </Setting>
     <Setting Name="Profiles_H" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_H.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_H.csv</Value>
     </Setting>
     <Setting Name="Profiles_L" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_L.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_L.csv</Value>
     </Setting>
     <Setting Name="Profiles_Rectangular" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_Rectangular.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_Rectangular.csv</Value>
     </Setting>
     <Setting Name="Profiles_T" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_T.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_T.csv</Value>
     </Setting>
     <Setting Name="Profiles_U" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Profiles\Profiles_U.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\Profiles\Profiles_U.csv</Value>
     </Setting>
     <Setting Name="profiles" Type="System.String" Scope="User">
-      <Value Profile="(Default)">UserDXFProfiles\profiles.csv</Value>
+      <Value Profile="(Default)">C:\ProgramData\AESCConstruct\UserDXFProfiles\profiles.csv</Value>
+    </Setting>
+    <Setting Name="NetworkLogUser_Enabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="NetworkLogUser_Directory" Type="System.String" Scope="User">
+      <Value Profile="(Default)">%ProgramData%\IPManager\Logs</Value>
+    </Setting>
+    <Setting Name="LengthUnit" Type="System.String" Scope="User">
+      <Value Profile="(Default)">mm</Value>
+    </Setting>
+    <Setting Name="DocumentAnchor" Type="System.String" Scope="User">
+      <Value Profile="(Default)">TopRight</Value>
     </Setting>
   </Settings>
 </SettingsFile>

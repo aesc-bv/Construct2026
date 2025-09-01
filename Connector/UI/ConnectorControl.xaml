@@ -286,7 +286,8 @@
                                  Margin="0"
                                  Text="0"
                                  Grid.Column="1"
-                                 HorizontalAlignment="Right">
+                                 HorizontalAlignment="Right"
+                                 TextChanged="connectorLocation_TextChanged">
                         </TextBox>
                     </Grid>
 

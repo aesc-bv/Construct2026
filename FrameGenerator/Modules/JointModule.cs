@@ -6,7 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Forms;
+using Application = SpaceClaim.Api.V242.Application;
+using Component = SpaceClaim.Api.V242.Component;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
 namespace AESCConstruct25.FrameGenerator.Modules
@@ -131,24 +132,26 @@ namespace AESCConstruct25.FrameGenerator.Modules
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(
-                                $"Error resetting geometry for component '{component?.Name}':\n{ex.Message}",
-                                "JointModule Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                            );
+                            //MessageBox.Show(
+                            //    $"Error resetting geometry for component '{component?.Name}':\n{ex.Message}",
+                            //    "JointModule Error",
+                            //    MessageBoxButtons.OK,
+                            //    MessageBoxIcon.Error
+                            //);
+                            Application.ReportStatus($"Error resetting geometry for component '{component?.Name}':\n{ex.Message}", StatusMessageType.Error, null);
                         }
                     }
                 });
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Unexpected error during geometry reset:\n{ex.Message}",
-                    "JointModule Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                //MessageBox.Show(
+                //    $"Unexpected error during geometry reset:\n{ex.Message}",
+                //    "JointModule Error",
+                //    MessageBoxButtons.OK,
+                //    MessageBoxIcon.Error
+                //);
+                Application.ReportStatus($"Unexpected error during geometry reset:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -251,23 +254,26 @@ namespace AESCConstruct25.FrameGenerator.Modules
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"Error extending geometry for component '{component?.Name}':\n{ex.Message}",
-                            "JointModule Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
+                        //MessageBox.Show(
+                        //    $"Error extending geometry for component '{component?.Name}':\n{ex.Message}",
+                        //    "JointModule Error",
+                        //    MessageBoxButtons.OK,
+                        //    MessageBoxIcon.Error
+                        //);
+
+                        Application.ReportStatus($"Error extending geometry for component '{component?.Name}':\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Unexpected error during geometry extension:\n{ex.Message}",
-                    "JointModule Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                //MessageBox.Show(
+                //    $"Unexpected error during geometry extension:\n{ex.Message}",
+                //    "JointModule Error",
+                //    MessageBoxButtons.OK,
+                //    MessageBoxIcon.Error
+                //);
+                Application.ReportStatus($"Unexpected error during geometry reset:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 

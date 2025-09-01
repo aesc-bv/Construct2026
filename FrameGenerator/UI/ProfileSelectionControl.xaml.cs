@@ -60,12 +60,13 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to initialize ProfileSelectionControl:\n{ex.Message}",
-                    "Initialization Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                //MessageBox.Show(
+                //    $"Failed to initialize ProfileSelectionControl:\n{ex.Message}",
+                //    "Initialization Error",
+                //    MessageBoxButton.OK,
+                //    MessageBoxImage.Error
+                //);
+                Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -332,12 +333,13 @@ namespace AESCConstruct25.FrameGenerator.UI
             string filePath = GetProfileCsvPathFromSettings(profileType);
             if (filePath == null || !File.Exists(filePath))
             {
-                MessageBox.Show(
-                    $"Could not find CSV for profile type '{profileType}'.",
-                    "CSV Not Found",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
+                //MessageBox.Show(
+                //    $"Could not find CSV for profile type '{profileType}'.",
+                //    "CSV Not Found",
+                //    MessageBoxButton.OK,
+                //    MessageBoxImage.Warning
+                //);
+                Application.ReportStatus($"Could not find CSV for profile type '{profileType}'.", StatusMessageType.Error, null);
                 return;
             }
 
@@ -379,12 +381,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                         }
                         else
                         {
-                            MessageBox.Show(
-                                $"Mismatched CSV row:\n{line}",
-                                "CSV Format Warning",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning
-                            );
+                            //MessageBox.Show(
+                            //    $"Mismatched CSV row:\n{line}",
+                            //    "CSV Format Warning",
+                            //    MessageBoxButton.OK,
+                            //    MessageBoxImage.Warning
+                            //);
+                            Application.ReportStatus($"Mismatched CSV row:\n{line}", StatusMessageType.Error, null);
                         }
                     }
 
@@ -394,12 +397,13 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to load CSV:\n{ex.Message}",
-                    "CSV Load Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                //MessageBox.Show(
+                //    $"Failed to load CSV:\n{ex.Message}",
+                //    "CSV Load Error",
+                //    MessageBoxButton.OK,
+                //    MessageBoxImage.Error
+                //);
+                Application.ReportStatus($"Failed to load CSV:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -433,7 +437,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 return;
             }
 
-            // make two equal‐width columns
+            // make two equal-width columns
             DynamicFieldsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             DynamicFieldsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -446,10 +450,13 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                 int columnIndex = i % 2;
 
-                // create sub‐grid for one label+input pair
-                var cellGrid = new Grid();
-                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(25) });                  // fixed 30px for label
-                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) }); // rest
+                // create sub-grid for one label+input pair, with top margin 5px
+                var cellGrid = new Grid
+                {
+                    Margin = new Thickness(0, 5, 0, 0)
+                };
+                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) }); // fixed px for label
+                cellGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(37) }); // rest
 
                 // the small “one-letter” label
                 var label = new TextBlock
@@ -547,11 +554,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Failed to open DXF:\n{ex.Message}",
-                        "DXF → Profile",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    //MessageBox.Show(
+                    //    $"Failed to open DXF:\n{ex.Message}",
+                    //    "DXF → Profile",
+                    //    MessageBoxButton.OK,
+                    //    MessageBoxImage.Error);
+                    Application.ReportStatus($"Failed to open DXF:\n{ex.Message}", StatusMessageType.Information, null);
                     return;
                 }
 
@@ -570,11 +578,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Clipboard.SetText(profile.ProfileString);
 
                 // 6) Let the user know that the string was copied
-                MessageBox.Show(
-                    $"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)",
-                    "DXF → Profile",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                //MessageBox.Show(
+                //    $"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)",
+                //    "DXF → Profile",
+                //    MessageBoxButton.OK,
+                //    MessageBoxImage.Information);
+                Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
 
                 //
                 // 7) Create “C:\ProgramData\AESC_Construct\UserDXFProfiles” if it doesn’t exist
@@ -588,11 +597,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}",
-                        "DXF → Profile",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    //MessageBox.Show(
+                    //$"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}",
+                    //"DXF → Profile",
+                    //MessageBoxButton.OK,
+                    //MessageBoxImage.Warning);
+                    Application.ReportStatus($"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}", StatusMessageType.Error, null);
                     return;
                 }
 
@@ -616,11 +626,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Failed to save preview image to disk:\n{ex.Message}",
-                        "DXF → Profile",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    //MessageBox.Show(
+                    //    $"Failed to save preview image to disk:\n{ex.Message}",
+                    //    "DXF → Profile",
+                    //    MessageBoxButton.OK,
+                    //    MessageBoxImage.Warning);
+
+                    Application.ReportStatus($"Failed to save preview image to disk:\n{ex.Message}", StatusMessageType.Error, null);
                     // If saving PNG fails, omit the image path in CSV
                     imageFileName = "";
                 }
@@ -671,11 +683,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Failed to update CSV:\n{ex.Message}",
-                        "DXF → Profile",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    //MessageBox.Show(
+                    //    $"Failed to update CSV:\n{ex.Message}",
+                    //    "DXF → Profile",
+                    //    MessageBoxButton.OK,
+                    //    MessageBoxImage.Warning);
+                    Application.ReportStatus($"Failed to update CSV:\n{ex.Message}", StatusMessageType.Error, null);
                 }
 
                 //
@@ -702,11 +715,12 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"Failed to render saved preview image:\n{ex.Message}",
-                            "DXF Preview Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
+                        //MessageBox.Show(
+                        //    $"Failed to render saved preview image:\n{ex.Message}",
+                        //    "DXF Preview Error",
+                        //    MessageBoxButton.OK,
+                        //    MessageBoxImage.Warning);
+                        Application.ReportStatus($"Failed to render saved preview image:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
                 if (!string.IsNullOrEmpty(doc.Path))
@@ -783,12 +797,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show(
-                                    $"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}",
-                                    "Profile Image Error",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Warning
-                                );
+                                //MessageBox.Show(
+                                //    $"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}",
+                                //    "Profile Image Error",
+                                //    MessageBoxButton.OK,
+                                //    MessageBoxImage.Warning
+                                //);
+                                Application.ReportStatus($"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
                             }
                         }
                     }
@@ -864,12 +879,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(
-                                $"Failed to update CSV when deleting profile:\n{ex.Message}",
-                                "Profile Delete Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning
-                            );
+                            //MessageBox.Show(
+                            //    $"Failed to update CSV when deleting profile:\n{ex.Message}",
+                            //    "Profile Delete Error",
+                            //    MessageBoxButton.OK,
+                            //    MessageBoxImage.Warning
+                            //);
+                            Application.ReportStatus($"Failed to update CSV when deleting profile:\n{ex.Message}", StatusMessageType.Error, null);
                         }
 
                         if (!string.IsNullOrEmpty(prof.ImgString))
@@ -883,12 +899,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 }
                                 catch (Exception ex)
                                 {
-                                    MessageBox.Show(
-                                        $"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}",
-                                        "Profile Delete Error",
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Warning
-                                    );
+                                    //MessageBox.Show(
+                                    //    $"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}",
+                                    //    "Profile Delete Error",
+                                    //    MessageBoxButton.OK,
+                                    //    MessageBoxImage.Warning
+                                    //);
+                                    Application.ReportStatus($"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
                                 }
                             }
                         }
@@ -907,198 +924,157 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error loading user profiles:\n{ex.Message}",
-                    "Profile Load Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
+                //MessageBox.Show(
+                //    $"Error loading user profiles:\n{ex.Message}",
+                //    "Profile Load Error",
+                //    MessageBoxButton.OK,
+                //    MessageBoxImage.Warning
+                //);
+                Application.ReportStatus($"Error loading user profiles:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
 
         private void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
-            var win = Window.ActiveWindow;
-            if (win == null)
-                return;
-
-            //var existingNames = win.Document.MainPart
-            //              .GetChildren<Component>()
-            //              .Select(c => c.Name)
-            //              .ToHashSet();
-            var existingComps = win.Document.MainPart
-              .GetChildren<Component>()
-              .ToHashSet();
-
-
-
-            double.TryParse(
-                RotationAngleTextBox.Text,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out rotationAngle
-            );
-            // Logger.Log($"anglerot{rotationAngle}");
-
-            var oldOri = Application.UserOptions.WorldOrientation;
-            Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
-            try
+            WriteBlock.ExecuteTask("Generate Profile", () =>
             {
-                // If nothing has been chosen, bail out:
-                if (string.IsNullOrEmpty(selectedDXFPath)
-                 && inputFieldMap.Count == 0
-                 && string.IsNullOrEmpty(selectedProfileString))
-                {
-                    System.Windows.MessageBox.Show(
-                        "Please select a profile (built-in or user-saved) or load a DXF file before generating.",
-                        "Selection Required",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                var win = Window.ActiveWindow;
+                if (win == null)
                     return;
-                }
 
-                bool isHollow = HollowCheckBox.IsChecked == false;
-                bool updateBOM = UpdateBOM.IsChecked == true;
-                // Logger.Log($"updateBOM {updateBOM}");
-                // Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
+                //var existingNames = win.Document.MainPart
+                //              .GetChildren<Component>()
+                //              .Select(c => c.Name)
+                //              .ToHashSet();
+                var existingComps = win.Document.MainPart
+                  .GetChildren<Component>()
+                  .ToHashSet();
 
-                //
-                // ─── 1) USER‐SAVED PROFILE (selectedProfileString != "") ───────────────────────────────
-                //
-                // Log exactly the raw string (with no trailing “.”):
-                // Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
-                if (!string.IsNullOrEmpty(selectedProfileString))
+
+
+                double.TryParse(
+                    RotationAngleTextBox.Text,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out rotationAngle
+                );
+                // Logger.Log($"anglerot{rotationAngle}");
+
+                var oldOri = Application.UserOptions.WorldOrientation;
+                Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
+                try
                 {
-                    // ─── 1a) SPLIT INTO INDIVIDUAL CURVE STRINGS ───────────────────────────────────────
-                    var curves = new List<ITrimmedCurve>();
-
-                    // First split on '&' → each loop
-                    string[] loopStrings = selectedProfileString.Split('&');
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25: Number of loops found = {loopStrings.Length}\n");
-
-                    for (int loopIndex = 0; loopIndex < loopStrings.Length; loopIndex++)
+                    // If nothing has been chosen, bail out:
+                    if (string.IsNullOrEmpty(selectedDXFPath)
+                     && inputFieldMap.Count == 0
+                     && string.IsNullOrEmpty(selectedProfileString))
                     {
-                        string loopStr = loopStrings[loopIndex].Trim();
-                        File.AppendAllText(logPath,
-                            $"AESCConstruct25: Loop[{loopIndex}] = \"{loopStr}\"\n");
+                        //System.Windows.MessageBox.Show(
+                        //    "Please select a profile (built-in or user-saved) or load a DXF file before generating.",
+                        //    "Selection Required",
+                        //    MessageBoxButton.OK,
+                        //    MessageBoxImage.Warning);
 
-                        // Now split that loop on spaces → each “S…E…” or “S…E…M…” piece
-                        string[] curveChunks = loopStr.Split(' ');
-                        File.AppendAllText(logPath,
-                            $"AESCConstruct25:   → Found {curveChunks.Length} curve‐chunks in this loop.\n");
-
-                        for (int i = 0; i < curveChunks.Length; i++)
-                        {
-                            string curveStr = curveChunks[i].Trim();
-                            if (string.IsNullOrEmpty(curveStr))
-                                continue;
-
-                            File.AppendAllText(logPath,
-                                $"AESCConstruct25:     • curveStr[{i}] = \"{curveStr}\"\n");
-
-                            try
-                            {
-                                ITrimmedCurve c = DXFImportHelper.CurveFromString(curveStr);
-                                if (c == null)
-                                {
-                                    File.AppendAllText(logPath,
-                                        $"AESCConstruct25 WARNING: CurveFromString returned NULL for “{curveStr}”\n");
-                                }
-                                else
-                                {
-                                    curves.Add(c);
-
-                                    // Log the geometry type and key points:
-                                    if (c is CurveSegment seg && seg.Geometry is Line)
-                                    {
-                                        var ps = seg.StartPoint;
-                                        var pe = seg.EndPoint;
-                                        File.AppendAllText(logPath,
-                                            $"AESCConstruct25 LOG:     → Parsed LINE: Start=({ps.X:0.###},{ps.Y:0.###})  End=({pe.X:0.###},{pe.Y:0.###})\n");
-                                    }
-                                    else if (c is CurveSegment arcSeg && arcSeg.Geometry is Circle cir)
-                                    {
-                                        var center = cir.Axis.Origin;
-                                        double radius = cir.Radius;
-                                        File.AppendAllText(logPath,
-                                            $"AESCConstruct25 LOG:     → Parsed CIRCLE/ARC: Center=({center.X:0.###},{center.Y:0.###})  Radius={radius:0.###}\n");
-                                    }
-                                    else
-                                    {
-                                        File.AppendAllText(logPath,
-                                            $"AESCConstruct25 LOG:     → Parsed curve of unknown type (neither LINE nor CIRCLE).\n");
-                                    }
-                                }
-                            }
-                            catch (Exception exParse)
-                            {
-                                File.AppendAllText(logPath,
-                                    $"AESCConstruct25 ERROR: Exception in CurveFromString(\"{curveStr}\") : {exParse}\n");
-                            }
-                        }
-                    }
-
-                    var firstSeg = (CurveSegment)curves[0];
-                    // Logger.Log($"firstseg {firstSeg.StartPoint}, {firstSeg.EndPoint}\n");
-                    var lastSeg = (CurveSegment)curves[curves.Count - 1];
-                    // Logger.Log($"lastSeg {lastSeg.StartPoint}, {lastSeg.EndPoint}\n");
-                    var diff = (firstSeg.StartPoint - lastSeg.EndPoint).Magnitude;
-                    // Logger.Log($"  Loop closure gap = {diff:0.########} m\n");
-
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25: Total curves parsed = {curves.Count}\n");
-
-                    if (curves.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show(
-                            "Could not reconstruct any curves from the saved profile string.",
-                            "Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                        Application.ReportStatus("Please select a profile (built-in or user-saved) or load a DXF file before generating.", StatusMessageType.Warning, null);
                         return;
                     }
 
-                    // ─── 1b) COMPUTE BOUNDING‐BOX (width, height) ─────────────────────────────────────────
-                    var (profW, profH) = DXFImportHelper.GetDXFSize(curves);
-                    double w = profW;
-                    double h = profH;
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25: Bounding box from GetDXFSize → width = {w:0.####}, height = {h:0.####}\n");
+                    bool isHollow = HollowCheckBox.IsChecked == false;
+                    bool updateBOM = UpdateBOM.IsChecked == true;
+                    // Logger.Log($"updateBOM {updateBOM}");
+                    // Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
 
-                    // ─── 1c) FIGURE OUT OFFSET RADIO CHOICE ──────────────────────────────────────────────
-                    double offsetX = 0, offsetY = 0;
-                    if (Offset_TopLeft.IsChecked == true) { offsetX = w / 2; offsetY = -h / 2; }
-                    else if (Offset_TopCenter.IsChecked == true) { offsetX = 0; offsetY = -h / 2; }
-                    else if (Offset_TopRight.IsChecked == true) { offsetX = -w / 2; offsetY = -h / 2; }
-                    else if (Offset_MiddleLeft.IsChecked == true) { offsetX = w / 2; offsetY = 0; }
-                    else if (Offset_Center.IsChecked == true) { offsetX = 0; offsetY = 0; }
-                    else if (Offset_MiddleRight.IsChecked == true) { offsetX = -w / 2; offsetY = 0; }
-                    else if (Offset_BottomLeft.IsChecked == true) { offsetX = w / 2; offsetY = h / 2; }
-                    else if (Offset_BottomCenter.IsChecked == true) { offsetX = 0; offsetY = h / 2; }
-                    else if (Offset_BottomRight.IsChecked == true) { offsetX = -w / 2; offsetY = h / 2; }
-
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25: (User-saved) Applying Offset X={offsetX:0.####}, Y={offsetY:0.####}\n");
-
-                    foreach (var c in curves)
+                    //
+                    // ─── 1) USER‐SAVED PROFILE (selectedProfileString != "") ───────────────────────────────
+                    //
+                    // Log exactly the raw string (with no trailing “.”):
+                    // Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
+                    if (!string.IsNullOrEmpty(selectedProfileString))
                     {
-                        if (c is CurveSegment seg)
+                        // ─── 1a) SPLIT INTO INDIVIDUAL CURVE STRINGS ───────────────────────────────────────
+                        var curves = new List<ITrimmedCurve>();
+
+                        // First split on '&' → each loop
+                        string[] loopStrings = selectedProfileString.Split('&');
+
+                        for (int loopIndex = 0; loopIndex < loopStrings.Length; loopIndex++)
                         {
-                            var ps = seg.StartPoint;
-                            var pe = seg.EndPoint;
-                            File.AppendAllText(logPath,
-                                $"  → CSV curve: Start=({ps.X:0.######},{ps.Y:0.######},{ps.Z:0.######})  " +
-                                $"End=({pe.X:0.######},{pe.Y:0.######},{pe.Z:0.######})\n");
+                            string loopStr = loopStrings[loopIndex].Trim();
+
+                            // Now split that loop on spaces → each “S…E…” or “S…E…M…” piece
+                            string[] curveChunks = loopStr.Split(' ');
+
+                            for (int i = 0; i < curveChunks.Length; i++)
+                            {
+                                string curveStr = curveChunks[i].Trim();
+                                if (string.IsNullOrEmpty(curveStr))
+                                    continue;
+
+                                try
+                                {
+                                    ITrimmedCurve c = DXFImportHelper.CurveFromString(curveStr);
+                                    if (c != null)
+                                    {
+                                        curves.Add(c);
+
+                                        // Log the geometry type and key points:
+                                        if (c is CurveSegment seg && seg.Geometry is Line)
+                                        {
+                                            var ps = seg.StartPoint;
+                                            var pe = seg.EndPoint;
+                                        }
+                                        else if (c is CurveSegment arcSeg && arcSeg.Geometry is Circle cir)
+                                        {
+                                            var center = cir.Axis.Origin;
+                                            double radius = cir.Radius;
+                                        }
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                }
+                            }
                         }
-                    }
-                    // ─── 1d) EXTRUDE THE CURVES ───────────────────────────────────────────────────────────
-                    try
-                    {
-                        WriteBlock.ExecuteTask("Generate Profile (user-saved)", () =>
-                        {
 
+                        var firstSeg = (CurveSegment)curves[0];
+                        var lastSeg = (CurveSegment)curves[curves.Count - 1];
+                        var diff = (firstSeg.StartPoint - lastSeg.EndPoint).Magnitude;
+
+                        if (curves.Count == 0)
+                        {
+                            Application.ReportStatus("Could not reconstruct any curves from the saved profile string.", StatusMessageType.Warning, null);
+                            return;
+                        }
+
+                        // ─── 1b) COMPUTE BOUNDING‐BOX (width, height) ─────────────────────────────────────────
+                        var (profW, profH) = DXFImportHelper.GetDXFSize(curves);
+                        double w = profW;
+                        double h = profH;
+
+                        // ─── 1c) FIGURE OUT OFFSET RADIO CHOICE ──────────────────────────────────────────────
+                        double offsetX = 0, offsetY = 0;
+                        if (Offset_TopLeft.IsChecked == true) { offsetX = w / 2; offsetY = -h / 2; }
+                        else if (Offset_TopCenter.IsChecked == true) { offsetX = 0; offsetY = -h / 2; }
+                        else if (Offset_TopRight.IsChecked == true) { offsetX = -w / 2; offsetY = -h / 2; }
+                        else if (Offset_MiddleLeft.IsChecked == true) { offsetX = w / 2; offsetY = 0; }
+                        else if (Offset_Center.IsChecked == true) { offsetX = 0; offsetY = 0; }
+                        else if (Offset_MiddleRight.IsChecked == true) { offsetX = -w / 2; offsetY = 0; }
+                        else if (Offset_BottomLeft.IsChecked == true) { offsetX = w / 2; offsetY = h / 2; }
+                        else if (Offset_BottomCenter.IsChecked == true) { offsetX = 0; offsetY = h / 2; }
+                        else if (Offset_BottomRight.IsChecked == true) { offsetX = -w / 2; offsetY = h / 2; }
+
+                        foreach (var c in curves)
+                        {
+                            if (c is CurveSegment seg)
+                            {
+                                var ps = seg.StartPoint;
+                                var pe = seg.EndPoint;
+                            }
+                        }
+                        // ─── 1d) EXTRUDE THE CURVES ───────────────────────────────────────────────────────────
+                        try
+                        {
                             ExtrudeProfileCommand.ExecuteExtrusion(
                                 "CSV",      // e.g. “square”
                                 curves,            // List<ITrimmedCurve>
@@ -1109,49 +1085,40 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 updateBOM,
                                 selectedProfileString
                             );
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        File.AppendAllText(logPath,
-                            $"AESCConstruct25 ERROR extruding user-saved “{selectedProfile}”: {ex}\n");
-                        System.Windows.MessageBox.Show(
-                            "An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.",
-                            "Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-                    }
-                    return;
-                }
-
-                //
-                // ─── 2) LOADED DXF (selectedDXFPath != "" && dxfContours != null) ───────────────────────────────────
-                //
-                if (!string.IsNullOrEmpty(selectedDXFPath) && dxfContours != null)
-                {
-                    selectedProfile = "DXF";
-                    var (DXFwidth, DXFheight) = DXFImportHelper.GetDXFSize(dxfContours);
-                    double w = DXFwidth;
-                    double h = DXFheight;
-
-                    double offsetX = 0, offsetY = 0;
-                    if (Offset_TopLeft.IsChecked == true) { offsetX = w / 2; offsetY = -h / 2; }
-                    else if (Offset_TopCenter.IsChecked == true) { offsetX = 0; offsetY = -h / 2; }
-                    else if (Offset_TopRight.IsChecked == true) { offsetX = -w / 2; offsetY = -h / 2; }
-                    else if (Offset_MiddleLeft.IsChecked == true) { offsetX = w / 2; offsetY = 0; }
-                    else if (Offset_Center.IsChecked == true) { offsetX = 0; offsetY = 0; }
-                    else if (Offset_MiddleRight.IsChecked == true) { offsetX = -w / 2; offsetY = 0; }
-                    else if (Offset_BottomLeft.IsChecked == true) { offsetX = w / 2; offsetY = h / 2; }
-                    else if (Offset_BottomCenter.IsChecked == true) { offsetX = 0; offsetY = h / 2; }
-                    else if (Offset_BottomRight.IsChecked == true) { offsetX = -w / 2; offsetY = h / 2; }
-
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25: (DXF) Applying Offset X={offsetX:0.####}, Y={offsetY:0.####}\n");
-
-                    try
-                    {
-                        WriteBlock.ExecuteTask("Generate Profile (DXF)", () =>
+                            //});
+                        }
+                        catch (Exception)
                         {
+                            Application.ReportStatus("An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.", StatusMessageType.Error, null);
+                        }
+                        return;
+                    }
+
+                    //
+                    // ─── 2) LOADED DXF (selectedDXFPath != "" && dxfContours != null) ───────────────────────────────────
+                    //
+                    if (!string.IsNullOrEmpty(selectedDXFPath) && dxfContours != null)
+                    {
+                        selectedProfile = "DXF";
+                        var (DXFwidth, DXFheight) = DXFImportHelper.GetDXFSize(dxfContours);
+                        double w = DXFwidth;
+                        double h = DXFheight;
+
+                        double offsetX = 0, offsetY = 0;
+                        if (Offset_TopLeft.IsChecked == true) { offsetX = w / 2; offsetY = -h / 2; }
+                        else if (Offset_TopCenter.IsChecked == true) { offsetX = 0; offsetY = -h / 2; }
+                        else if (Offset_TopRight.IsChecked == true) { offsetX = -w / 2; offsetY = -h / 2; }
+                        else if (Offset_MiddleLeft.IsChecked == true) { offsetX = w / 2; offsetY = 0; }
+                        else if (Offset_Center.IsChecked == true) { offsetX = 0; offsetY = 0; }
+                        else if (Offset_MiddleRight.IsChecked == true) { offsetX = -w / 2; offsetY = 0; }
+                        else if (Offset_BottomLeft.IsChecked == true) { offsetX = w / 2; offsetY = h / 2; }
+                        else if (Offset_BottomCenter.IsChecked == true) { offsetX = 0; offsetY = h / 2; }
+                        else if (Offset_BottomRight.IsChecked == true) { offsetX = -w / 2; offsetY = h / 2; }
+
+                        try
+                        {
+                            //WriteBlock.ExecuteTask("Generate Profile (DXF)", () =>
+                            //{
                             ExtrudeProfileCommand.ExecuteExtrusion(
                                 selectedProfile,   // “DXF”
                                 dxfContours,       // List<ITrimmedCurve>
@@ -1162,78 +1129,70 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 updateBOM,
                                 ""
                             );
-                        });
+                            //});
+                        }
+                        catch (Exception)
+                        {
+                            Application.ReportStatus("An error occurred while extruding the DXF contours.\nSee log in addin folder for details.", StatusMessageType.Error, null);
+                        }
+                        return;
                     }
-                    catch (Exception exDxf)
+
+                    //
+                    // ─── 3) BUILT‐IN SHAPES (Rectangular, Circular, H, L, U, T) ───────────────────────────────
+                    //
+                    double wBuilt = 0, hBuilt = 0;
+                    if (selectedProfile == "Circular")
                     {
-                        File.AppendAllText(logPath,
-                            $"AESCConstruct25 ERROR extruding DXF contours: {exDxf}\n");
-                        System.Windows.MessageBox.Show(
-                            "An error occurred while extruding the DXF contours.\nSee log in addin folder for details.",
-                            "Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                        wBuilt = inputFieldMap.ContainsKey("D")
+                            ? double.Parse(inputFieldMap["D"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                            : 0.0;
+                        hBuilt = wBuilt;
                     }
-                    return;
-                }
-
-                //
-                // ─── 3) BUILT‐IN SHAPES (Rectangular, Circular, H, L, U, T) ───────────────────────────────
-                //
-                double wBuilt = 0, hBuilt = 0;
-                if (selectedProfile == "Circular")
-                {
-                    wBuilt = inputFieldMap.ContainsKey("D")
-                        ? double.Parse(inputFieldMap["D"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                        : 0.0;
-                    hBuilt = wBuilt;
-                }
-                else if (selectedProfile == "L")
-                {
-                    wBuilt = inputFieldMap.ContainsKey("b")
-                        ? double.Parse(inputFieldMap["b"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                        : 0.0;
-                    hBuilt = inputFieldMap.ContainsKey("a")
-                        ? double.Parse(inputFieldMap["a"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                        : 0.0;
-                }
-                else
-                {
-                    wBuilt = inputFieldMap.ContainsKey("w")
-                        ? double.Parse(inputFieldMap["w"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                        : 0.0;
-                    hBuilt = inputFieldMap.ContainsKey("h")
-                        ? double.Parse(inputFieldMap["h"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                        : 0.0;
-                }
-
-                double offsetXB = 0, offsetYB = 0;
-                if (Offset_TopLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = -hBuilt / 2; }
-                else if (Offset_TopCenter.IsChecked == true) { offsetXB = 0; offsetYB = -hBuilt / 2; }
-                else if (Offset_TopRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = -hBuilt / 2; }
-                else if (Offset_MiddleLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = 0; }
-                else if (Offset_Center.IsChecked == true) { offsetXB = 0; offsetYB = 0; }
-                else if (Offset_MiddleRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = 0; }
-                else if (Offset_BottomLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = hBuilt / 2; }
-                else if (Offset_BottomCenter.IsChecked == true) { offsetXB = 0; offsetYB = hBuilt / 2; }
-                else if (Offset_BottomRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = hBuilt / 2; }
-
-                File.AppendAllText(logPath,
-                    $"AESCConstruct25: (Built-in) Applying Offset X={offsetXB:0.####}, Y={offsetYB:0.####}\n");
-                bool isHollowBuilt = HollowCheckBox.IsChecked == false;
-
-                try
-                {
-                    var dataDict = inputFieldMap
-                    .ToDictionary(
-                        kvp => kvp.Key,                // e.g. "w", "h", "t", etc.
-                        kvp => kvp.Value.Text.Trim()   // the string value the user typed
-                    );
-
-                    dataDict["Name"] = csvRowNames[SizeComboBox.SelectedIndex];
-
-                    WriteBlock.ExecuteTask("Generate Profile (built-in)", () =>
+                    else if (selectedProfile == "L")
                     {
+                        wBuilt = inputFieldMap.ContainsKey("b")
+                            ? double.Parse(inputFieldMap["b"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                            : 0.0;
+                        hBuilt = inputFieldMap.ContainsKey("a")
+                            ? double.Parse(inputFieldMap["a"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                            : 0.0;
+                    }
+                    else
+                    {
+                        wBuilt = inputFieldMap.ContainsKey("w")
+                            ? double.Parse(inputFieldMap["w"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                            : 0.0;
+                        hBuilt = inputFieldMap.ContainsKey("h")
+                            ? double.Parse(inputFieldMap["h"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
+                            : 0.0;
+                    }
+
+                    double offsetXB = 0, offsetYB = 0;
+                    if (Offset_TopLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = -hBuilt / 2; }
+                    else if (Offset_TopCenter.IsChecked == true) { offsetXB = 0; offsetYB = -hBuilt / 2; }
+                    else if (Offset_TopRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = -hBuilt / 2; }
+                    else if (Offset_MiddleLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = 0; }
+                    else if (Offset_Center.IsChecked == true) { offsetXB = 0; offsetYB = 0; }
+                    else if (Offset_MiddleRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = 0; }
+                    else if (Offset_BottomLeft.IsChecked == true) { offsetXB = wBuilt / 2; offsetYB = hBuilt / 2; }
+                    else if (Offset_BottomCenter.IsChecked == true) { offsetXB = 0; offsetYB = hBuilt / 2; }
+                    else if (Offset_BottomRight.IsChecked == true) { offsetXB = -wBuilt / 2; offsetYB = hBuilt / 2; }
+
+                    bool isHollowBuilt = HollowCheckBox.IsChecked == false;
+
+                    try
+                    {
+                        var dataDict = inputFieldMap
+                        .ToDictionary(
+                            kvp => kvp.Key,                // e.g. "w", "h", "t", etc.
+                            kvp => kvp.Value.Text.Trim()   // the string value the user typed
+                        );
+
+                        dataDict["Name"] = csvRowNames[SizeComboBox.SelectedIndex];
+
+                        //WriteBlock.ExecuteTask("Generate Profile (built-in)", () =>
+                        //{
                         // Logger.Log($"profile{dataDict}");
                         ExtrudeProfileCommand.ExecuteExtrusion(
                             selectedProfile,  // e.g. "Rectangular", "H", etc.
@@ -1245,47 +1204,33 @@ namespace AESCConstruct25.FrameGenerator.UI
                             updateBOM,
                             ""
                         );
-                    });
+                        //});
+                    }
+                    catch (Exception)
+                    {
+                        Application.ReportStatus("An error occurred while extruding the built‐in profile.", StatusMessageType.Error, null);
+                    }
                 }
-                catch (Exception exBuiltIn)
+                finally
                 {
-                    File.AppendAllText(logPath,
-                        $"AESCConstruct25 ERROR extruding built‐in “{selectedProfile}”: {exBuiltIn}\n");
-                    System.Windows.MessageBox.Show(
-                        "An error occurred while extruding the built‐in profile.\nSee log file in addin folder for details.",
-                        "Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                }
-            }
-            finally
-            {
-                //var newComps = win.Document.MainPart
-                //        .GetChildren<Component>()
-                //        .Where(c => !existingNames.Contains(c.Name))
-                //        .ToList();
-                var currentComps = win.Document.MainPart
-                      .GetChildren<Component>()
-                      .ToList();
+                    var currentComps = win.Document.MainPart
+                          .GetChildren<Component>()
+                          .ToList();
 
-                var newComps = currentComps
-                      .Where(c => !existingComps.Contains(c))
-                      .ToList();
+                    var newComps = currentComps
+                          .Where(c => !existingComps.Contains(c))
+                          .ToList();
 
-                // 3) if we have an angle and new components, rotate them
-                //if (rotationAngle != 0.0 && newComps.Count > 0)
-                //    RotateComponentCommand.ApplyRotation(win, newComps, rotationAngle);
-                if (rotationAngle != 0.0 && newComps.Count > 0)
-                {
-                    WriteBlock.ExecuteTask("Rotate Profile", () =>
+                    // 3) if we have an angle and new components, rotate them
+                    if (rotationAngle != 0.0 && newComps.Count > 0)
                     {
                         RotateComponentCommand.ApplyRotation(win, newComps, rotationAngle);
-                    });
-                }
+                    }
 
-                // restore whatever the user had selected
-                Application.UserOptions.WorldOrientation = oldOri;
-            }
+                    // restore whatever the user had selected
+                    Application.UserOptions.WorldOrientation = oldOri;
+                }
+            });
         }
 
         private void HollowCheckBox_Checked(object sender, RoutedEventArgs e)

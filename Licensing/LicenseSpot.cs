@@ -1,265 +1,305 @@
-﻿//using LicenseSpot.Framework;
-//using SpaceClaim.Api.V242;
-//using System;
-//using System.IO;
-//using System.Windows;
-//using AESCConstruct25.FrameGenerator.Utilities;
-//using AESCConstruct25.FrameGenerator.UI;
-
-//namespace AESCConstruct25.LicenseSpot
-//{
-//    internal class LicenseSpot
-//    {
-//        public static ExtendedLicense license;
-//        public static string _addinPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\SpaceClaim\\Addins\\AESCConstruct";
-//        public static string keyPair = "<RSAKeyValue><Modulus>y1bZeGeXfpp5NEm4S34PmT5F0uAouchu30MnWUYNxhqjrs2BNWvMeYDrT0Fqw6JhUchv7OFduwTxzOS7V8yajkCgvbo0OnxYF4Qgf46xoTE0kYBDeuXLnASPfoeo+JfQ5M81IhfwYsMD1i6pvIlODl5KK/8ydqNs3bcknUF/DGDeOa3eEyCoxnFMzu+t2rdENKUK5P403l6K3R2WpfzN+xHAyqs6OUi79zdzPoSkU/X5+ZFO5ZQiO3L4Qn/Yc2Pgn4GrqbpQ6QJVpd9n3kioC9LFs8lOKqHwlz5G+Ob96quhn7aswFKbFZQAXiHF+vKhUENzWnMywtEhp+bn4rqOaQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-//        public static string licenseFolder = _addinPath + "\\AESCCalculateLicense.lic";
-//        private static DateTime LicenseExpiration = DateTime.Parse("01/09/2025");
-
-//        public static class _License
-//        {
-//            public static string status = "License is not valid.";
-//            public static Boolean valid = false;
-//            public static Boolean genuine = false;
-//            public static Boolean isNetwork = false;
-//        }
-
-//        public static void activateLicense()
-//        {
-//           // Logger.Log("activate");
-//            var info = new LicenseValidationInfo
-//            {
-//                LicenseFile = new LicenseFile(LicenseSpot.LicenseSpot.licenseFolder),
-//                SerialNumber = Settings.Default.SerialNumber
-//            };
-//            LicenseSpot.LicenseSpot.license =
-//                ExtendedLicenseManager.GetLicense(typeof(SettingsControl),
-//                                                 null, info, LicenseSpot.LicenseSpot.keyPair);
-//            LicenseSpot.LicenseSpot._License.valid = LicenseSpot.LicenseSpot.license.Validate();
-//        }
-
-//        //public static void licenseCheckIn()
-//        //{
-//        //    MessageBox.Show("licenseCheckIn\nlicense.IsNetwork: " + license.IsNetwork.ToString() + "\nlicense.IsValidConnection(): " + license.IsValidConnection().ToString());
-//        //    if (license.IsNetwork)// && license.IsValidConnection())
-//        //    {
-//        //        if (license.IsValidConnection())
-//        //            license.CheckIn();
-//        //        LicenseSpot._License.valid = false;
-//        //        _License.status = "Valid license, not activated.";
-//        //        //if (Properties.Settings.Default.NetworkLogUser_Enabled)
-//        //        //{
-//        //        //Logger.Log(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\tCheckIn  \t" + license.HardwareID);
-//        //        //MessageBox.Show("Check licenseCheckIn: Succes");
-//        //        //}
-
-//        //        //update button activate
-//        //        try
-//        //        {
-//        //            //Command com = Command.GetCommand("AESC.Calculate.LicenseNetworkCmd");
-//        //            //com.Text = Language.tl("LicenseNetwork_Activate");
-//        //            //com.Hint = Language.tl("LicenseNetwork_Activate_Tooltip");
-//        //            //com.Image = Properties.Resources.icons8_next_36px;
-//        //        }
-//        //        catch { }
-
-//        //    }
-//        //}
+﻿//private static string _keyPair =
+//            "<RSAKeyValue><Modulus>pR07DDlVi/rcY1XeNkdFHdXEtbkk9zOBNx9MA+PwGMOMHfeA6c3cqFizdt/pcjR+p7SPwTP6L/K6DO6asU0KeSEoBwZZaTQ/UJyp4T/xJtrHpThJX5XaIf35ebp9zV1ETiYik+C0HbPVpZVrCZjRnf9waLRsO5UtTnZDQn8yvY0vtz7OlWBdHtTBO0EKmd+gXvR1K2pML/R2LLu4mpwbpv7L3p4O6/xaEEPvGuHyKHeK6B3+IW5bo94DuzG6OCi9r10xQ4N/ZT6/3WJVp6CfrzZtUd8/vYh7EiBqeYvKZm9jcgEfiG1nUY7Y1ntX6dtjSTFT9k6Ne2ZcybVUPWMJGw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
 
-//        //public static string GetHardWareID()
-//        //{
-//        //    return license.HardwareID;
-//        //}
-
-//        //public static void licenseCheckOut()
-//        //{
-//        //    try
-//        //    {
-//        //        license.CheckOut();
-//        //        if (!license.IsValidConnection())
-//        //        {
-//        //            MessageBox.Show("Could not activate the Calculate license, it is already connected.");
-//        //            return;
-//        //        }
-
-//        //        LicenseSpot._License.valid = true;
-//        //        _License.status = "Valid license";
-
-//        //        //checkModules();
-
-//        //        //if (Properties.Settings.Default.NetworkLogUser_Enabled)
-//        //        //{
-//        //            //Logger.Log(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\tCheckout\t" + license.HardwareID);
-//        //        //}
-//        //        //Functions.ShowCustomMessageBox("License Check Out Succes");
-
-//        //        try
-//        //        {
-//        //            //update button activate
-//        //            Command com = Command.GetCommand("AESC.Calculate.LicenseNetworkCmd");
-//        //            //com.Text = Language.tl("LicenseNetwork_Deactivate");
-//        //            //com.Hint = Language.tl("LicenseNetwork_Deactivate_Tooltip");
-//        //            //com.Image = Properties.Resources.icons8_pause_squared_36px;
-//        //        }
-//        //        catch { }
-
-
-//        //    }
-//        //    catch
-//        //    {
-//        //        //Functions.ShowCustomMessageBox("Could not activate the Calculate license, please check if it is already connected.");
-//        //        LicenseSpot._License.valid = false;
-//        //    }
-
-//        //}
-
-//        public static void checkLicense()
-//        {
-//            //LicenseValidationInfo info = new LicenseValidationInfo();
-//            //info.LicenseFile = new LicenseFile(licenseFolder);
-//            //license = ExtendedLicenseManager.GetLicense(typeof(AESCConstruct25.UIMain.UIManager), null, info, keyPair);
-//            //LicenseSpot._License.isNetwork = license.IsNetwork;
-//           // Logger.Log("// Logger.Log(\"AESCConstruct25:Licensing started\");");
-//            //try
-//            //{
-//            //    license.Refresh();
-//            //    //check valid license
-//            //    bool genuine = license.IsGenuineEx(0) == GenuineResult.Genuine && license.IsGenuine(true, keyPair);
-//            //    LicenseSpot._License.genuine = genuine;
-//            //    if (!license.IsNetwork)
-//            //        LicenseSpot._License.valid = genuine;
-//            //    MessageBox.Show("license.IsGenuineEx(0)\t" + license.IsGenuineEx(0).ToString() + "\nGenuineResult.Genuine\t" + GenuineResult.Genuine.ToString() + "\nlicense.IsGenuine(true, keyPair)\t" + license.IsGenuine(true, keyPair).ToString() + "\n_License.valid\t" + LicenseSpot._License.valid.ToString()) ;
-//            //}
-//            //catch
-//            //{
-//            //    _License.status = "Could not connect with the internet";
-//            //    LicenseSpot._License.valid = false;
-//            //}
-
-
-
-//            //// Write to log if needed
-//            //if (license.IsNetwork && license.IsValidConnection())
-//            //    licenseCheckIn();
-
-
-//            //if (license.IsNetwork && LicenseSpot._License.genuine)
-//            //{
-//            //    //if (Properties.Settings.Default.AutomaticCheckIn_FloatingLicense)
-//            //    //{
-//            //        licenseCheckOut();
-//            //    //}
-//            //    //else
-//            //    //    _License.status = "Valid license, not activated.";
-//            //}
-
-
-//            //if (_License.valid)
-//            //{
-//            //    _License.status = "Valid license";
-//            //    //checkModules();
-//            //}
-//            //else if (DateTime.Compare(LicenseExpiration, DateTime.Now) > 0)
-//            //{
-//            //   // Logger.Log("Trial version expires in " + (LicenseExpiration - DateTime.Now).Days.ToString() + "days");
-//            //    LicenseSpot._License.valid = true;
-//            //}
-//        }
-
-//    }
-//}
-using AESCConstruct25.Properties;
 using LicenseSpot.Framework;
+using SpaceClaim.Api.V242; // for Command (network toggle UI)
 using System;
+using System.IO;
+using System.Windows;
 
-namespace AESCConstruct25.LicenseSpot
+namespace AESCConstruct25.Licensing
 {
-    internal static class LicenseSpot
+    /// <summary>
+    /// Central license integration. Network licenses are considered "valid" only when checked-out.
+    /// </summary>
+    public static class ConstructLicenseSpot
     {
-        public static ExtendedLicense License;
-        public static class State
+        private sealed class Construct25Anchor { }
+        public static bool IsDebugMode { get; set; } = true;
+        private static void Debug(string m) { if (IsDebugMode) MessageBox.Show(m, "License Debug"); }
+
+        private static readonly Type AnchorType = typeof(Construct25Anchor);
+        private static ExtendedLicense _license;
+        public static ExtendedLicense CurrentLicense => _license;
+
+        // Put your real RSA public key here
+        private static string _keyPair =
+            "<RSAKeyValue><Modulus>pR07DDlVi/rcY1XeNkdFHdXEtbkk9zOBNx9MA+PwGMOMHfeA6c3cqFizdt/pcjR+p7SPwTP6L/K6DO6asU0KeSEoBwZZaTQ/UJyp4T/xJtrHpThJX5XaIf35ebp9zV1ETiYik+C0HbPVpZVrCZjRnf9waLRsO5UtTnZDQn8yvY0vtz7OlWBdHtTBO0EKmd+gXvR1K2pML/R2LLu4mpwbpv7L3p4O6/xaEEPvGuHyKHeK6B3+IW5bo94DuzG6OCi9r10xQ4N/ZT6/3WJVp6CfrzZtUd8/vYh7EiBqeYvKZm9jcgEfiG1nUY7Y1ntX6dtjSTFT9k6Ne2ZcybVUPWMJGw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+
+        // Optional product filter (empty = disabled)
+        private static string LicenseDescription = "";
+
+        // Preferred license file
+        private static readonly string ProgramData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        private static readonly string BaseDir = Path.Combine(ProgramData, "IPManager");
+        public static readonly string LicenseFilePath = Path.Combine(BaseDir, "AESC_License_Construct25.lic");
+
+        // Public state for UI gating
+        public static bool IsValid { get; private set; } = false;     // true only if: (node-locked genuine) OR (network genuine + checked-out)
+        public static bool IsNetwork { get; private set; } = false;
+        public static string Status { get; private set; } = "License is not valid.";
+
+        // ─────────────────────────────────────────────────────────────────────
+
+        public static bool CheckLicense()
         {
-            public static bool Valid { get; internal set; }
-            public static bool IsNetwork { get; internal set; }
-            public static string Status { get; internal set; }
+            try
+            {
+                EnsureProgramDataFolder();
+
+                if (!File.Exists(LicenseFilePath))
+                {
+                    IsValid = false; IsNetwork = false;
+                    Status = "License file not found. Please activate.";
+                    return false;
+                }
+
+                var fi = new FileInfo(LicenseFilePath);
+                if (fi.Length < 16)
+                {
+                    IsValid = false; IsNetwork = false;
+                    Status = "License file appears incomplete. Try activating again.";
+                    return false;
+                }
+
+                _license = OpenStrict(LicenseFilePath);
+                if (_license == null)
+                {
+                    IsValid = false; IsNetwork = false;
+                    Status = "No license found or invalid license file.";
+                    return false;
+                }
+
+                _license.Refresh();
+                IsNetwork = _license.IsNetwork;
+
+                bool g1 = _license.IsGenuineEx(0) == GenuineResult.Genuine;
+                bool g2 = _license.IsGenuine(true, _keyPair);
+
+                bool descOk = true;
+                if (!string.IsNullOrEmpty(LicenseDescription))
+                {
+                    try
+                    {
+                        var desc = _license.GetProperty("Description")?.ToString() ?? "";
+                        descOk = string.Equals(desc, LicenseDescription, StringComparison.OrdinalIgnoreCase);
+                    }
+                    catch { descOk = false; }
+                }
+
+                if (g1 && g2 && descOk)
+                {
+                    if (IsNetwork)
+                    {
+                        bool connected = _license.IsValidConnection();
+                        IsValid = connected;
+                        Status = connected ? "Valid license." : "Valid license, not activated.";
+                    }
+                    else
+                    {
+                        IsValid = true;
+                        Status = "Valid license.";
+                    }
+                }
+                else
+                {
+                    IsValid = false;
+                    Status = "License is not valid.";
+                }
+
+                if (!IsValid)
+                {
+                    var exp = _license.GetTimeLimit()?.EndDate;
+                    string SafeProp(string k) { try { return _license.GetProperty(k)?.ToString() ?? ""; } catch { return ""; } }
+                    //MessageBox.Show(
+                    //    $"g1={g1} g2={g2} descOk={descOk}\n" +
+                    //    $"IsNetwork={IsNetwork} Conn={_license.IsValidConnection()}\n" +
+                    //    $"InvalidReason={_license.InvalidReason}\n" +
+                    //    $"Desc='{SafeProp("Description")}' Prod='{SafeProp("Product")}' Exp={exp:yyyy-MM-dd} desc from '{Path.GetFileName(LicenseFilePath)}'",
+                    //    "License validation flags");
+                }
+
+                UpdateNetworkButtonUI();
+                return IsValid;
+            }
+            catch (Exception ex)
+            {
+                IsValid = false; IsNetwork = false;
+                Status = "CheckLicense error: " + ex.Message;
+                return false;
+            }
         }
 
-        private static readonly string KeyPair = "<RSAKeyValue><Modulus>pR07DDlVi/rcY1XeNkdFHdXEtbkk9zOBNx9MA+PwGMOMHfeA6c3cqFizdt/pcjR+p7SPwTP6L/K6DO6asU0KeSEoBwZZaTQ/UJyp4T/xJtrHpThJX5XaIf35ebp9zV1ETiYik+C0HbPVpZVrCZjRnf9waLRsO5UtTnZDQn8yvY0vtz7OlWBdHtTBO0EKmd+gXvR1K2pML/R2LLu4mpwbpv7L3p4O6/xaEEPvGuHyKHeK6B3+IW5bo94DuzG6OCi9r10xQ4N/ZT6/3WJVp6CfrzZtUd8/vYh7EiBqeYvKZm9jcgEfiG1nUY7Y1ntX6dtjSTFT9k6Ne2ZcybVUPWMJGw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-
-        /// <summary>
-        /// Reads the saved serial number from settings, tries to activate or validate,
-        /// and populates State.Valid/Status.
-        /// </summary>
-        public static void Initialize()
+        public static bool TryActivate(string serialNumber, out string message)
         {
-            // Logger.Log("LicenseSpot: Initializing license");
-            var serial = Settings.Default.SerialNumber?.Trim();
-            if (string.IsNullOrEmpty(serial))
+            if (string.IsNullOrWhiteSpace(serialNumber))
             {
-                State.Valid = false;
-                State.Status = "No serial entered.";
-                return;
+                message = "No activation code provided.";
+                return false;
             }
 
             try
             {
-                // This will look in ProgramData\IPManager\license.lic (default) or App_Data, etc.
-                License = ExtendedLicenseManager.GetLicense(typeof(LicenseSpot), null, KeyPair);
-                State.IsNetwork = License.IsNetwork;
-                License.Refresh();
+                EnsureProgramDataFolder();
 
-                var result = License.IsGenuineEx(0);
-                State.Valid = result == GenuineResult.Genuine;
-                State.Status = State.Valid
-                  ? "License is valid."
-                  : $"License invalid: {License.InvalidReason}";
+                // Create a clean handle bound only by key for activation.
+                var handle = ExtendedLicenseManager.GetLicense(AnchorType, _keyPair) as ExtendedLicense;
+                if (handle == null)
+                {
+                    message = "Could not create license handle.";
+                    return false;
+                }
+
+                try { handle.Deactivate(); } catch { /* ignore */ }
+
+                // LicenseSpot saves to ProgramData\IPManager with this stem.
+                var stem = Path.GetFileNameWithoutExtension(LicenseFilePath);
+                handle.Activate(serialNumber.Trim(), saveFile: true, fileName: stem);
+
+                WaitUntilFileLooksWritten();
+
+                // Now reopen STRICTLY from our exact file so other .lic files cannot interfere.
+                _license = OpenStrict(LicenseFilePath);
+                var ok = CheckLicense();
+                message = Status;
+                return ok;
             }
             catch (Exception ex)
             {
-                State.Valid = false;
-                State.Status = "License check failed: " + ex.Message;
-                // Logger.Log("LicenseSpot: exception in Initialize(): " + ex);
+                IsValid = false;
+                IsNetwork = false;
+                Status = "Activation error: " + ex.Message;
+                message = Status;
+                return false;
             }
         }
 
 
 
-        /// <summary>
-        /// Called from Settings “Activate” button to save & re-check.
-        /// </summary>
-        public static void Activate(string serial)
+        // Call this right after startup to ensure a network license is not consuming a seat until user clicks the button.
+        public static void EnsureNetworkDeactivatedOnStartup()
         {
-            // 1) save to user settings
-            Settings.Default.SerialNumber = serial;
-            Settings.Default.Save();
-            // Logger.Log($"LicenseSpot: activating serial “{serial}”");
+            try
+            {
+                if (_license != null && _license.IsNetwork && _license.IsValidConnection())
+                {
+                    _license.CheckIn();
+                    IsValid = false;
+                    Status = "Valid license, not activated.";
+                    UpdateNetworkButtonUI();
+                    Debug("[Startup] Network license was connected – checked in to keep it deactivated until user action.");
+                }
+            }
+            catch
+            {
+                // ignore; if check-in fails we leave state as-is
+            }
+        }
+
+        // ── Network toggles wired to the ribbon ──────────────────────────────
+
+        public static void licenseCheckOut()
+        {
+            if (_license == null || !_license.IsNetwork) return;
 
             try
             {
-                // 2) get a fresh ExtendedLicense instance (no file must exist yet)
-                License = ExtendedLicenseManager.GetLicense(typeof(LicenseSpot), null);
-
-                // 3) actually activate ⇒ downloads & writes the .lic for us
-                //    the return value is the raw xml, if you ever need it
-                string licenseXml = License.Activate(
-                  serial,                // serial number
-                  saveFile: true,      // write it out
-                  fileName: "AESCCalculateLicense.lic"
-                );
-
-                // 4) now re-validate
-                Initialize();
-
-                // Logger.Log($"LicenseSpot: Activation result: {State.Status} (Valid={State.Valid})");
+                _license.CheckOut();
+                if (_license.IsValidConnection())
+                {
+                    IsValid = true;
+                    Status = "Network license activated.";
+                }
+                else
+                {
+                    IsValid = false;
+                    Status = "Could not activate the network license (already connected?).";
+                }
             }
             catch (Exception ex)
             {
-                State.Valid = false;
-                State.Status = "Activation failed: " + ex.Message;
-                // Logger.Log("LicenseSpot: exception in Activate(): " + ex);
+                IsValid = false;
+                Status = "CheckOut error: " + ex.Message;
+            }
+            UpdateNetworkButtonUI();
+        }
+
+        public static void licenseCheckIn()
+        {
+            if (_license == null || !_license.IsNetwork) return;
+
+            try
+            {
+                if (_license.IsValidConnection())
+                {
+                    _license.CheckIn();
+                }
+                IsValid = false;
+                Status = "Valid license, not activated.";
+            }
+            catch (Exception ex)
+            {
+                Status = "CheckIn error: " + ex.Message;
+            }
+            UpdateNetworkButtonUI();
+        }
+
+        // ── Ribbon button state ──────────────────────────────────────────────
+
+        public static void UpdateNetworkButtonUI()
+        {
+            try
+            {
+                var cmd = Command.GetCommand("AESCConstruct25.ActivateNetwork");
+                if (cmd == null) return;
+
+                var lic = _license;
+                bool hasNet = lic != null && lic.IsNetwork;
+                bool connected = hasNet && lic.IsValidConnection();
+
+                cmd.IsEnabled = hasNet;
+                cmd.Text = connected ? "LicenseNetwork_Deactivate" : "LicenseNetwork_Activate";
+
+                // Optional: swap icons if you prefer (keep or remove as needed)
+                // cmd.Image = connected ? new Bitmap(new MemoryStream(Resources.icons8_pause_squared_36px))
+                //                       : new Bitmap(new MemoryStream(Resources.icons8_next_36px));
+            }
+            catch { /* ignore */ }
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────────
+
+        private static void EnsureProgramDataFolder()
+        {
+            try { Directory.CreateDirectory(BaseDir); } catch { }
+        }
+
+        private static ExtendedLicense OpenStrict(string filePath)
+        {
+            try
+            {
+                var vinfo = new LicenseValidationInfo { LicenseFile = new LicenseFile(filePath) };
+                // Bind to THIS file only; no directory scanning.
+                return ExtendedLicenseManager.GetLicense(AnchorType, instance: null, info: vinfo, publicKey: _keyPair) as ExtendedLicense;
+            }
+            catch
+            {
+                return null;
             }
         }
 
+        private static void WaitUntilFileLooksWritten(int attempts = 10, int delayMs = 100)
+        {
+            for (int i = 0; i < attempts; i++)
+            {
+                try
+                {
+                    if (File.Exists(LicenseFilePath) && new FileInfo(LicenseFilePath).Length > 32) return;
+                }
+                catch { }
+                System.Threading.Thread.Sleep(delayMs);
+            }
+        }
     }
 }

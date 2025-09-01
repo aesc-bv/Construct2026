@@ -1,4 +1,5 @@
 ﻿using AESCConstruct25.FrameGenerator.UI;
+using AESCConstruct25.Licensing;
 using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
 using System;
@@ -54,7 +55,8 @@ namespace AESCConstruct25.UIMain
         static Bitmap _dock = new Bitmap(new MemoryStream(Resources.Menu_Dock));
         public static void RegisterAll()
         {
-            bool valid = LicenseSpot.LicenseSpot.State.Valid;
+            bool valid = ConstructLicenseSpot.IsValid;
+            //bool valid = true;// DateTime.Now < new DateTime(2025, 9, 31, 23, 59, 59);//LicenseSpot.LicenseSpot.State.Valid;//DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
             Register(
                 ProfileCommand,
                 Localization.Language.Translate("Ribbon.Button.FrameGenerator"),
@@ -137,6 +139,27 @@ namespace AESCConstruct25.UIMain
             );
         }
 
+        public static void RefreshLicenseUI()
+        {
+            bool valid = ConstructLicenseSpot.IsValid;
+
+            SetEnabled(ProfileCommand, valid);
+            SetEnabled(PlateCommand, valid);
+            SetEnabled(FastenerCommand, valid);
+            SetEnabled(RibCutOutCommand, valid);
+            SetEnabled(CustomPropertiesCommand, valid);
+            SetEnabled(EngravingCommand, valid);
+            SetEnabled(ConnectorCommand, valid);
+
+            UpdateCommandTexts();
+        }
+
+        private static void SetEnabled(string commandId, bool enabled)
+        {
+            var c = Command.GetCommand(commandId);
+            if (c != null) c.IsEnabled = enabled;
+        }
+
         private static void Register(string name, string text, string hint, byte[] icon, Action execute, bool enabled)
         {
             var cmd = Command.Create(name);
@@ -204,7 +227,11 @@ namespace AESCConstruct25.UIMain
 
         private static void ShowFloating(string key)
         {
-            Command.Execute("Line");
+            Command.Execute("SetMode3D");
+            //Command.Execute("Select");
+            if (TryExecuteCommand("Select")) return;        // common id
+            if (TryExecuteCommand("SelectTool")) return;    // alternate id
+            if (TryExecuteCommand("Selection")) return;
             // If our STA thread + window are already running, just swap the content and bring to front
             if (_floatingThread != null
                 && _floatingThread.IsAlive
@@ -242,6 +269,13 @@ namespace AESCConstruct25.UIMain
             // Logger.Log("ShowFloating end");
         }
 
+        private static bool TryExecuteCommand(string commandId)
+        {
+            var cmd = Command.GetCommand(commandId);
+            if (cmd == null) return false;
+            try { cmd.Execute(); return true; } catch { return false; }
+        }
+
         // ── Helper to build & wire a single floating window ──
         private static WpfWindow CreateFloatingWindow(string key)
         {
@@ -268,7 +302,6 @@ namespace AESCConstruct25.UIMain
 
         private static void FloatingWindow_Closed(object sender, EventArgs e)
         {
-            // Logger.Log("Floating window closed by user");
             var win = (WpfWindow)sender;
             win.Closed -= FloatingWindow_Closed;
             _floatingWindow = null;
@@ -288,7 +321,6 @@ namespace AESCConstruct25.UIMain
                 // Fully qualify WPF TextBox to avoid ambiguity
                 if (child is System.Windows.Controls.TextBox wpfTb)
                 {
-                    // Logger.Log($"[WPF TextBox] Name={wpfTb.Name}, IsEnabled={wpfTb.IsEnabled}, IsReadOnly={wpfTb.IsReadOnly}");
                     wpfTb.IsEnabled = true;
                     wpfTb.IsReadOnly = false;
                 }
@@ -301,12 +333,6 @@ namespace AESCConstruct25.UIMain
 
         private static void ShowDocked(string key)
         {
-            //if (_mainWindow != null && !_mainWindow.IsDisposed && _floatingMode)
-            //{
-            //    _mainWindow.Hide();
-            //    // Logger.Log("Hid floating window before docking");
-            //}
-            // Logger.Log($"ShowDocked start for '{key}'");
             switch (key)
             {
                 case ProfileCommand:
@@ -326,7 +352,6 @@ namespace AESCConstruct25.UIMain
                 case ConnectorCommand:
                     EnsureConnector(); Application.AddPanelContent(Command.GetCommand(key), _connectorHost, Panel.Options); break;
             }
-            // Logger.Log("ShowDocked end");
         }
 
         /// <summary>

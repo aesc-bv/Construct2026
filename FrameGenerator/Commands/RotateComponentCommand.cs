@@ -81,6 +81,7 @@
 //////        }
 //////    }
 //////}
+using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -121,6 +122,83 @@ namespace AESCConstruct25.Commands
         /// then counter–rotates that curve so it remains fixed in world space.
         /// Also accumulates a "RotationAngle" custom property on the Part.
         /// </summary>
+        //public static void ApplyRotation(
+        //    Window window,
+        //    List<Component> components,
+        //    double angleDegrees,
+        //    bool storeProperty = true
+        //)
+        //{
+        //    if (window == null || components == null || components.Count == 0)
+        //        return;
+
+        //    // Convert once to radians
+        //    double angleRad = angleDegrees * Math.PI / 180.0;
+
+        //    foreach (var comp in components)
+        //    {
+        //        Part part = comp.Template;
+        //        var dc = part.Curves.OfType<DesignCurve>().FirstOrDefault();
+        //        var body = part.Bodies.OfType<DesignBody>().FirstOrDefault();
+        //        if (dc == null || body == null)
+        //            continue;
+
+        //        // — 1) Build world-space rotation axis along local Z through component origin —
+        //        Point originLocal = Point.Origin;
+        //        Vector zLocal = Vector.Create(0, 0, 1);
+        //        Point originWorld = comp.Placement * originLocal;
+        //        Direction axisDir = (comp.Placement * zLocal).Direction;
+        //        Line axis = Line.Create(originWorld, axisDir);
+
+        //        // — 2) Snapshot the curve’s world endpoints BEFORE rotation —
+        //        var seg = dc.Shape as CurveSegment;
+        //        if (seg == null)
+        //            continue;
+        //        Point worldStart = comp.Placement * seg.StartPoint;
+        //        Point worldEnd = comp.Placement * seg.EndPoint;
+
+        //        // — 3) Rotate the component placement around axis —
+        //        var rotation = Matrix.CreateRotation(axis, angleRad);
+        //        comp.Placement = rotation * comp.Placement;
+
+        //        // — 4) Reproject those saved world points back into the NEW local frame —
+        //        var invPlacement = comp.Placement.Inverse;
+        //        Point newLocalStart = invPlacement * worldStart;
+        //        Point newLocalEnd = invPlacement * worldEnd;
+
+        //        // — 5) Delete old curve and recreate it exactly at the same world location —
+        //        string oldName = dc.Name;
+        //        var oldColor = dc.GetColor(null);
+        //        dc.Delete();
+
+        //        var newSeg = CurveSegment.Create(newLocalStart, newLocalEnd);
+        //        var newDc = DesignCurve.Create(part, newSeg);
+        //        newDc.Name = oldName;
+        //        newDc.SetColor(null, oldColor);
+
+        //        // — 6) Optionally store cumulative RotationAngle in the Part’s properties —
+        //        if (storeProperty)
+        //        {
+        //            double prev = 0;
+        //            if (part.CustomProperties.TryGetValue("RotationAngle", out var prop) &&
+        //                double.TryParse(prop.Value.ToString(),
+        //                                NumberStyles.Float,
+        //                                CultureInfo.InvariantCulture,
+        //                                out var parsed))
+        //            {
+        //                prev = parsed;
+        //            }
+
+        //            double total = prev + angleDegrees;
+        //            string text = total.ToString(CultureInfo.InvariantCulture);
+
+        //            if (part.CustomProperties.ContainsKey("RotationAngle"))
+        //                part.CustomProperties["RotationAngle"].Value = text;
+        //            else
+        //                CustomPartProperty.Create(part, "RotationAngle", text);
+        //        }
+        //    }
+        //}
         public static void ApplyRotation(
             Window window,
             List<Component> components,
@@ -131,59 +209,78 @@ namespace AESCConstruct25.Commands
             if (window == null || components == null || components.Count == 0)
                 return;
 
-            // Convert once to radians
             double angleRad = angleDegrees * Math.PI / 180.0;
 
             foreach (var comp in components)
             {
-                Part part = comp.Template;
-                var dc = part.Curves.OfType<DesignCurve>().FirstOrDefault();
+                var part = comp.Template;
+
+                // pick the axis curve inside the component (prefer a named one if present)
+                var dc = part.Curves
+                             .OfType<DesignCurve>()
+                             .FirstOrDefault(c => string.Equals(c.Name, "ConstructCurve", StringComparison.OrdinalIgnoreCase))
+                      ?? part.Curves.OfType<DesignCurve>().FirstOrDefault();
+
                 var body = part.Bodies.OfType<DesignBody>().FirstOrDefault();
                 if (dc == null || body == null)
                     continue;
 
-                // — 1) Build world-space rotation axis along local Z through component origin —
-                Point originLocal = Point.Origin;
-                Vector zLocal = Vector.Create(0, 0, 1);
-                Point originWorld = comp.Placement * originLocal;
-                Direction axisDir = (comp.Placement * zLocal).Direction;
-                Line axis = Line.Create(originWorld, axisDir);
-
-                // — 2) Snapshot the curve’s world endpoints BEFORE rotation —
-                var seg = dc.Shape as CurveSegment;
-                if (seg == null)
+                if (dc.Shape is not CurveSegment seg)
                     continue;
-                Point worldStart = comp.Placement * seg.StartPoint;
-                Point worldEnd = comp.Placement * seg.EndPoint;
 
-                // — 3) Rotate the component placement around axis —
-                var rotation = Matrix.CreateRotation(axis, angleRad);
+                // world-space endpoints of the axis curve BEFORE rotation
+                var place = comp.Placement;
+                Point w0 = place * seg.StartPoint;
+                Point w1 = place * seg.EndPoint;
+
+                // guard: degenerate axis → skip
+                var dirVec = (w1 - w0);
+                if (dirVec.Magnitude < 1e-9)
+                    continue;
+
+                var axisDir = dirVec.Direction;
+                var midWorld = Point.Create(
+                    0.5 * (w0.X + w1.X),
+                    0.5 * (w0.Y + w1.Y),
+                    0.5 * (w0.Z + w1.Z)
+                );
+                var axisWorld = Line.Create(midWorld, axisDir);
+
+                // rotate the COMPONENT placement around the axis defined by its own curve
+                var rotation = Matrix.CreateRotation(axisWorld, angleRad);
                 comp.Placement = rotation * comp.Placement;
 
-                // — 4) Reproject those saved world points back into the NEW local frame —
-                var invPlacement = comp.Placement.Inverse;
-                Point newLocalStart = invPlacement * worldStart;
-                Point newLocalEnd = invPlacement * worldEnd;
+                // keep the axis curve fixed in world space: rebuild it in the new local frame
+                var invNew = comp.Placement.Inverse;
+                Point newLocalStart = invNew * w0;
+                Point newLocalEnd = invNew * w1;
 
-                // — 5) Delete old curve and recreate it exactly at the same world location —
                 string oldName = dc.Name;
                 var oldColor = dc.GetColor(null);
+                bool oldVis = true;
+                try { oldVis = dc.GetVisibility(null) == true; } catch { }
+                Logger.Log($"RotateComponent: oldVis={oldVis}");
+                var oldLayer = dc.Layer;
+
                 dc.Delete();
 
                 var newSeg = CurveSegment.Create(newLocalStart, newLocalEnd);
                 var newDc = DesignCurve.Create(part, newSeg);
                 newDc.Name = oldName;
                 newDc.SetColor(null, oldColor);
+                var ctx = window?.ActiveContext as IAppearanceContext;
+                try { newDc.SetVisibility(ctx, oldVis); } catch { }
+                try { newDc.Layer = oldLayer; } catch { }
 
-                // — 6) Optionally store cumulative RotationAngle in the Part’s properties —
+                // accumulate RotationAngle on the Part
                 if (storeProperty)
                 {
                     double prev = 0;
-                    if (part.CustomProperties.TryGetValue("RotationAngle", out var prop) &&
-                        double.TryParse(prop.Value.ToString(),
-                                        NumberStyles.Float,
-                                        CultureInfo.InvariantCulture,
-                                        out var parsed))
+                    if (part.CustomProperties.TryGetValue("RotationAngle", out var prop)
+                        && double.TryParse(prop.Value.ToString(),
+                                           NumberStyles.Float,
+                                           CultureInfo.InvariantCulture,
+                                           out var parsed))
                     {
                         prev = parsed;
                     }

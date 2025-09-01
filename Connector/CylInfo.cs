@@ -1,8 +1,8 @@
-﻿using System;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using SpaceClaim.Api.V242;
-using SpaceClaim.Api.V242.Geometry;
 
 public static class CylInfo
 {
@@ -147,7 +147,7 @@ public static class CylInfo
 
     public static (bool Success, Point PointEdge) GetClosestPoint(DesignEdge designEdge, Point point, Direction direction)
     {
-        Point returnPoint = Point.Origin ;
+        Point returnPoint = Point.Origin;
         bool success = false;
 
         var separation = designEdge.Shape.GetClosestSeparation(CurveSegment.Create(point + 100 * direction, point - 100 * direction));

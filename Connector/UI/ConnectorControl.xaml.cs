@@ -12,7 +12,6 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Application = SpaceClaim.Api.V242.Application;
@@ -22,7 +21,6 @@ using ConnectorModel = global::Connector;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using Line = SpaceClaim.Api.V242.Geometry.Line;
-using MessageBox = System.Windows.MessageBox;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using RadioButton = System.Windows.Controls.RadioButton;
 using Settings = AESCConstruct25.Properties.Settings;
@@ -80,9 +78,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                Logger.Log($"ConnectorControl ctor failed: {ex}");
-                MessageBox.Show($"Failed to initialize ProfileSelectionControl:\n{ex.Message}",
-                    "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
         private void InitializeDrawingHost()
@@ -95,7 +91,16 @@ namespace AESCConstruct25.UI
                     BackColor = System.Drawing.Color.White
                 };
                 picDrawing.Paint += PicDrawing_Paint;
-                picDrawing.Resize += (_, __) => { try { InvalidateDrawing(); } catch (Exception ex) { Logger.Log($"PictureBox Resize invalidate failed: {ex}"); } };
+                picDrawing.Resize += (_, __) =>
+                {
+                    try
+                    {
+                        InvalidateDrawing();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                };
 
                 // host from XAML
                 picDrawingHost.Child = picDrawing;
@@ -104,12 +109,13 @@ namespace AESCConstruct25.UI
                 this.SizeChanged += (_, __) =>
                 {
                     try { InvalidateDrawing(); }
-                    catch (Exception ex) { Logger.Log($"SizeChanged invalidate failed: {ex}"); }
+                    catch (Exception)
+                    {
+                    }
                 };
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Logger.Log($"InitializeDrawingHost failed: {ex}");
             }
         }
 
@@ -169,7 +175,7 @@ namespace AESCConstruct25.UI
                 drawConnector();
             else
             {
-                MessageBox.Show("Please enter a valid double value.", "Input", MessageBoxButton.OK, MessageBoxImage.Information);
+                Application.ReportStatus("Please enter a valid double value.", StatusMessageType.Warning, null);
                 connectorHeight?.Focus();
             }
         }
@@ -177,10 +183,11 @@ namespace AESCConstruct25.UI
         // === Optional: call drawConnector on load (keeps legacy behavior) ===
         private void ConnectorControl_Loaded(object sender, RoutedEventArgs e)
         {
-            try {
+            try
+            {
                 WireUiChangeHandlers();
                 LoadConnectorPresets();
-                drawConnector(); 
+                drawConnector();
             }
             catch (Exception ex) { Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
         }
@@ -272,9 +279,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                Logger.Log($"LoadConnectorPresets failed: {ex}");
-                MessageBox.Show($"Failed to load connector presets:\n{ex.Message}",
-                    "Connector Presets", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Failed to load connector presets:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -470,9 +475,6 @@ namespace AESCConstruct25.UI
                     return;
                 }
 
-
-
-
                 List<DesignBody> selDBodyList = new List<DesignBody> { };
                 List<Point> selPointList = new List<Point> { };
                 List<Part> selParts = new List<Part> { };
@@ -487,7 +489,6 @@ namespace AESCConstruct25.UI
                     var de = sel as DesignEdge;
                     if (de != null)
                         desEdge = de;
-
 
                     var ide = sel as IDesignEdge;
                     if (ide != null)
@@ -509,7 +510,7 @@ namespace AESCConstruct25.UI
                         return;
                     }
 
-                    // Check if it fits on the line
+                    // Check if it fits on the line (now also accounts for Location offset)
                     if (!checkFitsLine(ide, connector))
                     {
                         //SC.reportStatus("The connector does not fully fit on the selected line");
@@ -532,7 +533,6 @@ namespace AESCConstruct25.UI
 
                     selPointList.Add(selPoint);
 
-
                     selParts.Add(part);
                     selEdges.Add(desEdge);
                     selDBodyList.Add(desEdge.Parent);
@@ -540,20 +540,10 @@ namespace AESCConstruct25.UI
                     if (ide != null)
                         selIDBodyList.Add(ide.Parent);
 
-                    //if (selDBodyList.Count != selIDBodyList.Count)
-                    //    SC.reportStatus("Nr DB != Nr IDB");
-
-
-                    //WriteBlock.ExecuteTask("connector", () =>
-                    //{
-                    //    DatumPoint.Create(mainPart, "selPoint", selPoint);
-                    //});
-
                     // CHeck sheet metal
                     bool suspendSheetMetal = false;
                     if (part.SheetMetal != null || part.IsSheetMetalSuspended)
                         suspendSheetMetal = true;
-
 
                     if (suspendSheetMetal)
                         suspendSheetMetalParts.Add(part);
@@ -581,7 +571,6 @@ namespace AESCConstruct25.UI
 
                 bool CylinderStraightCut = false; // To add in interface if needed
 
-
                 // Iterate through all selected edges
                 for (int i = 0; i < selEdges.Count; i++)
                 {
@@ -589,6 +578,13 @@ namespace AESCConstruct25.UI
                     DesignBody designBody = selDBodyList[i];
                     IDesignBody iDesignBody = selIDBodyList[i];
                     IDesignEdge ide = selIDesignEdges[i];
+                    var edge = selEdges[i];                          // use the specific edge for this iteration
+
+                    // >>> APPLY LEFT/RIGHT SHIFT ALONG THE SELECTED EDGE <<<
+                    // Location is in millimetres; convert to metres and shift along the edge tangent.
+                    double offsetM = 0.001 * connector.Location;
+                    Direction tangent = edge.Shape.ProjectPoint(pCenter).Derivative.Direction;
+                    pCenter = pCenter + offsetM * tangent;
 
                     getFacesFromSelection(ide, out DesignFace bigFace, out DesignFace smallFace);
                     if (bigFace == null || smallFace == null)
@@ -608,35 +604,15 @@ namespace AESCConstruct25.UI
 
                     DesignFace oppositeFace = getOppositeFace(smallFace, bigFace, isPlane, out double thickness, out Direction dirY2);
 
-
                     if (oppositeFace == null)
                     {
                         //SC.reportStatus("Could not find opposite face. Ensure the connector is made between planar or cylindrical faces");
                         continue;
                     }
 
-
                     List<IDesignBody> nrBodies = getIDesignBodiesFromBody(mainPart, designBody.Shape);
                     bool allBodies = true; // Default to modifying only the selected body
-                    // Check if there are more than one body
-                    if (nrBodies.Count > 1)
-                    {
-                        // Prompt the user with a message box
-                        //DialogResult result = MessageBox.Show($"The selected file exists multiple times in the design ({nrBodies.Count}). Do you want to modify all identical parts? If not, only the selected part is affected.",
-                        //                                      "Modify Bodies", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                        // If user clicks 'Yes', set allBodies to true
-                        //if (result == DialogResult.No)
-                        //{
-                        //    allBodies = false;
-                        //}
-                    }
-
-
-                    // check faces (small face must be planar)
-
-
-                    //Point pX1, pX2;
                     Body connectorBody = null;
                     Body cutBody = null;
                     Body collisionBody = null;
@@ -655,8 +631,7 @@ namespace AESCConstruct25.UI
                             }
 
                             // get Directions
-
-                            Direction dirX = desEdge.Shape.ProjectPoint(pCenter).Derivative.Direction;
+                            Direction dirX = edge.Shape.ProjectPoint(pCenter).Derivative.Direction;   // use this edge’s tangent
                             Direction dirY = getNormalDirectionPlanarFace(bigFace.Shape);
                             Direction dirZ = getNormalDirectionPlanarFace(smallFace.Shape);
 
@@ -679,10 +654,8 @@ namespace AESCConstruct25.UI
                             // Check if there is an inner/outer cylindrical face with same axis
                             var (innerFace, outerFace, thickness1, outerRadius, axis) = CylInfo.GetCoaxialCylPair(iDesignBody, bigFace);
 
-
                             if (innerFace == null || outerFace == null)
                             {
-
                                 Application.ReportStatus($"No inner/outer Face found", StatusMessageType.Information, null);
                                 return;
                             }
@@ -727,10 +700,7 @@ namespace AESCConstruct25.UI
                             Point pOuter_A = pAxis - distOuter * dir_A;
                             Point pOuter_B = pAxis - distOuter * dir_B;
 
-
-                            //// Check the inner and outer edges closest to the connecter on the inner and outer face
                             var (success, innerEdge, outerEdge) = CylInfo.GetEdges(innerFace, p_InnerFace, outerFace, p_OuterFace);
-                            // Derive maximal distance to edges, checking from all bottom corners of the part.
                             var (successInnerA, p_InnerEdge_A) = CylInfo.GetClosestPoint(innerEdge, pInner_A, dirZ);
                             var (successInnerB, p_InnerEdge_B) = CylInfo.GetClosestPoint(innerEdge, pInner_B, dirZ);
                             var (successOuterA, p_OuterEdge_A) = CylInfo.GetClosestPoint(outerEdge, pWidth_A, dirZ);
@@ -746,7 +716,6 @@ namespace AESCConstruct25.UI
                             if (successOuterB && (pWidth_B - p_OuterEdge_B).Direction == dirZ)
                                 maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_B - p_OuterEdge_B).Magnitude);
 
-
                             // Create planes
                             Plane planeInner = Plane.Create(Frame.Create(pInnerMid, dirX, dirZ));
                             Plane planeOuter = Plane.Create(Frame.Create(p_OuterFace, dirX, dirZ));
@@ -755,49 +724,8 @@ namespace AESCConstruct25.UI
                             double WidthDifferenceInner = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pInner_A - pInner_B).Magnitude;
                             double WidthDifferenceOuter = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
 
-
-                            // For debugging, draw all points and planes
-
-                            if (false)
-                            {
-                                WriteBlock.ExecuteTask("connector", () =>
-                                {
-                                    DatumPoint.Create(iDesignBody.Parent, "pCenter", pCenter);
-                                    DatumPoint.Create(iDesignBody.Parent, "pTest", pTest);
-                                    DatumPoint.Create(iDesignBody.Parent, "pAxis", pAxis);
-                                    DatumPoint.Create(iDesignBody.Parent, "pWidth", pWidth);
-                                    DatumPoint.Create(iDesignBody.Parent, "pWidth_A", pWidth_A);
-                                    DatumPoint.Create(iDesignBody.Parent, "pWidth_B", pWidth_B);
-                                    DatumPoint.Create(iDesignBody.Parent, "pOuter_B", pOuter_B);
-                                    DatumPoint.Create(iDesignBody.Parent, "pOuter_A", pOuter_A);
-                                    DatumPoint.Create(iDesignBody.Parent, "pInner_A", pInner_A);
-                                    DatumPoint.Create(iDesignBody.Parent, "pInner_B", pInner_B);
-                                    DatumPoint.Create(iDesignBody.Parent, "pInnerMid", pInnerMid);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_InnerFace", p_InnerFace);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_OuterFace", p_OuterFace);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_InnerEdge_A", p_InnerEdge_A);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_InnerEdge_B", p_InnerEdge_B);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_OuterEdge_A", p_OuterEdge_A);
-                                    DatumPoint.Create(iDesignBody.Parent, "p_OuterEdge_B", p_OuterEdge_B);
-
-                                    DatumPlane.Create(iDesignBody.Parent, "planeInner", planeInner);
-                                    DatumPlane.Create(iDesignBody.Parent, "planeOuter", planeOuter);
-
-                                });
-
-                            }
-
                             var boundary_Outer = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, p_OuterFace, WidthDifferenceOuter, maxDistanceBottom);
                             var boundary_Inner = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, pInnerMid, WidthDifferenceInner, maxDistanceBottom);
-
-                            if (false)
-                            {
-                                foreach (ITrimmedCurve curve in boundary_Outer)
-                                    DesignCurve.Create(iDesignBody.Parent, curve);
-                                foreach (ITrimmedCurve curve in boundary_Inner)
-                                    DesignCurve.Create(iDesignBody.Parent, curve);
-
-                            }
 
                             connectorBody = connector.CreateLoft(boundary_Outer, planeOuter, boundary_Inner, planeInner);
 
@@ -810,21 +738,11 @@ namespace AESCConstruct25.UI
                             connectorBody.Subtract(cylinder);
                             connectorBody.Subtract(cylinder2);
 
-
                             collisionBody = connectorBody.Copy();
                             cutBody = connectorBody.Copy();
                             cutBody.OffsetFaces(cutBody.Faces, connector.Tolerance * 0.001);
-
-                            if (false)
-                            {
-
-                                DesignBody.Create(iDesignBody.Parent.Master, "connectorBody", connectorBody.Copy());
-                                DesignBody.Create(iDesignBody.Parent.Master, "collisionBody", collisionBody.Copy());
-                                DesignBody.Create(iDesignBody.Parent.Master, "cutBody", cutBody.Copy());
-                            }
-
                         }
-                        //Collision body is used to check for collisions, if there is a collision, the cutBody is subtracted. cutBodiesSource is used for the Corner Cutouts
+
                         // Add connector to selected Master designbody
                         DesignBody desBodyMaster = iDesignBody.Master;
                         DesignBody.Create(desBodyMaster.Parent, "connectorBody", connectorBody);
@@ -841,7 +759,6 @@ namespace AESCConstruct25.UI
 
                         DesignBody.Create(desBodyMaster.Parent, "collisionBody", collisionBody);
                         DesignBody.Create(desBodyMaster.Parent, "cutBody", cutBody);
-
 
                         List<IDesignBody> _listIDB = mainPart.GetDescendants<IDesignBody>().ToList();
                         List<IDesignBody> listIDBCollisionBody = new List<IDesignBody> { };
@@ -907,9 +824,10 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString());
+                Application.ReportStatus(ex.ToString(), StatusMessageType.Error, null);
             }
         }
+
 
         private static List<IDesignBody> getIDesignBodiesFromBody(Part part, Body body)
         {
@@ -994,6 +912,32 @@ namespace AESCConstruct25.UI
 
         }
 
+        //private bool checkFitsLine(IDesignEdge iDesEdge, ConnectorModel connector)
+        //{
+        //    DesignEdge desEdge = iDesEdge.Master;
+        //    Point midPoint = Point.Origin;
+
+        //    var line = desEdge.Shape.Geometry as Line;
+        //    if (line == null)
+        //        return true;
+
+        //    if (connector.ClickPosition)
+        //    {
+        //        Point selPoint = (Point)Window.ActiveWindow.ActiveContext.GetSelectionPoint(iDesEdge);
+        //        midPoint = iDesEdge.Shape.ProjectPoint(selPoint).Point;
+        //    }
+        //    else
+        //    {
+        //        Point selPoint = Point.Origin;
+        //        double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
+        //        double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
+        //        midPoint = line.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
+        //    }
+        //    double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
+        //    //Application.ReportStatus($"minDist: {minDist}", StatusMessageType.Information, null);
+        //    return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
+
+        //}
         private bool checkFitsLine(IDesignEdge iDesEdge, ConnectorModel connector)
         {
             DesignEdge desEdge = iDesEdge.Master;
@@ -1001,7 +945,7 @@ namespace AESCConstruct25.UI
 
             var line = desEdge.Shape.Geometry as Line;
             if (line == null)
-                return true;
+                return true; // only enforce fit on straight lines
 
             if (connector.ClickPosition)
             {
@@ -1010,16 +954,20 @@ namespace AESCConstruct25.UI
             }
             else
             {
-                Point selPoint = Point.Origin;
                 double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
                 double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
                 midPoint = line.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
             }
-            double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
-            //Application.ReportStatus($"minDist: {minDist}", StatusMessageType.Information, null);
-            return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
 
+            // Apply left/right shift along the edge tangent (Location is mm)
+            double offsetM = 0.001 * connector.Location;
+            Direction tangent = desEdge.Shape.ProjectPoint(midPoint).Derivative.Direction;
+            midPoint = midPoint + offsetM * tangent;
+
+            double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
+            return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
         }
+
 
         private bool checkDesignEdge(IDesignEdge iDesEdge, bool clickPosition, out Point midPoint)
         {
@@ -1397,6 +1345,11 @@ namespace AESCConstruct25.UI
         {
             try { picDrawing?.Invalidate(); }
             catch (Exception ex) { Logger.Log($"InvalidateDrawing error: {ex}"); }
+        }
+
+        private void connectorLocation_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
         }
     }
 }

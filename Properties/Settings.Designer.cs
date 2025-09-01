@@ -12,7 +12,7 @@ namespace AESCConstruct25.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.13.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -49,7 +49,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.02")]
+        [global::System.Configuration.DefaultSettingValueAttribute("15.75")]
         public double TableAnchorX {
             get {
                 return ((double)(this["TableAnchorX"]));
@@ -61,7 +61,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.02")]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
         public double TableAnchorY {
             get {
                 return ((double)(this["TableAnchorY"]));
@@ -73,7 +73,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("BottomRightCorner")]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopRightCorner")]
         public string TableLocationPoint {
             get {
                 return ((string)(this["TableLocationPoint"]));
@@ -157,7 +157,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Connectors\\ConnectorProperties.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Connectors\\ConnectorProperties.csv")]
         public string ConnectorProperties {
             get {
                 return ((string)(this["ConnectorProperties"]));
@@ -169,7 +169,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("CustomProperty\\CompProperties.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\CustomProperty\\CompProperties.csv")]
         public string CompProperties {
             get {
                 return ((string)(this["CompProperties"]));
@@ -181,7 +181,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Bolt.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Fasteners\\Bolt.csv")]
         public string Bolt {
             get {
                 return ((string)(this["Bolt"]));
@@ -193,7 +193,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Nut.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Fasteners\\Nut.csv")]
         public string Nut {
             get {
                 return ((string)(this["Nut"]));
@@ -205,7 +205,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Fasteners\\Washer.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Fasteners\\Washer.csv")]
         public string Washer {
             get {
                 return ((string)(this["Washer"]));
@@ -217,7 +217,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Plates\\PlatesProperties.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Plates\\PlatesProperties.csv")]
         public string PlatesProperties {
             get {
                 return ((string)(this["PlatesProperties"]));
@@ -229,7 +229,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_Circular.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_Circular.csv")]
         public string Profiles_Circular {
             get {
                 return ((string)(this["Profiles_Circular"]));
@@ -241,7 +241,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_H.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_H.csv")]
         public string Profiles_H {
             get {
                 return ((string)(this["Profiles_H"]));
@@ -253,7 +253,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_L.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_L.csv")]
         public string Profiles_L {
             get {
                 return ((string)(this["Profiles_L"]));
@@ -265,7 +265,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_Rectangular.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_Rectangular.csv")]
         public string Profiles_Rectangular {
             get {
                 return ((string)(this["Profiles_Rectangular"]));
@@ -277,7 +277,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_T.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_T.csv")]
         public string Profiles_T {
             get {
                 return ((string)(this["Profiles_T"]));
@@ -289,7 +289,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Profiles\\Profiles_U.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\Profiles\\Profiles_U.csv")]
         public string Profiles_U {
             get {
                 return ((string)(this["Profiles_U"]));
@@ -301,13 +301,61 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("UserDXFProfiles\\profiles.csv")]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\ProgramData\\AESCConstruct\\UserDXFProfiles\\profiles.csv")]
         public string profiles {
             get {
                 return ((string)(this["profiles"]));
             }
             set {
                 this["profiles"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool NetworkLogUser_Enabled {
+            get {
+                return ((bool)(this["NetworkLogUser_Enabled"]));
+            }
+            set {
+                this["NetworkLogUser_Enabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("%ProgramData%\\IPManager\\Logs")]
+        public string NetworkLogUser_Directory {
+            get {
+                return ((string)(this["NetworkLogUser_Directory"]));
+            }
+            set {
+                this["NetworkLogUser_Directory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("mm")]
+        public string LengthUnit {
+            get {
+                return ((string)(this["LengthUnit"]));
+            }
+            set {
+                this["LengthUnit"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopRight")]
+        public string DocumentAnchor {
+            get {
+                return ((string)(this["DocumentAnchor"]));
+            }
+            set {
+                this["DocumentAnchor"] = value;
             }
         }
     }

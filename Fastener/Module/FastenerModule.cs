@@ -251,7 +251,7 @@ namespace AESCConstruct25.Fastener.Module
                     {
                         continue;
                     }
-                    if (Math.Abs(radius - circle.Radius) < 1e-9)
+                    if (Math.Abs(radius - circle.Radius) < 1e-6)
                         returnList.Add(CreatePlacementData(circle, ide));
                 }
             }
@@ -299,7 +299,7 @@ namespace AESCConstruct25.Fastener.Module
                     direction = dist1 > dist2 ? direction : -direction;
 
                     var cyl2 = face.Shape.Geometry as Cylinder;
-                    Matrix mat = Matrix.CreateMapping(SpaceClaim.Api.V242.Geometry.Frame.Create(cyl2.Axis.Origin, cyl2.Axis.Direction)).Inverse;
+                    Matrix mat = Matrix.CreateMapping(Frame.Create(cyl2.Axis.Origin, cyl2.Axis.Direction)).Inverse;
                     Box boundingBox = face.Shape.GetBoundingBox(mat, true);
                     depth = boundingBox.Size.Z;
 

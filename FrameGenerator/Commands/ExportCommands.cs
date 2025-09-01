@@ -1,5 +1,5 @@
 ﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Properties;     // for Settings.Default
+using AESCConstruct25.Properties;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -8,16 +8,24 @@ using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using WK.Libraries.BetterFolderBrowserNS;
+using Application = SpaceClaim.Api.V242.Application;
 using Body = SpaceClaim.Api.V242.Modeler.Body;
+using Clipboard = System.Windows.Forms.Clipboard;
 using Component = SpaceClaim.Api.V242.Component;
+using MessageBox = System.Windows.Forms.MessageBox;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Table = SpaceClaim.Api.V242.Table;
-//using Component = SpaceClaim.Api.V242.Component;
+using Vector = SpaceClaim.Api.V242.Geometry.Vector;
+using Window = SpaceClaim.Api.V242.Window;
+
+
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -28,76 +36,111 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                MessageBox.Show("No active document.", "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
                 return;
             }
 
-            bool matBOM = Settings.Default.MatInBOM;
+            bool matSetting = Settings.Default.MatInBOM;
+            var unit = GetSelectedUnit();
 
+            // Ensure a drawing sheet exists (offer to create one if none)
             DrawingSheet sheet = doc.DrawingSheets.FirstOrDefault();
-            if (update)
+            if (sheet == null)
             {
+                var choice = MessageBox.Show(
+                    "No drawing sheet present. Create a drawing sheet?",
+                    "Export BOM",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (choice == DialogResult.No)
+                    return;
+
+                try
+                {
+                    Command.Execute("NewDrawingSheet");
+                    sheet = doc.DrawingSheets.FirstOrDefault();
+                }
+                catch { /* ignore */ }
+
                 if (sheet == null)
                 {
-                    MessageBox.Show(
-                        "No drawing sheet open; skipping BOM update.",
-                        "Export BOM",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
+                    //MessageBox.Show("Failed to create a drawing sheet.", "Export BOM",
+                    //    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Application.ReportStatus("Failed to create a drawing sheet.", StatusMessageType.Error, null);
                     return;
-                }
-                else
-                {
-                    var old = sheet
-                        .GetDescendants<Table>()
-                        .Where(t => t.TryGetTextAttribute("IsExportedBOM", out var tag) && tag == "true")
-                        .ToList();
-                    // Logger.Log($"Deleting {old.Count} existing BOM table(s).");
-                    foreach (var tbl in old)
-                        tbl.Delete();
                 }
             }
 
+            //var sheetWindow = Window.Create(sheet);   // open a window for the drawing sheet
+            //if (sheetWindow != null)
+            //{
+            //    Window.ActiveWindow = sheetWindow;    // ✅ static property on Window
+            //}
+            var existing = Window.AllWindows.FirstOrDefault(w => w.Scene == sheet);
+            if (existing != null) Window.ActiveWindow = existing;
+            else Window.ActiveWindow = Window.Create(sheet);
+
+            // This preserves the placement even if the user dragged the table manually.
+            var existingBoms = sheet.GetDescendants<Table>()
+                                    .Where(t => t.TryGetTextAttribute("IsExportedBOM", out var tag) && tag == "true")
+                                    .ToList();
+
+            PointUV? reuseLocation = null;
+            if (existingBoms.Count > 0)
+            {
+                try
+                {
+                    // Always use the visual top-left as the anchor we will reuse
+                    reuseLocation = existingBoms[0].GetLocation(LocationPoint.TopLeftCorner);
+                }
+                catch { reuseLocation = null; }
+
+                foreach (var tbl in existingBoms)
+                    tbl.Delete();
+            }
+
+            // Normalize duplicate names & ensure Construct_Tubelength / Construct_Length are set
             CompareCommand.CompareSimple();
 
             var comps = doc.MainPart
-                           .GetChildren<SpaceClaim.Api.V242.Component>()
+                           .GetChildren<Component>()
                            .Where(c => c.Template.Bodies.Any())
                            .ToList();
+
             if (!comps.Any())
             {
-                MessageBox.Show("No components found to export.", "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //MessageBox.Show("No components found to export.", "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
                 return;
             }
 
-            // 2) Group into BOM rows
+            bool anyMaterial = comps.Any(c => c.Template.Material != null && !string.IsNullOrWhiteSpace(c.Template.Material.Name));
+            bool includeMaterial = matSetting && anyMaterial;
+
             var bomRows = comps
                 .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
                 .Select(g =>
                 {
                     var first = g.First();
-                    string length = "N/A";
-                    if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p))
-                        length = p.Value.ToString();
 
-                    string material = "N/A";
-                    if (matBOM && first.Template.Material != null)
-                        material = first.Template.Material.Name;
+                    // length saved in meters (string)
+                    string lengthMeters = "N/A";
+                    if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p) ||
+                        first.Template.CustomProperties.TryGetValue("Construct_Length", out p))
+                        lengthMeters = p.Value.ToString();
+
+                    string material = first.Template.Material?.Name ?? "";
 
                     string cuts;
-                    try { cuts = GetCutString(first); }
-                    catch (Exception)
-                    {
-                        // Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
-                        cuts = "N/A";
-                    }
+                    try { cuts = GetCutString(first); } catch { cuts = "N/A"; }
 
                     return new
                     {
                         Part = g.Key,
                         Qty = g.Count(),
-                        TubeLength = length,
+                        TubeLengthMeters = lengthMeters,
                         CutAngles = cuts,
                         Material = material
                     };
@@ -105,77 +148,60 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 .OrderBy(x => x.Part)
                 .ToList();
 
-            // 3) Build tab-delimited payload
             int baseCols = 4;
-            int cols = matBOM ? baseCols + 1 : baseCols;
+            int cols = includeMaterial ? baseCols + 1 : baseCols;
             var sb = new StringBuilder();
 
-            // Header row
+            // Header with selected unit
             sb.Append("Part Name").Append('\t')
               .Append("Qty").Append('\t')
-              .Append("Tube Length").Append('\t')
+              .Append($"Tube Length ({unit})").Append('\t')
               .Append("Cut Angles");
-            if (matBOM)
-                sb.Append('\t').Append("Material");
+            if (includeMaterial) sb.Append('\t').Append("Material");
             sb.Append("\r\n");
 
-            // Data rows
             foreach (var row in bomRows)
             {
-                // Logger.Log($"Export row: {row.Part} → material={row.Material}");
                 sb.Append(row.Part).Append('\t')
                   .Append(row.Qty).Append('\t')
-                  .Append(row.TubeLength).Append('\t')
+                  .Append(FormatLengthFromMetersString(row.TubeLengthMeters)).Append('\t')
                   .Append(row.CutAngles);
-                if (matBOM)
-                    sb.Append('\t').Append(row.Material);
+                if (includeMaterial)
+                    sb.Append('\t').Append(string.IsNullOrWhiteSpace(row.Material) ? "" : row.Material);
                 sb.Append("\r\n");
             }
 
             var payload = sb.ToString();
 
-            // 4) Copy to clipboard
             try { Clipboard.SetText(payload); }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to copy BOM to clipboard:\n" + ex.Message, "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("Failed to copy BOM to clipboard:\n" + ex.Message, "Export BOM",
+                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                Application.ReportStatus("Failed to copy BOM to clipboard:\n" + ex.Message, StatusMessageType.Error, null);
                 return;
             }
 
-            // 5) Paste into drawing sheet
             try
             {
-                if (sheet == null)
-                {
-                    MessageBox.Show(
-                        "Please activate a drawing sheet before exporting the BOM.",
-                        "Export BOM",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
-                    return;
-                }
-
                 int rows = bomRows.Count + 1;
                 var contents = new string[rows, cols];
 
-                // Header
                 contents[0, 0] = "Part Name";
                 contents[0, 1] = "Qty";
-                contents[0, 2] = "Tube Length";
+                contents[0, 2] = $"Tube Length ({unit})";
                 contents[0, 3] = "Cut Angles";
-                if (matBOM)
-                    contents[0, 4] = "Material";
+                if (includeMaterial) contents[0, 4] = "Material";
 
-                // Data
                 for (int i = 0; i < bomRows.Count; i++)
                 {
                     contents[i + 1, 0] = bomRows[i].Part;
                     contents[i + 1, 1] = bomRows[i].Qty.ToString();
-                    contents[i + 1, 2] = bomRows[i].TubeLength;
+                    contents[i + 1, 2] = FormatLengthFromMetersString(bomRows[i].TubeLengthMeters);
                     contents[i + 1, 3] = bomRows[i].CutAngles;
-                    if (matBOM)
-                        contents[i + 1, 4] = bomRows[i].Material;
+                    if (includeMaterial)
+                        contents[i + 1, 4] = string.IsNullOrWhiteSpace(bomRows[i].Material) ? "" : bomRows[i].Material;
                 }
 
                 double rowHeight = 0.008;
@@ -183,147 +209,153 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 double columnWidth = width / cols;
                 double fontSize = rowHeight * 0.4;
 
-                double anchorX = Settings.Default.TableAnchorX;
-                double anchorY = Settings.Default.TableAnchorY;
-                var anchorUV = new PointUV(anchorX, anchorY);
+                // Decide placement:
+                //  - If we captured a previous table's location, reuse it and anchor by TopLeftCorner
+                //  - Otherwise, compute from DocumentAnchor + AnchorX/Y settings
+                PointUV anchorUV;
+                LocationPoint corner;
 
-                var corner = (LocationPoint)Enum.Parse(
-                    typeof(LocationPoint),
-                    Settings.Default.TableLocationPoint
-                );
+                if (reuseLocation.HasValue)
+                {
+                    anchorUV = reuseLocation.Value;
+                    corner = LocationPoint.TopLeftCorner;
+                }
+                else
+                {
+                    bool left = (Settings.Default.DocumentAnchor == "TopLeft" || Settings.Default.DocumentAnchor == "BottomLeft");
+                    bool top = (Settings.Default.DocumentAnchor == "TopLeft" || Settings.Default.DocumentAnchor == "TopRight");
 
-                var table = Table.Create(
-                    sheet,
-                    anchorUV,
-                    corner,  //LocationPoint.BottomRightCorner,
-                    rowHeight,
-                    columnWidth,
-                    fontSize,
-                    contents
-                );
+                    double anchorX = Settings.Default.TableAnchorX / 1000.0; // mm → m
+                    if (!left)
+                        anchorX = sheet.Width - (Settings.Default.TableAnchorX / 1000.0);
 
+                    double anchorY = Settings.Default.TableAnchorY / 1000.0; // mm → m
+                    if (top)
+                        anchorY = sheet.Height - (Settings.Default.TableAnchorY / 1000.0);
+
+                    anchorUV = new PointUV(anchorX, anchorY);
+                    corner = (LocationPoint)Enum.Parse(typeof(LocationPoint), Settings.Default.TableLocationPoint);
+                }
+
+                var table = Table.Create(sheet, anchorUV, corner, rowHeight, columnWidth, fontSize, contents);
                 table.SetTextAttribute("IsExportedBOM", "true");
 
-                // Adjust column widths dynamically
-                double[] columnWidths = matBOM
-                    ? new[] { 0.06, 0.015, 0.03, 0.04, 0.08 }
-                    : new[] { 0.06, 0.015, 0.03, 0.04 };
+                double[] columnWidths = includeMaterial
+                    ? new[] { 0.06, 0.015, 0.04, 0.05, 0.08 }
+                    : new[] { 0.08, 0.02, 0.06, 0.06 };
 
                 for (int colIndex = 0; colIndex < columnWidths.Length && colIndex < table.Columns.Count; colIndex++)
                     table.Columns[colIndex].Width = columnWidths[colIndex];
 
-                MessageBox.Show(
-                    "BOM table has been written to the active drawing sheet.",
-                    "Export BOM",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                //MessageBox.Show("BOM table has been written to the active drawing sheet.",
+                //    "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.ReportStatus("BOM table has been written to the active drawing sheet.", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to build BOM table:\n" + ex.Message, "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("Failed to build BOM table:\n" + ex.Message, "Export BOM",
+                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus("Failed to build BOM table:\n" + ex.Message, StatusMessageType.Error, null);
             }
         }
-
 
         public static void ExportExcel(Window window)
         {
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                MessageBox.Show("No active document.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("No active document.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
                 return;
             }
 
-            bool matExcel = Settings.Default.MatInExcel;
+            bool matExcelSetting = Settings.Default.MatInExcel;
+            var unit = GetSelectedUnit();
 
-            // normalize duplicate names & ensure Construct_Tubelength is set
             CompareCommand.CompareSimple();
 
-            // gather components
             var comps = doc.MainPart
                            .GetChildren<SpaceClaim.Api.V242.Component>()
                            .Where(c => c.Template.Bodies.Any())
                            .ToList();
             if (!comps.Any())
             {
-                MessageBox.Show("No components found to export.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //MessageBox.Show("No components found to export.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
                 return;
             }
 
-            // group by cleaned name and pull tube length + material if requested
+            bool anyMaterial = comps.Any(c => c.Template.Material != null && !string.IsNullOrWhiteSpace(c.Template.Material.Name));
+            bool includeMaterial = matExcelSetting && anyMaterial;
+
             var bomRows = comps
-              .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
-              .Select(g =>
-              {
-                  var first = g.First();
+                .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
+                .Select(g =>
+                {
+                    var first = g.First();
 
-                  string length = "N/A";
-                  if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p))
-                      length = p.Value.ToString();
+                    // length saved in meters
+                    string lengthMeters = "N/A";
+                    if (first.Template.CustomProperties.TryGetValue("Construct_Tubelength", out var p) ||
+                        first.Template.CustomProperties.TryGetValue("Construct_Length", out p))
+                        lengthMeters = p.Value.ToString();
 
-                  string material = "N/A";
-                  if (matExcel && first.Template.Material != null)
-                      material = first.Template.Material.Name;
+                    string material = first.Template.Material?.Name ?? "";
 
-                  string cuts;
-                  try
-                  {
-                      cuts = GetCutString(first);
-                  }
-                  catch (Exception)
-                  {
-                      // Logger.Log($"ExportCommands: failed to get cuts for {first.Name}: {ex.Message}");
-                      cuts = "N/A";
-                  }
+                    string cuts;
+                    try { cuts = GetCutString(first); } catch { cuts = "N/A"; }
 
-                  return new
-                  {
-                      Part = g.Key,
-                      Qty = g.Count(),
-                      TubeLength = length,
-                      CutAngles = cuts,
-                      Material = material
-                  };
-              })
-              .OrderBy(x => x.Part)
-              .ToList();
+                    return new
+                    {
+                        Part = g.Key,
+                        Qty = g.Count(),
+                        TubeLengthMeters = lengthMeters,
+                        CutAngles = cuts,
+                        Material = material
+                    };
+                })
+                .OrderBy(x => x.Part)
+                .ToList();
 
-            // ask for folder
-            string folderPath;
-            using (var bfb = new BetterFolderBrowser(new Container()))
+            // Ask for file name + location (like ExportSettingsButton_Click)
+            var dlg = new SaveFileDialog
             {
-                bfb.Title = "Select folder to save BOM Excel";
-                bfb.RootFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                if (bfb.ShowDialog() != DialogResult.OK)
-                    return;
-                folderPath = bfb.SelectedFolder;
-            }
+                Title = "Export BOM to Excel",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                FileName = "BOM.xlsx",
+                AddExtension = true,
+                DefaultExt = ".xlsx",
+                OverwritePrompt = true
+            };
+            if (dlg.ShowDialog() != true)
+                return;
 
-            var excelPath = Path.Combine(folderPath, "BOM.xlsx");
+            var excelPath = dlg.FileName;
+
             try
             {
                 using (var docX = SpreadsheetDocument.Create(excelPath, SpreadsheetDocumentType.Workbook))
                 {
                     var wbPart = docX.AddWorkbookPart();
                     wbPart.Workbook = new Workbook();
+
                     var sheetPart = wbPart.AddNewPart<WorksheetPart>();
                     var sheetData = new SheetData();
                     sheetPart.Worksheet = new Worksheet(sheetData);
 
-                    // header row
+                    // Header row
                     var header = new Row { RowIndex = 1 };
                     header.Append(
                         MakeTextCell("A", 1, "Part Name"),
                         MakeTextCell("B", 1, "Quantity"),
-                        MakeTextCell("C", 1, "Tube Length"),
+                        MakeTextCell("C", 1, $"Tube Length ({unit})"),
                         MakeTextCell("D", 1, "Cut Angles")
                     );
-                    if (matExcel)
+                    if (includeMaterial)
                         header.Append(MakeTextCell("E", 1, "Material"));
                     sheetData.Append(header);
 
-                    // data rows
+                    // Data rows
                     for (int i = 0; i < bomRows.Count; i++)
                     {
                         uint rowIndex = (uint)(i + 2);
@@ -331,11 +363,11 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         row.Append(
                             MakeTextCell("A", rowIndex, bomRows[i].Part),
                             MakeNumberCell("B", rowIndex, bomRows[i].Qty),
-                            MakeTextCell("C", rowIndex, bomRows[i].TubeLength),
+                            MakeTextCell("C", rowIndex, FormatLengthFromMetersString(bomRows[i].TubeLengthMeters)),
                             MakeTextCell("D", rowIndex, bomRows[i].CutAngles)
                         );
-                        if (matExcel)
-                            row.Append(MakeTextCell("E", rowIndex, bomRows[i].Material));
+                        if (includeMaterial)
+                            row.Append(MakeTextCell("E", rowIndex, string.IsNullOrWhiteSpace(bomRows[i].Material) ? "" : bomRows[i].Material));
                         sheetData.Append(row);
                     }
 
@@ -346,24 +378,35 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         SheetId = 1,
                         Name = "BOM"
                     });
+
                     wbPart.Workbook.Save();
                 }
 
+                //MessageBox.Show("BOM exported:\n" + excelPath, "Export to Excel",
+                //    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.ReportStatus("BOM exported:\n" + excelPath, StatusMessageType.Information, null);
+
+                // Open the file
                 Process.Start(new ProcessStartInfo(excelPath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to export to Excel:\n{ex.Message}", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show($"Failed to export to Excel:\n{ex.Message}", "Export to Excel",
+                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                Application.ReportStatus($"Failed to export to Excel:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
+
 
         public static void ExportSTEP(Window window)
         {
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                MessageBox.Show("No active document.", "Export to STEP",
-                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("No active document.", "Export to STEP",
+                //                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.ReportStatus("No active document.", StatusMessageType.Error, null);
                 return;
             }
 
@@ -375,8 +418,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 .ToList();
             if (!partsToExport.Any())
             {
-                MessageBox.Show("No parts found to export.", "Export to STEP",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //MessageBox.Show("No parts found to export.", "Export to STEP",
+                //                MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                Application.ReportStatus("No parts found to export.", StatusMessageType.Warning, null);
                 return;
             }
 
@@ -393,62 +438,67 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             try
             {
-                // 3) Loop through each part and export to a uniquely named .stp
-                foreach (var part in partsToExport)
+                WriteBlock.ExecuteTask("Convert DXF Profile", () =>
                 {
-                    // base name from display name
-                    var name = part.DisplayName;
-
-                    // if checkbox set, append material (underscored, no spaces)
-                    if (matSTEP && part.Material != null)
+                    // 3) Loop through each part and export to a uniquely named .stp
+                    foreach (var part in partsToExport)
                     {
-                        var mat = part.Material.Name.Replace(" ", "_");
-                        name = $"{name}_{mat}";
-                    }
+                        // base name from display name
+                        var name = part.DisplayName;
 
-                    var baseFileName = $"{name}.stp";
-                    var dest = Path.Combine(folderPath, baseFileName);
-
-                    // If file exists, append a numeric suffix
-                    if (File.Exists(dest))
-                    {
-                        int suffix = 1;
-                        string candidate;
-                        do
+                        // if checkbox set, append material (underscored, no spaces)
+                        if (matSTEP && part.Material != null)
                         {
-                            candidate = Path.Combine(folderPath, $"{name} ({suffix}).stp");
-                            suffix++;
+                            var mat = part.Material.Name.Replace(" ", "_");
+                            name = $"{name}_{mat}";
                         }
-                        while (File.Exists(candidate) && suffix < 1000);
 
-                        dest = candidate;
+                        var baseFileName = $"{name}.stp";
+                        var dest = Path.Combine(folderPath, baseFileName);
+
+                        // If file exists, append a numeric suffix
+                        if (File.Exists(dest))
+                        {
+                            int suffix = 1;
+                            string candidate;
+                            do
+                            {
+                                candidate = Path.Combine(folderPath, $"{name} ({suffix}).stp");
+                                suffix++;
+                            }
+                            while (File.Exists(candidate) && suffix < 1000);
+
+                            dest = candidate;
+                        }
+
+                        try
+                        {
+                            part.Export(PartExportFormat.Step, dest, false, null);
+                        }
+                        catch
+                        {
+                            // Swallow export errors for individual parts
+                        }
                     }
 
-                    try
+                    // 4) Open the export folder in Explorer
+                    Process.Start(new ProcessStartInfo(folderPath)
                     {
-                        part.Export(PartExportFormat.Step, dest, false, null);
-                    }
-                    catch
-                    {
-                        // Swallow export errors for individual parts
-                    }
-                }
-
-                // 4) Open the export folder in Explorer
-                Process.Start(new ProcessStartInfo(folderPath)
-                {
-                    UseShellExecute = true,
-                    Verb = "open"
+                        UseShellExecute = true,
+                        Verb = "open"
+                    });
                 });
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                  $"Failed to export STEP files:\n{ex.Message}",
-                  "Export to STEP",
-                  MessageBoxButtons.OK,
-                  MessageBoxIcon.Error
-                );
+                //MessageBox.Show(
+                //  $"Failed to export STEP files:\n{ex.Message}",
+                //  "Export to STEP",
+                //  MessageBoxButtons.OK,
+                //  MessageBoxIcon.Error
+                //);
+
+                Application.ReportStatus($"Failed to export STEP files:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -473,69 +523,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 CellValue = new CellValue(number.ToString())
             };
         }
-
-        //public static (double aStart, double aEnd) GetProfileCutAngles(Component comp)
-        //{
-        //    // — 1) Extract the local sweep direction from the design curve —
-        //    var dc = comp.Template.Curves
-        //                 .OfType<DesignCurve>()
-        //                 .FirstOrDefault()
-        //             ?? throw new InvalidOperationException("No construction curve");
-        //    var seg = (CurveSegment)dc.Shape;
-        //    Vector sweepLocal = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
-
-        //    // — 2) Pull out only the planar faces of the extruded profile body —
-        //    var body = comp.Template.Bodies
-        //                  .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-        //              ?? throw new InvalidOperationException("No ExtrudedProfile");
-        //    var profileBody = (Body)body.Shape;
-
-        //    const double tol = 1e-6;
-        //    var endCaps = profileBody.Faces
-        //      .Select(f => f.Geometry as Plane)               // cast to Plane
-        //      .Where(pl => pl != null)
-        //      .Select(pl => pl.Frame.DirZ.ToVector())         // face normal in local
-        //      .Where(n => Math.Abs(Vector.Dot(n, sweepLocal)) > tol)
-        //      .ToList();
-
-        //    if (endCaps.Count != 2)
-        //        throw new InvalidOperationException(
-        //          $"Expected 2 end-cap faces but found {endCaps.Count}"
-        //        );
-
-        //    // — 3) Identify start vs end by alignment with ±sweepLocal —
-        //    var n0 = endCaps.OrderByDescending(n => Vector.Dot(n, -sweepLocal)).First();
-        //    var n1 = endCaps.OrderByDescending(n => Vector.Dot(n, sweepLocal)).First();
-
-        //    // — 4) “Up” axis in local (Z)
-        //    Vector localUp = Vector.Create(0, 0, 1);
-
-        //    // — 5) Measure deviation from 90°, **round to 0.1°** —
-        //    double Clamp01(double x) => Math.Max(-1.0, Math.Min(1.0, x));
-        //    double Measure(Vector normal)
-        //    {
-        //        // normal·up = cos(deviation), 1→0°, 0→90°
-        //        var d = Clamp01(Vector.Dot(normal, localUp));
-        //        double angle = Math.Acos(d) * 180.0 / Math.PI;
-        //        return Math.Round(angle, 1);     // <-- 0.1° precision
-        //    }
-
-        //    return (Measure(n0), Measure(n1));
-        //}
-
-        //public static string GetCutString(Component comp)
-        //{
-        //    try
-        //    {
-        //        var (a0, a1) = GetProfileCutAngles(comp);
-        //        return $"{a0:F1}/{a1:F1}";
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //       // Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
-        //        return "ERR";
-        //    }
-        //}
         public static (double xStart, double zStart, double xEnd, double zEnd) GetProfileCutAngles(Component comp)
         {
             const double tol = 1e-6;
@@ -616,5 +603,49 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        static string GetSelectedUnit()
+        {
+            var u = Settings.Default.LengthUnit;
+            return string.IsNullOrWhiteSpace(u) ? "mm" : u;
+        }
+
+        static bool TryParseMeters(string text, out double meters)
+        {
+            meters = 0;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            // stored as raw numeric meters (e.g., "0.06")
+            // be tolerant of culture
+            if (double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ||
+                double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out v))
+            {
+                meters = v;
+                return true;
+            }
+            return false;
+        }
+
+        static double FromMeters(double meters, string unit)
+        {
+            switch (unit)
+            {
+                case "mm": return meters * 1000.0;
+                case "cm": return meters * 100.0;
+                case "m": return meters;
+                case "inch": return meters / 0.0254;
+                default: return meters;
+            }
+        }
+
+        static string FormatLengthFromMetersString(string rawMeters)
+        {
+            if (TryParseMeters(rawMeters, out var m))
+            {
+                var unit = GetSelectedUnit();
+                var val = FromMeters(m, unit);
+                return val.ToString("0.###", CultureInfo.InvariantCulture);
+            }
+            return rawMeters; // fallback (e.g., "N/A")
+        }
     }
 }

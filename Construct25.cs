@@ -1,17 +1,19 @@
 ﻿using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.Licensing;
 using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
-using SpaceClaim.Api.V242.Geometry;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using Application = SpaceClaim.Api.V242.Application;
+using Clipboard = System.Windows.Forms.Clipboard;
 using Image = System.Drawing.Image;
+using Window = SpaceClaim.Api.V242.Window;
 
 namespace AESCConstruct25
 {
@@ -35,12 +37,13 @@ namespace AESCConstruct25
 
                 Api.AttachToSession(session);
 
-                LicenseSpot.LicenseSpot.Initialize();
+                bool LicenseValid = ConstructLicenseSpot.CheckLicense();
+
+                ConstructLicenseSpot.EnsureNetworkDeactivatedOnStartup();
 
                 if (!isCommandRegistered)
                 {
-                    //Logger.Log("AESCConstruct25: Registering Commands...");
-                    bool valid = LicenseSpot.LicenseSpot.State.Valid;//DateTime.Now < new DateTime(2025, 8, 31, 23, 59, 59);
+                    bool valid = ConstructLicenseSpot.IsValid;
 
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
@@ -50,7 +53,6 @@ namespace AESCConstruct25
                     exportExcel.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
                     exportExcel.Executing += (s, e) => ExportCommands.ExportExcel(Window.ActiveWindow);
                     exportExcel.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 2");
 
                     // Export BOM
                     var exportBOM = Command.Create("AESCConstruct25.ExportBOM");
@@ -60,7 +62,6 @@ namespace AESCConstruct25
                     exportBOM.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
                     exportBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, false);
                     exportBOM.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 3");
 
 
                     var updateBOM = Command.Create("AESCConstruct25.UpdateBOM");
@@ -79,8 +80,6 @@ namespace AESCConstruct25
                     exportSTEP.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
                     exportSTEP.Executing += (s, e) => ExportCommands.ExportSTEP(Window.ActiveWindow);
                     exportSTEP.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 4");
-
                     //
                     // ─── NEW DXF COMMANDS ────────────────────────────────────────────────────────
                     //
@@ -91,7 +90,6 @@ namespace AESCConstruct25
                     importDxfContours.Hint = "Load DXF contours into the active document.";
                     importDxfContours.Executing += ImportDXFContours_Execute;
                     importDxfContours.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 5");
 
                     // 2) Convert (open) DXF → Profile
                     var dxfToProfile = Command.Create("AESCConstruct25.DXFToProfile");
@@ -99,7 +97,6 @@ namespace AESCConstruct25
                     dxfToProfile.Hint = "Convert an open DXF window into a profile string and preview image.";
                     dxfToProfile.Executing += DXFtoProfile_Execute;
                     dxfToProfile.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 6");
 
                     // 3) Save DXFProfile list to CSV
                     var saveDxfCsv = Command.Create("AESCConstruct25.SaveDXFProfileCsv");
@@ -107,7 +104,6 @@ namespace AESCConstruct25
                     saveDxfCsv.Hint = "Save all collected DXFProfile objects to a CSV file.";
                     saveDxfCsv.Executing += SaveDXFProfiles_Execute;
                     saveDxfCsv.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 7");
 
                     // 4) Load DXFProfile list from CSV
                     var loadDxfCsv = Command.Create("AESCConstruct25.LoadDXFProfileCsv");
@@ -115,7 +111,6 @@ namespace AESCConstruct25
                     loadDxfCsv.Hint = "Load DXFProfile objects from a CSV file.";
                     loadDxfCsv.Executing += LoadDXFProfiles_Execute;
                     loadDxfCsv.KeepAlive(true);
-                    //Logger.Log("AESCConstruct25: 8");
 
                     // 5)Compare bodies in document
                     var CompareCmd = Command.Create("AESCConstruct25.CompareBodies");
@@ -126,7 +121,6 @@ namespace AESCConstruct25
                     CompareCmd.KeepAlive(true);
                     CompareCmd.Executing += (s, e) =>
                         CompareCommand.CompareSimple();
-                    //Logger.Log("AESCConstruct25: 9");
 
                     //
                     // ─── LEGACY / OTHER COMMANDS ─────────────────────────────────────────────────
@@ -140,12 +134,68 @@ namespace AESCConstruct25
                     jointCmd.Executing += (s, e) =>
                         ExecuteJointCommand.ExecuteJoint(Window.ActiveWindow, 0.0, "Miter", false);
 
+                    // Network license toggle — create the command BEFORE the ribbon needs it
+                    var cmdNet = Command.Create("AESCConstruct25.ActivateNetwork");
+                    cmdNet.IsEnabled = true;                 // let UpdateNetworkButtonUI refine this later
+                    cmdNet.KeepAlive(true);                  // IMPORTANT: prevent GC
+                    cmdNet.Executing += (s, e) =>            // Use Executing (not Executed)
+                    {
+                        try
+                        {
+                            // Make sure we have a license handle/state
+                            ConstructLicenseSpot.CheckLicense();
+
+                            var lic = ConstructLicenseSpot.CurrentLicense;
+                            if (lic == null)
+                            {
+                                Application.ReportStatus("No license handle available (activate or check your license files).", StatusMessageType.Error, null);
+
+                                return;
+                            }
+
+                            if (!lic.IsNetwork)
+                            {
+                                //System.Windows.MessageBox.Show(
+                                //    "Current license is not a network license.",
+                                //    "Network License",
+                                //    System.Windows.MessageBoxButton.OK,
+                                //    System.Windows.MessageBoxImage.Information);
+
+                                Application.ReportStatus("Current license is not a network license.", StatusMessageType.Warning, null);
+                                return;
+                            }
+
+                            // Toggle
+                            if (lic.IsValidConnection())
+                                ConstructLicenseSpot.licenseCheckIn();
+                            else
+                                ConstructLicenseSpot.licenseCheckOut();
+
+                            // Refresh UI after the operation
+                            RefreshLicenseUI();
+                            ConstructLicenseSpot.UpdateNetworkButtonUI();
+                        }
+                        catch (Exception ex)
+                        {
+                            //System.Windows.MessageBox.Show(
+                            //    "Network license toggle failed:\n" + ex.Message,
+                            //    "Network License",
+                            //    System.Windows.MessageBoxButton.OK,
+                            //    System.Windows.MessageBoxImage.Error);
+
+                            Application.ReportStatus("Network license toggle failed:\n" + ex.Message, StatusMessageType.Warning, null);
+                        }
+                    };
+
+                    // Initial button state (enabled/disabled) based on license type
+                    ConstructLicenseSpot.UpdateNetworkButtonUI();
+
+
                     // Sidebar commands
                     var _ = Localization.Language.Translate("Settings");
                     UIManager.RegisterAll();
                     UpdateCommandTexts();
                     UIManager.UpdateCommandTexts();
-                    //UIManager.ShowPanel("RibCutOut");
 
                     isCommandRegistered = true;
                 }
@@ -154,9 +204,22 @@ namespace AESCConstruct25
             }
             catch (Exception)
             {
-                //Logger.Log($"AESCConstruct25: Error during initialization - {ex.Message}");
                 return false;
             }
+        }
+
+        public static void RefreshLicenseUI()
+        {
+            bool valid = ConstructLicenseSpot.IsValid;
+
+            SetEnabled("AESCConstruct25.ExportExcel", valid);
+            SetEnabled("AESCConstruct25.ExportBOM", valid);
+            SetEnabled("AESCConstruct25.UpdateBOM", valid);
+            SetEnabled("AESCConstruct25.ExportSTEP", valid);
+            SetEnabled("AESCConstruct25.CompareBodies", valid);
+
+            UIManager.RefreshLicenseUI();
+            UpdateCommandTexts();
         }
 
         public static void UpdateCommandTexts()
@@ -188,7 +251,12 @@ namespace AESCConstruct25
 
         public void Disconnect()
         {
-            //Logger.Log("AESCConstruct25: Disconnect() called");
+        }
+
+        private static void SetEnabled(string commandId, bool enabled)
+        {
+            var cmd = Command.GetCommand(commandId);
+            if (cmd != null) cmd.IsEnabled = enabled;
         }
 
         public string GetCustomUI()
@@ -196,7 +264,6 @@ namespace AESCConstruct25
             try
             {
                 string resourceName = "AESCConstruct25.UIMain.Ribbon.xml";
-                // Logger.Log($"AESCConstruct25: Loading Ribbon UI from {resourceName}");
 
                 using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
                 {
@@ -205,14 +272,12 @@ namespace AESCConstruct25
 
                     using (StreamReader reader = new StreamReader(stream))
                     {
-                        // Logger.Log("AESCConstruct25: Ribbon UI Loaded Successfully");
                         return reader.ReadToEnd();
                     }
                 }
             }
             catch (Exception)
             {
-                // Logger.Log($"AESCConstruct25: Error loading Ribbon UI - {ex.Message}");
                 return "";
             }
         }
@@ -235,25 +300,11 @@ namespace AESCConstruct25
             // Call the helper
             if (DXFImportHelper.ImportDXFContours(filePath, out var contours))
             {
-                MessageBox.Show(
-                    $"Imported {contours.Count} contour curves from:\n{filePath}",
-                    "DXF Import",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
-
-                // (Optional) create a planar body just to visualize
-                //var planar = Body.CreatePlanarBody(Plane.PlaneXY, contours);
-                //DesignBody.Create(Window.ActiveWindow.Document.MainPart, "ImportedContours", planar);
+                Application.ReportStatus($"Imported {contours.Count} contour curves from:\n{filePath}", StatusMessageType.Information, null);
             }
             else
             {
-                MessageBox.Show(
-                    $"Failed to import valid contours from:\n{filePath}",
-                    "DXF Import",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
+                Application.ReportStatus($"Failed to import valid contours from:\n{filePath}", StatusMessageType.Error, null);
             }
         }
 
@@ -263,18 +314,14 @@ namespace AESCConstruct25
             var profile = DXFImportHelper.DXFtoProfile();
             if (profile == null)
             {
-                MessageBox.Show("DXF → Profile failed or was invalid.", "DXF→Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus("DXF → Profile failed or was invalid.", StatusMessageType.Error, null);
                 return;
             }
 
             // Copy the ProfileString to the clipboard
             Clipboard.SetText(profile.ProfileString);
-            MessageBox.Show(
-                $"DXF→Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)",
-                "DXF→Profile",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
+
+            Application.ReportStatus($"DXF→Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
 
             // Decode and display the preview image if available
             if (!string.IsNullOrEmpty(profile.ImgString))
@@ -286,7 +333,7 @@ namespace AESCConstruct25
                     var frm = new Form
                     {
                         Text = "DXF Preview: " + profile.Name,
-                        ClientSize = new Size(bmp.Width, bmp.Height)
+                        ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
                     };
                     var pb = new PictureBox
                     {
@@ -305,7 +352,7 @@ namespace AESCConstruct25
             var profiles = DXFImportHelper.SessionProfiles;
             if (profiles == null || profiles.Count() == 0)
             {
-                MessageBox.Show("No DXF profiles available to save.", "Save DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.ReportStatus("No DXF profiles available to save.", StatusMessageType.Information, null);
                 return;
             }
 
@@ -325,11 +372,12 @@ namespace AESCConstruct25
             try
             {
                 DXFImportHelper.DXFProfileCsvHandler.SaveDXFProfiles(csvPath, profiles);
-                MessageBox.Show($"Saved {profiles.Count()} profiles to:\n{csvPath}", "Save DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                Application.ReportStatus($"Saved {profiles.Count()} profiles to:\n{csvPath}", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save CSV:\n{ex.Message}", "Save DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus($"Failed to save CSV:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -399,8 +447,8 @@ namespace AESCConstruct25
                 DXFImportHelper.SessionProfiles.Clear();
                 DXFImportHelper.SessionProfiles.AddRange(profiles);
 
-                MessageBox.Show($"Loaded {profiles.Count} profiles from:\n{csvPath}", "Load DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                Application.ReportStatus($"Loaded {profiles.Count} profiles from:\n{csvPath}", StatusMessageType.Information, null);
                 // (Optional) Immediately reconstruct each profile in the main part:
                 foreach (var prof in profiles)
                 {
@@ -410,7 +458,7 @@ namespace AESCConstruct25
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load CSV:\n{ex.Message}", "Load DXFProfile CSV", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus($"Failed to load CSV:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
     }

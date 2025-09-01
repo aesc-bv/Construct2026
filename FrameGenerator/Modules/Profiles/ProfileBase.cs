@@ -1,8 +1,9 @@
-﻿using SpaceClaim.Api.V242.Geometry;
+﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Windows;
+using Application = SpaceClaim.Api.V242.Application;
 
 namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 {
@@ -59,7 +60,8 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             catch (Exception ex)
             {
                 var msg = $"Invalid profile size format:\n  {string.Join(", ", sizeValues)}\n\n{ex.GetType().Name}: {ex.Message}";
-                MessageBox.Show(msg, "Profile generation error", MessageBoxButton.OK, MessageBoxImage.Error);
+                //MessageBox.Show(msg, "Profile generation error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus(msg, StatusMessageType.Error, null);
             }
 
             return null;

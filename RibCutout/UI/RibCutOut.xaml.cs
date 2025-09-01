@@ -1,13 +1,12 @@
 ﻿using AESCConstruct25.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
 using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Window = SpaceClaim.Api.V242.Window;
-
-using SpaceClaim.Api.V242.Modeler;
 
 namespace AESCConstruct25.UI
 {
@@ -29,7 +28,7 @@ namespace AESCConstruct25.UI
 
             // Get all design bodies in main part
             //var designBodies = doc.MainPart.Bodies;
-            
+
             var sel = window?.ActiveContext?.Selection;
             List<Body> bodies;
             if (sel != null && sel.Count > 0)

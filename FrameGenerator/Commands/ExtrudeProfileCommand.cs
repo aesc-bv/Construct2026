@@ -6,7 +6,7 @@ using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms; // MessageBox
+using Application = SpaceClaim.Api.V242.Application; // MessageBox
 
 namespace AESCConstruct25.FrameGenerator.Commands
 {
@@ -33,7 +33,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 var win = Window.ActiveWindow;
                 if (win == null)
                 {
-                    MessageBox.Show("No active window found.", "Extrude Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Application.ReportStatus("No active window found.", StatusMessageType.Error, null);
                     return;
                 }
 
@@ -43,14 +43,17 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     .Select(tc => tc as CurveSegment
                                 ?? CurveSegment.Create(tc.StartPoint, tc.EndPoint))
                     .ToList();
+                var createdCurves = new List<DesignCurve>();
+
                 if (rawCurves.Count == 0)
                 {
-                    MessageBox.Show(
-                        "Select at least one straight line or edge.",
-                        "Selection Required",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
+                    //MessageBox.Show(
+                    //    "Select at least one straight line or edge.",
+                    //    "Selection Required",
+                    //    MessageBoxButtons.OK,
+                    //    MessageBoxIcon.Warning
+                    //);
+                    Application.ReportStatus("Select at least one straight line or edge.", StatusMessageType.Warning, null);
                     return;
                 }
 
@@ -72,12 +75,13 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 }
                 else
                 {
-                    MessageBox.Show(
-                        "Error: invalid profile type or data. Cannot create extrusion.",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
+                    //MessageBox.Show(
+                    //    "Error: invalid profile type or data. Cannot create extrusion.",
+                    //    "Error",
+                    //    MessageBoxButtons.OK,
+                    //    MessageBoxIcon.Error
+                    //);
+                    Application.ReportStatus("Error: invalid profile type or data. Cannot create extrusion.", StatusMessageType.Error, null);
                     return;
                 }
 
@@ -137,7 +141,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                                 dxfFilePath,
                                 dxfContours,
                                 reuseComponent: null,
-                                csvProfileString: selectedProfileString
+                                csvProfileString: selectedProfileString,
+                                createdCurves: createdCurves
                             );
 
                             var selectedCurves = win.ActiveContext.Selection
@@ -175,12 +180,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(
-                                $"Error extruding profile segment {i}:\n{ex.Message}",
-                                "Extrude Profile Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                            );
+                            Application.ReportStatus($"Error extruding profile segment {i}:\n{ex.Message}", StatusMessageType.Error, null);
                         }
                     }
                 }
@@ -194,22 +194,12 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Error updating BOM or comparing bodies:\n{ex.Message}",
-                        "Extrude Profile Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
+                    Application.ReportStatus($"Error updating BOM or comparing bodies:\n{ex.Message}", StatusMessageType.Error, null);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Unexpected error during extrusion:\n{ex.Message}",
-                    "Extrude Profile Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                Application.ReportStatus($"Unexpected error during extrusion:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 

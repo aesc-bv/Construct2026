@@ -7,7 +7,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Windows.Forms;
+using Application = SpaceClaim.Api.V242.Application;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
 namespace AESCConstruct25.FrameGenerator.Utilities
@@ -142,7 +142,8 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             var window = Window.ActiveWindow;
             if (window == null)
             {
-                MessageBox.Show("No active window.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("No active window.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.ReportStatus("No active window.", StatusMessageType.Warning, null);
                 return null;
             }
 
@@ -152,7 +153,8 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             // Must have exactly one datum plane
             if (mainPart.DatumPlanes.Count() != 1)
             {
-                MessageBox.Show("Not a DXF: should have a single datum plane", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("Not a DXF: should have a single datum plane", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.ReportStatus("DXF should have a single datum plane", StatusMessageType.Warning, null);
                 return null;
             }
 
@@ -160,7 +162,8 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             // Ensure that plane is aligned with XY
             if (!((Plane)datumPlane.Shape.Geometry).Frame.DirZ.IsParallel(Direction.DirZ))
             {
-                MessageBox.Show("Plane is not aligned to XY frame", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                //MessageBox.Show("Plane is not aligned to XY frame", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Application.ReportStatus("Plane is not aligned to XY frame", StatusMessageType.Warning, null);
                 return null;
             }
 
@@ -217,7 +220,8 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 
             if (body == null)
             {
-                MessageBox.Show("Invalid profile—check the DXF contours.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("Invalid profile—check the DXF contours.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus("Invalid profile—check the DXF contours.", StatusMessageType.Error, null);
             }
             return dxfProfile;
         }
@@ -467,7 +471,8 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"getImgBase64 error:\n{ex}", "DXFImportHelper", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show($"getImgBase64 error:\n{ex}", "DXFImportHelper", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.ReportStatus($"getImgBase64 error:\n{ex}", StatusMessageType.Error, null);
                 return "";
             }
         }

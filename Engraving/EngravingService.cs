@@ -198,7 +198,13 @@ for i in range(0,multiSelection.Count):
 
 result = ComponentHelper.SetRootActive(None)
 ";
+                    //var env = ScriptEnvironment.GetOrCreate(true);
+                    //var success = env.RunCommand(script);
+
                     var env = ScriptEnvironment.GetOrCreate(true);
+                    // Logger.Log($"API = {env.ApiVersion}");
+                    env.ApiVersion = 242;
+                    // Logger.Log($"API = {env.ApiVersion}");
                     var success = env.RunCommand(script);
                     // log the result
                     // Logger.Log($"AddNote script returned: {success}");

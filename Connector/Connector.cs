@@ -1,5 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.UI;
+﻿using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -106,9 +105,8 @@ public class Connector
                 radiusInCutOut, radiusInCutOut_Radius, connectorStraight
             );
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Logger.Log($"CreateConnector parse failed: {ex}");
             return null;
         }
     }

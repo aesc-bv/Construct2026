@@ -12,7 +12,7 @@ using Window = SpaceClaim.Api.V242.Window;
 namespace AESCConstruct25.Plates.Modules
 {
     internal class PlatesModule
-    {                                                                           
+    {
         public static void CreatePlateFromUI(
             string type, string sizeName, double angleDeg,
             double L1, double L2, int count1,

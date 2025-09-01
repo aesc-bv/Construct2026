@@ -276,20 +276,22 @@
                           Margin="0,0,0,0"
                           Width="230"
                           x:Name="ProfileSizeEditFields"
-                          Visibility="Collapsed">
+                          Visibility="Collapsed"
+                          >
                         <Grid.RowDefinitions>
                             <RowDefinition Height="auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="115" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Grid x:Name="DynamicFieldsGrid"
                               Margin="0,0,0,0"
-                              Width="140"
+                              Width="115"
+                              VerticalAlignment="Center"
                               Grid.Column="0" />
                         <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Img_Measures_Frame_Rect.png"
-                               Width="90"
+                               Width="115"
                                x:Name="ProfilePreviewImage"
                                Stretch="Uniform"
                                Margin="0,0,0,0"
@@ -572,6 +574,7 @@
                              GroupName="JointGroup"
                              Grid.Row="0"
                              Grid.Column="0"
+                             ToolTip="Miter joint"
                              Margin="0,0,10,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_1.png"
                            Width="25"
@@ -584,6 +587,7 @@
                              GroupName="JointGroup"
                              Grid.Row="0"
                              Grid.Column="1"
+                             ToolTip="Straight joint. Selection 1: long part, selection 2: shortened part. End cut perpendicular to selection 1."
                              Margin="0,0,0,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_2.png"
                            Width="25"
@@ -596,6 +600,7 @@
                              GroupName="JointGroup"
                              Grid.Row="0"
                              Grid.Column="2"
+                             ToolTip="Straight joint. Selection 1: long part, selection 2: shortened part. End cut parallel to selection 2."
                              Margin="10,0,0,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_3.png"
                            Width="25"
@@ -608,6 +613,7 @@
                              GroupName="JointGroup"
                              Grid.Row="1"
                              Grid.Column="0"
+                             ToolTip="T joint. Selection 1: long part, selection 2: shortened part."
                              Margin="0,0,10,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_4.png"
                            Width="25"
@@ -620,6 +626,7 @@
                              GroupName="JointGroup"
                              Grid.Row="1"
                              Grid.Column="1"
+                             ToolTip="No joint"
                              Margin="0,0,0,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_5.png"
                            Width="25"
@@ -632,6 +639,7 @@
                              GroupName="JointGroup"
                              Grid.Row="1"
                              Grid.Column="2"
+                             ToolTip="Cutout selected profiles"
                              Margin="10,0,0,10">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_7.png"
                            Width="25"
@@ -644,6 +652,7 @@
                              GroupName="JointGroup"
                              Grid.Row="2"
                              Grid.Column="0"
+                             ToolTip="Cutout on selected planes"
                              Margin="0,0,10,0">
                     <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Joint_6.png"
                            Width="25"
@@ -672,6 +681,7 @@
                             Width="30"
                             Height="30"
                             Click="RestoreGeometry_Click"
+                            ToolTip="Reset full geometry"
                             Margin="0">
                         <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
                                Width="20"
@@ -705,6 +715,7 @@
                             Width="30"
                             Height="30"
                             Click="RestoreJoint_Click"
+                            ToolTip="Reset halves of profile part of selected joint"
                             Margin="0">
                         <Image Source="pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Restore.png"
                                Width="20"

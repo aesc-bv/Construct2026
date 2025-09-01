@@ -1,13 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <customUI
   xmlns="http://schemas.spaceclaim.com/customui"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://schemas.spaceclaim.com/customui http://schemas.spaceclaim.com/customui/SpaceClaimCustomUI.V242.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<!-- xsi:schemaLocation="http://schemas.spaceclaim.com/customui http://schemas.spaceclaim.com/customui/SpaceClaimCustomUI.V242.xsd"> -->
 	<ribbon>
 		<tabs>
 			<tab id="AESCConstruct25.Tab" label="AESC Construct">
 				<!-- Frame Generator group -->
-				<group id="AESCConstruct25.Group" getLabel="GetRibbonLabel" verticalAlign="top"><!--label="Frame Generator"-->
+				<group id="AESCConstruct25.Group" getLabel="GetRibbonLabel" verticalAlign="top">
+					<!--label="Frame Generator"-->
 					<button id="AESCConstruct25.ProfileSidebarBtn"
 							command="AESCConstruct25.ProfileSidebar"
 							getLabel="GetRibbonLabel"
@@ -15,7 +16,7 @@
 							Enabled="False"/>
 					<!--label="Profiles"-->
 
-						<separator id="AESC.Construct.separator1"/>
+					<separator id="AESC.Construct.separator1"/>
 					<!-- sketch tools block -->
 					<container id="AESC.Construct.SketchToolGroupContainer"
 					   layoutOrientation="horizontal"
@@ -32,7 +33,7 @@
 							<button id="AESC.Construct.CurveOffset"
 									command="CurveOffset"/>
 						</container>
-					
+
 						<container id="AESC.Construct.sketchToolsContainer2"
 						   layoutOrientation="vertical"
 						   isGroup="false"
@@ -81,20 +82,20 @@
 								getLabel="GetRibbonLabel"
 								size="large"
 								style="imageandtext">
-									<button id="AESCConstruct25.UpdateBOM"
-											command="AESCConstruct25.UpdateBOM"
-											getLabel="GetRibbonLabel"
-											size="large"
-											showLabel="true"/>
-									<button id="AESCConstruct25.ExportExcelBtn"
-											command="AESCConstruct25.ExportExcel"
-											getLabel="GetRibbonLabel"
-											size="large"
-											style="imageandtext"/>
-							</button>
-						</container>
+							<button id="AESCConstruct25.UpdateBOM"
+									command="AESCConstruct25.UpdateBOM"
+									getLabel="GetRibbonLabel"
+									size="large"
+									showLabel="true"/>
+							<button id="AESCConstruct25.ExportExcelBtn"
+									command="AESCConstruct25.ExportExcel"
+									getLabel="GetRibbonLabel"
+									size="large"
+									style="imageandtext"/>
+						</button>
+					</container>
 				</group>
-				
+
 				<group id="AESCConstruct25.PlateGroup" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.Plate"
 							command="AESCConstruct25.Plate"
@@ -147,6 +148,13 @@
 				<group id="AESCConstruct25.UI" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.DockBtn"
 						command="AESCConstruct25.DockCmd"
+						getLabel="GetRibbonLabel"
+						size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.UI" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.ActivateNetwork"
+						command="AESCConstruct25.ActivateNetwork"
 						getLabel="GetRibbonLabel"
 						size="large"/>
 				</group>

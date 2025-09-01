@@ -31,7 +31,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
             string dxfFilePath = "",
             List<ITrimmedCurve> dxfContours = null,
             Component reuseComponent = null,
-            string csvProfileString = null
+            string csvProfileString = null,
+            List<DesignCurve> createdCurves = null
         )
         {
             //Logger.Log($"ExtrudeProfile started for {profileType}");
@@ -149,7 +150,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
                             offsetY,
                             dxfContours,
                             dxfFilePath,
-                            csvProfileString
+                            csvProfileString,
+                            createdCurves
                         );
 
             // 8) Wipe out any old "ExtrudedProfile" bodies
@@ -162,28 +164,13 @@ namespace AESCConstruct25.FrameGenerator.Modules
             //    but if we're re-using an existing component, do NOT touch its Placement.
             if (reuseComponent == null)
             {
-                //Logger.Log($"Before setting Placement, new component '{comp.Name}' had default:\n    {MatrixToString(comp.Placement)}");
                 comp.Placement = compPlacement;
-                //Logger.Log($"After setting Placement, component '{comp.Name}' now has:\n    {MatrixToString(comp.Placement)}");
-            }
-            else
-            {
-                //Logger.Log($"ReuseComponent = '{comp.Name}', preserving placement:\n    {MatrixToString(comp.Placement)}");
             }
 
             // 10) Finally add the fresh body at local (0,0,0)→+Z
             var framesLayer = doc.GetLayer("Frames");
             var db = DesignBody.Create(comp.Template, "ExtrudedProfile", outerBody);
             db.Layer = framesLayer;
-
-            // 11) Log bounding-box center in local and world to verify
-            //Point localCenter = BodyCenterLocal(outerBody);
-            //Logger.Log($"Created ExtrudedProfile body: center local = {PointToString(localCenter)}, world = {PointToString(comp.Placement * localCenter)}");
-
-            //Logger.Log($"Successfully extruded {profileType} at origin/+Z; " +
-            //(reuseComponent == null
-            //    ? "placed in world via Component.Placement."
-            //    : "body remains in component’s existing local frame."));
         }
 
         private static Vector MostOrthogonalWorldAxis(Vector v)
@@ -216,20 +203,6 @@ namespace AESCConstruct25.FrameGenerator.Modules
         }
         private static string GetProfileName(Dictionary<string, string> profileData)
         {
-            // 1) If we actually have a dictionary, log every entry
-            if (profileData != null)
-            {
-                foreach (var kv in profileData)
-                {
-                    // Logger.Log($"[GetProfileName] profileData[\"{kv.Key}\"] = \"{kv.Value}\"");
-                }
-            }
-            else
-            {
-                // Logger.Log("[GetProfileName] profileData is NULL");
-            }
-
-            // 2) Now try to grab the "Name" entry
             if (profileData != null
              && profileData.TryGetValue("Name", out var nm)
              && !string.IsNullOrWhiteSpace(nm))
@@ -257,7 +230,9 @@ namespace AESCConstruct25.FrameGenerator.Modules
             double offsetY,
             List<ITrimmedCurve> dxfContourVal,
             string dxfFilePath,
-            string csvProfileString)
+            string csvProfileString,
+            List<DesignCurve> createdCurves = null
+        )
         {
             // clone so we don’t mutate caller’s dictionary
             profileData = profileData != null
@@ -296,6 +271,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             );
 
             Layer framesLayer = doc.GetLayer("Frames");
+            Layer hiddenFramesLayer = doc.GetLayer("Construct (hidden)");
 
             // …if it wasn’t there, create it
             if (framesLayer == null)
@@ -303,27 +279,21 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
                 framesLayer = Layer.Create(doc, "Frames", myCustomColor);
             }
+            if (hiddenFramesLayer == null)
+            {
+                var gray = ColorTranslator.FromHtml("#9ea0a1");
+                hiddenFramesLayer = Layer.Create(doc, "Construct (hidden)", gray);
+                hiddenFramesLayer.SetVisible(null, false);
+            }
             string rawName = GetProfileName(profileData) ?? "";
             string profileName = Regex.Replace(rawName.Trim(), @"\s+", "_");
-            // Logger.Log($"name prop = {profileName}");
             // store metadata
             CreateCustomProperty(part, "Type", profileType);
             CreateCustomProperty(part, "Hollow", isHollow.ToString().ToLower());
             CreateCustomProperty(part, "offsetX", offsetX);
             CreateCustomProperty(part, "offsetY", offsetY);
             CreateCustomProperty(part, "Name", profileName);
-            //if (profileType.Equals("DXF", StringComparison.OrdinalIgnoreCase)
-            //    && !string.IsNullOrWhiteSpace(dxfFilePath))
-            //{
-            //    CreateCustomProperty(part, "DXFPath", dxfFilePath);
-            //}
 
-            //if (profileType.Equals("CSV", StringComparison.OrdinalIgnoreCase)
-            //    && !string.IsNullOrWhiteSpace(csvProfileString))
-            //{
-            //    // this is exactly the original data you parsed
-            //    CreateCustomProperty(part, "RawCSV", csvProfileString);
-            //}
             // helper to parse a numeric parameter
             double GetNum(string key)
             {
@@ -399,15 +369,20 @@ namespace AESCConstruct25.FrameGenerator.Modules
             // record the construction line for joints
             if (pathCurve != null)
             {
+                //var window = Window.ActiveWindow;
+                //var ctx = window?.ActiveContext as IAppearanceContext;
                 // draw from (0,0,0) to (len,0,0)
                 var flatSeg = CurveSegment.Create(
                     Point.Create(-offsetX, -offsetY, 0),
                     Point.Create(-offsetX, -offsetY, len)
                 );
                 var dc = DesignCurve.Create(part, flatSeg);
-                dc.SetVisibility(null, false);
                 dc.Name = "ConstructCurve";
-                dc.Layer = framesLayer;
+                dc.Layer = hiddenFramesLayer;
+                dc.SetVisibility(null, false);
+
+                if (createdCurves != null)
+                    createdCurves.Add(dc);
             }
 
             return comp;
@@ -443,13 +418,6 @@ namespace AESCConstruct25.FrameGenerator.Modules
             {
                 CustomPartProperty.Create(part, key, valueString);
             }
-        }
-
-        private static Point BodyCenterLocal(Body body)
-        {
-            // Returns the local‐space center of the body’s bounding box.
-            var bb = body.GetBoundingBox(Matrix.Identity, tight: true);
-            return bb.Center;
         }
     }
 }

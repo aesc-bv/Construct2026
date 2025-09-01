@@ -60,7 +60,8 @@ namespace AESCConstruct25.RibCutout.Modules
 
         static void AddPolyline(IReadOnlyList<Point> pts, string name, Color color)
         {
-            if (s_part == null || pts == null || pts.Count < 2) {
+            if (s_part == null || pts == null || pts.Count < 2)
+            {
                 return;
             }
             for (int i = 0; i < pts.Count - 1; i++)
