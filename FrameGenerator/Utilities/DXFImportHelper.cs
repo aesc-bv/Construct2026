@@ -50,8 +50,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 WriteBlock.ExecuteTask("Import DXF", () =>
                 {
                     Document.Open(filePath, null);
-                    //var docDXF = Window.ActiveWindow.Document;
-                    //var mainPartDXF = docDXF.MainPart;
                     var dxfWindow = Window.ActiveWindow;
                     var mainPartDXF = dxfWindow.Document.MainPart;
 
@@ -61,17 +59,12 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                     {
                         localContours.Add(dc.Shape);
                     }
-
-                    //dxfWindow.Close();
                 });
-                //Window.ActiveWindow = originalWindow;
-                //originalWindow?.
                 contours.AddRange(localContours);
                 return contours.Count > 2; // Return true if ≥ 3 curves found
             }
             catch
             {
-                //Logger.Log($"ERROR - Failed to import DXF file: {filePath}");
                 return false;
             }
         }
@@ -142,7 +135,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             var window = Window.ActiveWindow;
             if (window == null)
             {
-                //MessageBox.Show("No active window.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.ReportStatus("No active window.", StatusMessageType.Warning, null);
                 return null;
             }
@@ -153,7 +145,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             // Must have exactly one datum plane
             if (mainPart.DatumPlanes.Count() != 1)
             {
-                //MessageBox.Show("Not a DXF: should have a single datum plane", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.ReportStatus("DXF should have a single datum plane", StatusMessageType.Warning, null);
                 return null;
             }
@@ -162,7 +153,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             // Ensure that plane is aligned with XY
             if (!((Plane)datumPlane.Shape.Geometry).Frame.DirZ.IsParallel(Direction.DirZ))
             {
-                //MessageBox.Show("Plane is not aligned to XY frame", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Application.ReportStatus("Plane is not aligned to XY frame", StatusMessageType.Warning, null);
                 return null;
             }
@@ -181,7 +171,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 }
                 catch
                 {
-                    // if creation fails, body stays null
                 }
 
                 if (body != null)
@@ -195,9 +184,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                     Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
                     db.SetColor(null, myCustomColor);
                     string imgString = getImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
-
-                    // 3) Close the preview window
-                    //Window.ActiveWindow.Close();
 
                     // 4) Build the DXFProfile object
                     dxfProfile = new DXFProfile
@@ -220,7 +206,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 
             if (body == null)
             {
-                //MessageBox.Show("Invalid profile—check the DXF contours.", "DXF to Profile", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Application.ReportStatus("Invalid profile—check the DXF contours.", StatusMessageType.Error, null);
             }
             return dxfProfile;
@@ -329,12 +314,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
         /// </summary>
         public static ITrimmedCurve CurveFromString(string curveString)
         {
-            // Example formats:
-            //   Line: "S13.66025_-6.83013E-3.66025_6.83013"
-            //   Arc:  "S13.66025_1.83013E-3.66025_6.83013M0.00000_5.00000"
-            //   Full circle: "S5.00000_0.00000E5.00000_0.00000M0.00000_0.00000"
-            //
-            // All coordinates are scaled ×1000 in the string; we parse with InvariantCulture.
 
             const double tol = 1e-6;
 
@@ -465,13 +444,11 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 {
                     bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                     byte[] bytes = ms.ToArray();
-                    //_window.Close();
                     return Convert.ToBase64String(bytes);
                 }
             }
             catch (Exception ex)
             {
-                //MessageBox.Show($"getImgBase64 error:\n{ex}", "DXFImportHelper", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Application.ReportStatus($"getImgBase64 error:\n{ex}", StatusMessageType.Error, null);
                 return "";
             }

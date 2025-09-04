@@ -17,6 +17,9 @@
                   HorizontalScrollBarVisibility="Disabled"
                   Margin="0">
         <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -49,8 +52,7 @@
                 <StackPanel Grid.Column="0">
                     <ComboBox ItemsSource="{Binding ProfileTypes}"
                               SelectedItem="{Binding SelectedProfileType}"
-                              Style="{StaticResource ComboBoxFlatStyle}"
-                              Width="130" />
+                              Style="{StaticResource ComboBoxFlatStyle}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
@@ -65,8 +67,7 @@
                 <StackPanel Grid.Row="1">
                     <ComboBox ItemsSource="{Binding ProfileSizes}"
                               SelectedItem="{Binding SelectedProfileSize}"
-                              Style="{StaticResource ComboBoxFlatStyle}"
-                              Width="130" />
+                              Style="{StaticResource ComboBoxFlatStyle}" />
                 </StackPanel>
 
                 <!--<StackPanel>
@@ -90,11 +91,10 @@
             <!-- 3) Parameter inputs -->
             <UniformGrid Grid.Row="3"
                          Columns="4"
-                         Margin="0,0,0,10"
-                         HorizontalAlignment="Center">
+                         Margin="0,0,0,10">
                 <!-- L1 -->
                 <TextBlock Text="{Binding L1Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding L1Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -105,7 +105,7 @@
                          VerticalAlignment="Center" />
                 <!-- L2 -->
                 <TextBlock Text="{Binding L2Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding L2Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -116,7 +116,7 @@
                          VerticalAlignment="Center" />
                 <!-- Count1 -->
                 <TextBlock Text="{Binding Count1Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding Count1Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -127,7 +127,7 @@
                          VerticalAlignment="Center" />
                 <!-- B1 -->
                 <TextBlock Text="{Binding B1Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding B1Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -138,7 +138,7 @@
                          VerticalAlignment="Center" />
                 <!-- B2 -->
                 <TextBlock Text="{Binding B2Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding B2Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -149,7 +149,7 @@
                          VerticalAlignment="Center" />
                 <!-- Count2 -->
                 <TextBlock Text="{Binding Count2Label}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding Count2Visible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -160,7 +160,7 @@
                          VerticalAlignment="Center" />
                 <!-- D -->
                 <TextBlock Text="{Binding DLabel}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding DVisible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -171,7 +171,7 @@
                          VerticalAlignment="Center" />
                 <!-- T -->
                 <TextBlock Text="{Binding TLabel}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding TVisible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -182,7 +182,7 @@
                          VerticalAlignment="Center" />
                 <!-- R -->
                 <TextBlock Text="{Binding RLabel}"
-                           Width="60"
+                           Width="30"
                            Visibility="{Binding RVisible}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />

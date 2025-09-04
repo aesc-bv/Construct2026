@@ -62,22 +62,14 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     Command.Execute("NewDrawingSheet");
                     sheet = doc.DrawingSheets.FirstOrDefault();
                 }
-                catch { /* ignore */ }
+                catch {}
 
                 if (sheet == null)
                 {
-                    //MessageBox.Show("Failed to create a drawing sheet.", "Export BOM",
-                    //    MessageBoxButtons.OK, MessageBoxIcon.Error);
                     Application.ReportStatus("Failed to create a drawing sheet.", StatusMessageType.Error, null);
                     return;
                 }
             }
-
-            //var sheetWindow = Window.Create(sheet);   // open a window for the drawing sheet
-            //if (sheetWindow != null)
-            //{
-            //    Window.ActiveWindow = sheetWindow;    // ✅ static property on Window
-            //}
             var existing = Window.AllWindows.FirstOrDefault(w => w.Scene == sheet);
             if (existing != null) Window.ActiveWindow = existing;
             else Window.ActiveWindow = Window.Create(sheet);
@@ -111,7 +103,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             if (!comps.Any())
             {
-                //MessageBox.Show("No components found to export.", "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
                 return;
             }
@@ -176,9 +167,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             try { Clipboard.SetText(payload); }
             catch (Exception ex)
             {
-                //MessageBox.Show("Failed to copy BOM to clipboard:\n" + ex.Message, "Export BOM",
-                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
-
                 Application.ReportStatus("Failed to copy BOM to clipboard:\n" + ex.Message, StatusMessageType.Error, null);
                 return;
             }
@@ -247,14 +235,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 for (int colIndex = 0; colIndex < columnWidths.Length && colIndex < table.Columns.Count; colIndex++)
                     table.Columns[colIndex].Width = columnWidths[colIndex];
 
-                //MessageBox.Show("BOM table has been written to the active drawing sheet.",
-                //    "Export BOM", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Application.ReportStatus("BOM table has been written to the active drawing sheet.", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                //MessageBox.Show("Failed to build BOM table:\n" + ex.Message, "Export BOM",
-                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Application.ReportStatus("Failed to build BOM table:\n" + ex.Message, StatusMessageType.Error, null);
             }
         }
@@ -264,7 +248,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                //MessageBox.Show("No active document.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
                 return;
             }
@@ -280,7 +263,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                            .ToList();
             if (!comps.Any())
             {
-                //MessageBox.Show("No components found to export.", "Export to Excel", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
                 return;
             }
@@ -322,7 +304,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 Title = "Export BOM to Excel",
                 Filter = "Excel Workbook (*.xlsx)|*.xlsx|All files (*.*)|*.*",
-                FileName = "BOM.xlsx",
+                FileName = "AESC_Construct25_BOM.xlsx",
                 AddExtension = true,
                 DefaultExt = ".xlsx",
                 OverwritePrompt = true
@@ -382,8 +364,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     wbPart.Workbook.Save();
                 }
 
-                //MessageBox.Show("BOM exported:\n" + excelPath, "Export to Excel",
-                //    MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Application.ReportStatus("BOM exported:\n" + excelPath, StatusMessageType.Information, null);
 
                 // Open the file
@@ -391,9 +371,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
             catch (Exception ex)
             {
-                //MessageBox.Show($"Failed to export to Excel:\n{ex.Message}", "Export to Excel",
-                //    MessageBoxButtons.OK, MessageBoxIcon.Error);
-
                 Application.ReportStatus($"Failed to export to Excel:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -404,8 +381,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                //MessageBox.Show("No active document.", "Export to STEP",
-                //                MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.ReportStatus("No active document.", StatusMessageType.Error, null);
                 return;
             }
@@ -418,9 +393,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 .ToList();
             if (!partsToExport.Any())
             {
-                //MessageBox.Show("No parts found to export.", "Export to STEP",
-                //                MessageBoxButtons.OK, MessageBoxIcon.Information);
-
                 Application.ReportStatus("No parts found to export.", StatusMessageType.Warning, null);
                 return;
             }
@@ -477,7 +449,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                         }
                         catch
                         {
-                            // Swallow export errors for individual parts
                         }
                     }
 
@@ -491,13 +462,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
             catch (Exception ex)
             {
-                //MessageBox.Show(
-                //  $"Failed to export STEP files:\n{ex.Message}",
-                //  "Export to STEP",
-                //  MessageBoxButtons.OK,
-                //  MessageBoxIcon.Error
-                //);
-
                 Application.ReportStatus($"Failed to export STEP files:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -526,7 +490,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
         public static (double xStart, double zStart, double xEnd, double zEnd) GetProfileCutAngles(Component comp)
         {
             const double tol = 1e-6;
-            // Logger.Log($"GetProfileCutAngles: component='{comp.Name}'");
 
             // — 1) Extract sweep direction and end-cap normals —
             var dc = comp.Template.Curves
@@ -554,8 +517,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var n0 = endCaps.OrderByDescending(n => Vector.Dot(n, -sweepLocal)).First();
             var n1 = endCaps.OrderByDescending(n => Vector.Dot(n, sweepLocal)).First();
 
-            // Logger.Log($"  normals: n0=({n0.X:F3},{n0.Y:F3},{n0.Z:F3}), n1=({n1.X:F3},{n1.Y:F3},{n1.Z:F3})");
-
             // — 2) Compute signed X-cut: 90°–|clocking|, with sign of clocking ▷ in [–90,90]
             double ComputeXcut(Vector n)
             {
@@ -580,9 +541,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
 
             double x0 = ComputeXcut(n0), z0 = ComputeZcut(n0);
-            // Logger.Log($"  start cut X={x0:F1}, Z={z0:F1}");
             double x1 = ComputeXcut(n1), z1 = ComputeZcut(n1);
-            // Logger.Log($"  end   cut X={x1:F1}, Z={z1:F1}");
 
             return (x0, z0, x1, z1);
         }
@@ -593,12 +552,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 var (x0, z0, x1, z1) = GetProfileCutAngles(comp);
                 string result = $"X: {x0:F1}/Z: {z0:F1}, X: {x1:F1}/Z: {z1:F1}";
-                // Logger.Log($"GetCutString: {result}");
                 return result;
             }
             catch (Exception)
             {
-                // Logger.Log($"GetCutString: FAILED on '{comp.Name}': {ex.Message}");
                 return "ERR";
             }
         }
@@ -645,7 +602,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 var val = FromMeters(m, unit);
                 return val.ToString("0.###", CultureInfo.InvariantCulture);
             }
-            return rawMeters; // fallback (e.g., "N/A")
+            return rawMeters;
         }
     }
 }

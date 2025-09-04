@@ -60,7 +60,6 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             catch (Exception ex)
             {
                 var msg = $"Invalid profile size format:\n  {string.Join(", ", sizeValues)}\n\n{ex.GetType().Name}: {ex.Message}";
-                //MessageBox.Show(msg, "Profile generation error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.ReportStatus(msg, StatusMessageType.Error, null);
             }
 

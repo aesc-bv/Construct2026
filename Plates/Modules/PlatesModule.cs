@@ -1,10 +1,15 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using DocumentFormat.OpenXml.Wordprocessing;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using Application = SpaceClaim.Api.V242.Application;
+using Body = SpaceClaim.Api.V242.Modeler.Body;
+using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using Window = SpaceClaim.Api.V242.Window;
@@ -30,7 +35,7 @@ namespace AESCConstruct25.Plates.Modules
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error creating plate: {ex.Message}", "Create Plate Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Error creating plate: {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -45,7 +50,7 @@ namespace AESCConstruct25.Plates.Modules
             var win = Window.ActiveWindow;
             if (win == null)
             {
-                MessageBox.Show("No active window found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus("No active window found.", StatusMessageType.Error, null);
                 return;
             }
             var doc = win.Document;
@@ -53,71 +58,74 @@ namespace AESCConstruct25.Plates.Modules
 
             if (selection.Count == 0)
             {
-                MessageBox.Show("No selection found. Please select a face.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Application.ReportStatus("No selection found. Please select a face.", StatusMessageType.Warning, null);
                 return;
             }
 
-            foreach (var obj in selection)
+            WriteBlock.ExecuteTask("Create part", () =>
             {
-                try
+                foreach (var obj in selection)
                 {
-                    DesignFace df = obj as DesignFace;
-                    var matrix = Matrix.Identity;
-
-                    if (obj is IDesignFace idf)
+                    try
                     {
-                        df = idf.Master;
-                        matrix = idf.TransformToMaster;
+                        DesignFace df = obj as DesignFace;
+                        var matrix = Matrix.Identity;
+
+                        if (obj is IDesignFace idf)
+                        {
+                            df = idf.Master;
+                            matrix = idf.TransformToMaster;
+                        }
+                        if (df == null)
+                        {
+                            Application.ReportStatus("Selected object is not a valid face.", StatusMessageType.Warning, null);
+                            continue;
+                        }
+
+                        var plane = df.Shape.Geometry as Plane;
+                        if (plane == null)
+                        {
+                            Application.ReportStatus("Selected face is not planar.", StatusMessageType.Warning, null);
+                            continue;
+                        }
+
+                        var rawPt = (Point)win.ActiveContext.GetSelectionPoint(selection.First());
+                        var selPoint = plane.ProjectPoint(rawPt).Point;
+
+                        var dirZ = df.Shape.IsReversed
+                            ? -df.Shape.ProjectPoint(selPoint).Normal
+                            : df.Shape.ProjectPoint(selPoint).Normal;
+
+                        if (insertPlateMid)
+                        {
+                            var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
+                            selPoint = bb.Center;
+                        }
+                        else
+                        {
+                            var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
+                            selPoint = Point.Create(selPoint.X, selPoint.Y, bb.Center.Z);
+                        }
+
+                        if (!matrix.IsIdentity)
+                        {
+                            plane = plane.CreateTransformedCopy(matrix.Inverse);
+                            dirZ = matrix.Inverse * dirZ;
+                        }
+
+                        createPlate(selPoint, plane, dirZ,
+                            type, name, angleDeg,
+                            L1, L2, Lnr,
+                            B1, B2, Bnr,
+                            T, Rad, Diam,
+                            insertPlateMid);
                     }
-                    if (df == null)
+                    catch (Exception ex)
                     {
-                        MessageBox.Show("Selected object is not a valid face.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        continue;
+                        Application.ReportStatus($"Error processing selection: {ex.Message}", StatusMessageType.Error, null);
                     }
-
-                    var plane = df.Shape.Geometry as Plane;
-                    if (plane == null)
-                    {
-                        MessageBox.Show("Selected face is not planar.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        continue;
-                    }
-
-                    var rawPt = (Point)win.ActiveContext.GetSelectionPoint(selection.First());
-                    var selPoint = plane.ProjectPoint(rawPt).Point;
-
-                    var dirZ = df.Shape.IsReversed
-                        ? -df.Shape.ProjectPoint(selPoint).Normal
-                        : df.Shape.ProjectPoint(selPoint).Normal;
-
-                    if (insertPlateMid)
-                    {
-                        var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
-                        selPoint = bb.Center;
-                    }
-                    else
-                    {
-                        var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
-                        selPoint = Point.Create(selPoint.X, selPoint.Y, bb.Center.Z);
-                    }
-
-                    if (!matrix.IsIdentity)
-                    {
-                        plane = plane.CreateTransformedCopy(matrix.Inverse);
-                        dirZ = matrix.Inverse * dirZ;
-                    }
-
-                    createPlate(selPoint, plane, dirZ,
-                        type, name, angleDeg,
-                        L1, L2, Lnr,
-                        B1, B2, Bnr,
-                        T, Rad, Diam,
-                        insertPlateMid);
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error processing selection: {ex.Message}", "Selection Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+            });
         }
 
         private static bool ValidateParams(
@@ -130,12 +138,12 @@ namespace AESCConstruct25.Plates.Modules
         {
             if (L2 > L1)
             {
-                MessageBox.Show($"Hole pitch X (L2={L2}) > plate L1={L1}", "Parameter Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Hole pitch X (L2={L2}) > plate L1={L1}", StatusMessageType.Error, null);
                 return false;
             }
             if (B2 > B1)
             {
-                MessageBox.Show($"Hole pitch Y (B2={B2}) > plate B1={B1}", "Parameter Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Hole pitch Y (B2={B2}) > plate B1={B1}", StatusMessageType.Error, null);
                 return false;
             }
 
@@ -144,7 +152,7 @@ namespace AESCConstruct25.Plates.Modules
                 var spacingX = L2 / (Lnr - 1);
                 if (spacingX < holeDiam)
                 {
-                    MessageBox.Show($"Holes too close in X (spacing {spacingX} < diam {holeDiam})", "Parameter Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.ReportStatus($"Holes too close in X (spacing {spacingX} < diam {holeDiam})", StatusMessageType.Error, null);
                     return false;
                 }
             }
@@ -153,7 +161,7 @@ namespace AESCConstruct25.Plates.Modules
                 var spacingY = B2 / (Bnr - 1);
                 if (spacingY < holeDiam)
                 {
-                    MessageBox.Show($"Holes too close in Y (spacing {spacingY} < diam {holeDiam})", "Parameter Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.ReportStatus($"Holes too close in Y (spacing {spacingY} < diam {holeDiam})", StatusMessageType.Error, null);
                     return false;
                 }
             }
@@ -196,24 +204,26 @@ namespace AESCConstruct25.Plates.Modules
             {
                 if (type.Contains("support"))
                 {
-                    // build the exact 6‐segment V18 contour
-                    var segs = getBaseCapContour(origin, dirX, dirY, type, L1, B1, Rad);
-                    if (segs.Count == 6 && T > 0)
+                    // SUPPORT: same geometry as Base/Cap (rounded rectangle + holes) but UPRIGHT
+                    if (T <= 0)
                     {
-                        var supportPlane = Plane.Create(Frame.Create(origin + 0.5 * T * dirY, dirX, dirZ));
-                        body = Body.ExtrudeProfile(new Profile(supportPlane, segs), T);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Invalid contour count or thickness for support plate.", "Plate Creation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        Application.ReportStatus("Support plate thickness must be positive.", StatusMessageType.Error, null);
                         return null;
                     }
+
+                    var uprightPlane = Plane.Create(Frame.Create(origin + (0.5 * T * dirY) + (0.5 * B1 * dirZ), dirX, dirZ));
+                    body = createRoundedRectangle(
+                        uprightPlane,
+                        length: L1, length2: L2, nrL: Lnr,
+                        width: B1, width2: B2, nrW: Bnr,
+                        thickness: T, radius: Rad, holeDiam: Diam
+                    );
                 }
                 else if (type.Contains("flange"))
                 {
                     if (T <= 0)
                     {
-                        MessageBox.Show("Flange thickness must be positive.", "Plate Creation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        Application.ReportStatus("Flange thickness must be positive.", StatusMessageType.Error, null);
                         return null;
                     }
 
@@ -252,99 +262,116 @@ namespace AESCConstruct25.Plates.Modules
                 }
                 else if (type == "UNP")
                 {
-                    // rectangular UNP with top‐corner chamfers
-                    body = createUnpRectangle(
-                        width: L1,
-                        height: B1,
-                        thickness: T,
-                        chamfer: Rad,
-                        holeDiam: Diam,
-                        holePitchX: L2, holeCountX: Lnr,
-                        holePitchY: B2, holeCountY: Bnr
+                    if (T <= 0)
+                    {
+                        Application.ReportStatus("UNP thickness must be positive.", StatusMessageType.Error, null);
+                        return null;
+                    }
+
+                    var uprightPlane = Plane.Create(
+                        Frame.Create(origin + (0.5 * T * dirY) + (0.5 * B1 * dirZ), dirX, dirZ)
                     );
+
+                    // Make contour coplanar with uprightPlane (puts TL/TR at y = +0.5*T)
+                    var pContour = origin + (0.5 * T - 0.5 * B1) * dirY;
+
+                    var segs = getBaseCapContour(pContour, dirX, dirY, type, L1, B1, Rad);
+                    if (segs == null || (segs.Count != 4 && segs.Count != 6))
+                    {
+                        Application.ReportStatus("UNP contour could not be built.", StatusMessageType.Error, null);
+                        return null;
+                    }
+
+                    body = Body.ExtrudeProfile(new Profile(uprightPlane, segs), T);
                 }
+
                 else
                 {
-                    // Logger.Log("[CreatePlateBody] Branch: rectangle");
                     body = createRoundedRectangle(L1, L2, Lnr, B1, B2, Bnr, T, Rad, Diam);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error creating plate body: {ex.Message}", "Plate Creation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Error creating plate body: {ex.Message}", StatusMessageType.Error, null);
                 return null;
             }
 
             return body;
         }
 
-        //— base/cap/UNP contour helper —
-        /// <summary>
-        /// Returns exactly six trimmed‐curves for “support” / base / cap shapes,
-        /// ported from your V18 getContour logic (no rotation here).
-        /// </summary>
         private static List<ITrimmedCurve> getBaseCapContour(
-            Point p,
-            Direction dX,
-            Direction dY,
-            string type,
-            double L1,
-            double B1,
-            double R
-        )
+    Point p, Direction dX, Direction dY,
+    string type, double L1, double B1, double R)
         {
             var dZ = Direction.Cross(dX, dY);
             var list = new List<ITrimmedCurve>();
 
-            if (type.Contains("support") || type.Contains("base") || type.Contains("cap") || type == "UNP")
-            {
-                // Re‐use exactly the six segments from your V18 code:
-                var p1 = p + (-0.5 * L1 + R) * dX + (0.5 * B1) * dY;
-                var p2 = p1 + (L1 - 2 * R) * dX;
-                var p5 = p1 - R * dX + R * dZ;
-                var p5a = p5 + (B1 - R) * dZ;
-                var p7 = p2 + R * dX + R * dZ;
-                var p7a = p7 + (B1 - R) * dZ;
+            // Corners on the "top" edge (z = 0 in this sketch)
+            var TL = p + (-0.5 * L1) * dX + (0.5 * B1) * dY;
+            var TR = p + (0.5 * L1) * dX + (0.5 * B1) * dY;
 
-                list.Add(CurveSegment.Create(p1, p2));
-                list.Add(CurveSegment.Create(p2, p7));
-                list.Add(CurveSegment.Create(p7, p7a));
-                list.Add(CurveSegment.Create(p7a, p5a));
-                list.Add(CurveSegment.Create(p5a, p5));
-                list.Add(CurveSegment.Create(p5, p1));
+            // Bottom corners
+            var BL = TL + B1 * dZ;
+            var BR = TR + B1 * dZ;
+
+            // If no chamfer: plain rectangle with exactly 4 edges
+            if (R <= 1e-9)
+            {
+                list.Add(CurveSegment.Create(TL, TR)); // top
+                list.Add(CurveSegment.Create(TR, BR)); // right
+                list.Add(CurveSegment.Create(BR, BL)); // bottom
+                list.Add(CurveSegment.Create(BL, TL)); // left
+                return list;
             }
+
+            // Chamfer hypotenuse R -> 45° legs
+            double a = R / Math.Sqrt(2.0); // along X
+            double b = R / Math.Sqrt(2.0); // along Z
+            a = Math.Min(a, 0.5 * L1);
+            b = Math.Min(b, B1);
+
+            // Top-corner chamfers (opposite to your previous bottom-corner version)
+            var TL_topRight = TL + a * dX;     // along top edge to the right
+            var TL_down = TL + b * dZ;     // down from TL
+            var TR_topLeft = TR - a * dX;     // along top edge to the left
+            var TR_down = TR + b * dZ;     // down from TR
+
+            // 6 straight segments CCW:
+            list.Add(CurveSegment.Create(TL_topRight, TR_topLeft)); // top between chamfers
+            list.Add(CurveSegment.Create(TR_topLeft, TR_down));    // top-right chamfer
+            list.Add(CurveSegment.Create(TR_down, BR));         // right vertical
+            list.Add(CurveSegment.Create(BR, BL));         // bottom
+            list.Add(CurveSegment.Create(BL, TL_down));    // left vertical
+            list.Add(CurveSegment.Create(TL_down, TL_topRight));// top-left chamfer
 
             return list;
         }
 
+
+        // NEW: plane-aware overload used by 'support' (upright) and by the default (flat) path
         private static Body createRoundedRectangle(
+            Plane profilePlane,
             double length, double length2, int nrL,
             double width, double width2, int nrW,
             double thickness, double radius, double holeDiam
         )
         {
-            // Logger.Log("[createRoundedRectangle] Enter");
-
-            // build the 2D profile curves:
+            // Build the 2D profile on the provided plane
             var boundary = CreateRectangleCurves(
-                Plane.PlaneXY,
+                profilePlane,
                 width: length,
                 height: width,
                 radius: radius
             );
-            // Logger.Log($"[createRoundedRectangle] boundary.Count = {boundary.Count}");
 
-            // extrude the plate
-            var plane = Plane.PlaneXY;
-            var body = Body.ExtrudeProfile(new Profile(plane, boundary), thickness);
-            // Logger.Log("[createRoundedRectangle] extruded plate");
+            // Extrude the plate along the plane normal
+            var body = Body.ExtrudeProfile(new Profile(profilePlane, boundary), thickness);
 
-            // drill holes if requested
+            // Drill holes (if requested) in the SAME plane
             if (holeDiam > 0 && nrL > 0 && nrW > 0)
             {
-                // Logger.Log("[createRoundedRectangle] adding holes");
                 var cutter = Body.ExtrudeProfile(
-                    new CircleProfile(plane, holeDiam * 0.5),
+                    new CircleProfile(profilePlane, holeDiam * 0.5),
                     1.1 * thickness
                 );
 
@@ -356,24 +383,30 @@ namespace AESCConstruct25.Plates.Modules
 
                         var copy = cutter.Copy();
                         copy.Transform(Matrix.CreateTranslation(Vector.Create(dx, dy, 0)));
-
-                        try
-                        {
-                            body.Subtract(copy);
-                            // Logger.Log($"[createRoundedRectangle] subtracted hole at ({dx:0.###}, {dy:0.###})");
-                        }
-                        catch
-                        {
-                            copy.Dispose();
-                            // Logger.Log("[createRoundedRectangle] hole subtract failed, disposing cutter copy");
-                        }
+                        try { body.Subtract(copy); }
+                        catch { copy.Dispose(); }
                     }
                 cutter.Dispose();
             }
 
-            // Logger.Log("[createRoundedRectangle] Exit");
             return body;
         }
+
+        // OLD signature now just calls the plane-aware version with PlaneXY (keeps existing callers working)
+        private static Body createRoundedRectangle(
+            double length, double length2, int nrL,
+            double width, double width2, int nrW,
+            double thickness, double radius, double holeDiam
+        )
+        {
+            return createRoundedRectangle(
+                Plane.PlaneXY,
+                length, length2, nrL,
+                width, width2, nrW,
+                thickness, radius, holeDiam
+            );
+        }
+
 
         private static List<ITrimmedCurve> CreateRectangleCurves(
             Plane profilePlane,
@@ -388,8 +421,6 @@ namespace AESCConstruct25.Plates.Modules
             var dx = frame.DirX;
             var dy = frame.DirY;
             var dz = frame.DirZ;
-
-            // Logger.Log($"[CreateRectangleCurves] radius = {radius}");
 
             // corner‐centers
             var m1 = center + (-width / 2 + radius) * dx + (height / 2 - radius) * dy; // top‐left
@@ -417,84 +448,8 @@ namespace AESCConstruct25.Plates.Modules
             curves.Add(CurveSegment.Create(p7, p8));                          // left edge
             if (radius > 0) curves.Add(CurveSegment.CreateArc(m1, p8, p1, -dz)); // top‐left
 
-            // Logger.Log($"[CreateRectangleCurves] returned {curves.Count} curves");
             return curves;
         }
-
-        private static Body createUnpRectangle(
-            double width,
-            double height,
-            double thickness,
-            double chamfer,
-            double holeDiam,
-            double holePitchX, int holeCountX,
-            double holePitchY, int holeCountY
-        )
-        {
-            var plane = Plane.PlaneXY;
-            var o = Point.Origin;
-            var dx = plane.Frame.DirX;
-            var dy = plane.Frame.DirY;
-            var dz = plane.Frame.DirZ;
-
-            double halfW = width / 2;
-            double halfH = height / 2;
-
-            // For a 45-degree chamfer, a = b = chamfer * sin(45°) = chamfer / sqrt(2)
-            double a = chamfer / Math.Sqrt(2);
-            double b = chamfer / Math.Sqrt(2);
-
-            // corner points, going CCW from bottom-left
-            var p0 = o + (-halfW) * dx + (-halfH) * dy;                 // BL
-            var p1 = o + (halfW) * dx + (-halfH) * dy;                  // BR
-            var p2 = o + (halfW) * dx + (halfH - b) * dy;               // just below TR chamfer start
-            var p3 = o + (halfW - a) * dx + (halfH) * dy;               // chamfer meet point
-            var p4 = o + (-halfW + a) * dx + (halfH) * dy;              // just right of TL chamfer start
-            var p5 = o + (-halfW) * dx + (halfH - b) * dy;              // TL chamfer meet
-
-            // build the poly with two chamfers
-            var boundary = new List<ITrimmedCurve> {
-                CurveSegment.Create(p0, p1),   // bottom
-                CurveSegment.Create(p1, p2),   // right vertical
-                CurveSegment.Create(p2, p3),   // TR chamfer
-                CurveSegment.Create(p3, p4),   // top between chamfers
-                CurveSegment.Create(p4, p5),   // TL chamfer
-                CurveSegment.Create(p5, p0),   // left vertical
-            };
-
-            // extrude
-            var body = Body.ExtrudeProfile(new Profile(plane, boundary), thickness);
-
-            // optional holes
-            if (holeDiam > 0 && holeCountX > 0 && holeCountY > 0)
-            {
-                var cutter = Body.ExtrudeProfile(
-                    new CircleProfile(plane, holeDiam * 0.5),
-                    1.1 * thickness
-                );
-                for (int i = 0; i < holeCountX; i++)
-                    for (int j = 0; j < holeCountY; j++)
-                    {
-                        double dx2 = -0.5 * holePitchX + (holeCountX > 1 ? i * (holePitchX / (holeCountX - 1)) : 0);
-                        double dy2 = -0.5 * holePitchY + (holeCountY > 1 ? j * (holePitchY / (holeCountY - 1)) : 0);
-                        var copy = cutter.Copy();
-                        copy.Transform(Matrix.CreateTranslation(Vector.Create(dx2, dy2, 0)));
-                        try
-                        {
-                            body.Subtract(copy);
-                        }
-                        catch
-                        {
-                            copy.Dispose();
-                        }
-                    }
-                cutter.Dispose();
-            }
-
-            return body;
-        }
-
-
 
         private static void createPlate(
             Point p, Plane pl, Direction dZ,
@@ -504,7 +459,6 @@ namespace AESCConstruct25.Plates.Modules
             double T, double R, double D,
             bool insertMid)
         {
-            // Logger.Log($"[createPlate] Enter: placing '{type}_{name}'");
             var doc = Window.ActiveWindow.Document;
             var main = doc.MainPart;
             var dX = pl.Frame.DirX;
@@ -513,8 +467,8 @@ namespace AESCConstruct25.Plates.Modules
 
             try
             {
-                WriteBlock.ExecuteTask("Create part", () =>
-                {
+                //WriteBlock.ExecuteTask("Create part", () =>
+                //{
                     var plates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates")
                                   ?? Part.Create(doc, "Plates")
                                      .Also(pp => Component.Create(main, pp));
@@ -523,7 +477,6 @@ namespace AESCConstruct25.Plates.Modules
                     Component comp;
                     if (exist != null)
                     {
-                        // Logger.Log($"[createPlate] Reusing '{exist.DisplayName}'");
                         comp = Component.Create(plates, exist);
                         comp.Transform(
                             Matrix.CreateTranslation(
@@ -533,10 +486,9 @@ namespace AESCConstruct25.Plates.Modules
                     }
                     else
                     {
-                        // Logger.Log("[createPlate] Building new plate body");
                         var b = CreatePlateBody(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
                         if (b == null)
-                        {// Logger.Log("[createPlate] abort body==null");
+                        {
                             return;
                         }
                         var pb = Part.Create(doc, pn);
@@ -548,18 +500,21 @@ namespace AESCConstruct25.Plates.Modules
                     var frame = Frame.Create(p, dX, dY);
                     if (frame.DirZ != dZ) frame = Frame.Create(p, -dX, dY);
                     comp.Transform(Matrix.CreateMapping(frame));
-                    // Logger.Log("[createPlate] moved into place");
 
-                    if (ang != 0)
+                    if(type != "UNP" && !type.Contains("support")) 
                     {
-                        comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), ang * Math.PI / 180));
-                        // Logger.Log($"[createPlate] rotated {ang}°");
+                        if(ang != 0)
+                            comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), ang * Math.PI / 180));
                     }
-                });
+                    else
+                    {
+                        comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), (ang + 90) * Math.PI / 180));
+                    }
+                //});
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error creating plate component: {ex.Message}", "Plate Placement Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Error creating plate component: {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -588,7 +543,7 @@ namespace AESCConstruct25.Plates.Modules
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error setting custom properties: {ex.Message}", "Property Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.ReportStatus($"Error setting custom properties: {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -628,7 +583,6 @@ namespace AESCConstruct25.Plates.Modules
             return true;
         }
     }
-
     internal static class Extensions
     {
         public static T Also<T>(this T self, Action<T> act) { act(self); return self; }

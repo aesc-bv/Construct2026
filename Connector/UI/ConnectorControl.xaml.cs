@@ -26,6 +26,7 @@ using RadioButton = System.Windows.Controls.RadioButton;
 using Settings = AESCConstruct25.Properties.Settings;
 using TextBox = System.Windows.Controls.TextBox;
 using UserControl = System.Windows.Controls.UserControl;
+using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using WF = System.Windows.Forms;
 using Window = SpaceClaim.Api.V242.Window;
 
@@ -456,6 +457,12 @@ namespace AESCConstruct25.UI
                 Window activeWindow = Window.ActiveWindow;
                 if (activeWindow == null)
                     return;
+
+                if (!CheckSelectedEdgeWidth())
+                {
+                    Application.ReportStatus("Bottom width can't be larger than edge width.", StatusMessageType.Error, null);
+                    return;
+                }
 
                 InteractionContext context = activeWindow.ActiveContext;
                 Document doc = activeWindow.Document;
@@ -1206,7 +1213,7 @@ namespace AESCConstruct25.UI
                 double alpha = Math.Atan(height / (0.5 * width2 - 0.5 * width1));
                 double alphaDegree = alpha / Math.PI * 180;
 
-                if (connector.HasCornerCutout)
+                if (connector.HasCornerCutout && cornerCutoutRadius > 0)
                 {
                     dX = Math.Abs((float)(cornerCutoutRadius * Math.Cos(alpha)));
                     dY = -Math.Abs((float)(cornerCutoutRadius * Math.Sin(alpha)));
@@ -1345,6 +1352,89 @@ namespace AESCConstruct25.UI
         {
             try { picDrawing?.Invalidate(); }
             catch (Exception ex) { Logger.Log($"InvalidateDrawing error: {ex}"); }
+        }
+        private bool CheckSelectedEdgeWidth()
+        {
+            var win = Window.ActiveWindow;
+            var ctx = win?.ActiveContext;
+            if (win == null || ctx?.Selection == null || ctx.Selection.Count == 0)
+                return true; // nothing selected → don't block
+
+            var iEdge = ctx.Selection.OfType<IDesignEdge>().FirstOrDefault();
+            if (iEdge == null)
+                return true; // not an edge → don't block
+
+            var c = ConnectorModel.CreateConnector(this);
+            if (c == null)
+                return true; // invalid inputs handled elsewhere
+
+            var edge = iEdge.Master;
+
+            // Get endpoints in model units (meters)
+            var p0 = edge.Shape.StartPoint;
+            var p1 = edge.Shape.EndPoint;
+
+            double availableWidthMm;
+
+            // 1) Straight line: full edge length
+            var line = edge.Shape.Geometry as Line;
+            if (line != null)
+            {
+                double lenM = (p1 - p0).Magnitude;
+                availableWidthMm = lenM * 1000.0; // m → mm
+            }
+            else
+            {
+                // 2) Circle/arc: use radius + endpoints to compute arc length
+                var circle = edge.Shape.GetGeometry<Circle>();
+                if (circle != null)
+                {
+                    var center = circle.Axis.Origin;
+                    double R = circle.Radius; // meters
+
+                    var v0 = p0 - center;
+                    var v1 = p1 - center;
+
+                    const double eps = 1e-9;
+                    double chordM = (p1 - p0).Magnitude;
+
+                    double theta; // radians along the shorter arc
+                    if (chordM < eps || v0.Magnitude < eps || v1.Magnitude < eps)
+                    {
+                        // Degenerate endpoints → treat as full circle
+                        theta = 2.0 * Math.PI;
+                    }
+                    else
+                    {
+                        double dot = Vector.Dot(v0, v1) / (v0.Magnitude * v1.Magnitude);
+                        // Clamp numerical noise
+                        if (dot > 1.0) dot = 1.0;
+                        if (dot < -1.0) dot = -1.0;
+
+                        theta = Math.Acos(dot);       // [0, π], shorter central angle
+                        if (theta < eps && chordM > eps)
+                        {
+                            // Start≈End but nonzero chord (rare numeric oddity) → assume full circle
+                            theta = 2.0 * Math.PI;
+                        }
+                    }
+
+                    double arcLenM = R * theta;       // meters
+                    availableWidthMm = arcLenM * 1000.0;
+                }
+                else
+                {
+                    // 3) Other curve types: fallback to chord length between endpoints
+                    double chordM = (p1 - p0).Magnitude;
+                    availableWidthMm = chordM * 1000.0;
+                }
+            }
+
+            // Criterion: availableWidth - entered width >= 0
+            Logger.Log($"[CheckSelectedEdgeWidth] availableWidthMm={availableWidthMm:0.###}, enteredWidth1={c.Width1:0.###}");
+            Logger.Log($"[CheckSelectedEdgeWidth] availableWidthMm - enteredWidth1 = {availableWidthMm - c.Width1:0.###}");
+            Logger.Log($"[CheckSelectedEdgeWidth] fits? = {(availableWidthMm - c.Width1) >= 0.0}");
+            return (availableWidthMm - c.Width1) >= 0.0;
         }
 
         private void connectorLocation_TextChanged(object sender, TextChangedEventArgs e)

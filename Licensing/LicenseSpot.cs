@@ -1,10 +1,10 @@
 ﻿//private static string _keyPair =
 //            "<RSAKeyValue><Modulus>pR07DDlVi/rcY1XeNkdFHdXEtbkk9zOBNx9MA+PwGMOMHfeA6c3cqFizdt/pcjR+p7SPwTP6L/K6DO6asU0KeSEoBwZZaTQ/UJyp4T/xJtrHpThJX5XaIf35ebp9zV1ETiYik+C0HbPVpZVrCZjRnf9waLRsO5UtTnZDQn8yvY0vtz7OlWBdHtTBO0EKmd+gXvR1K2pML/R2LLu4mpwbpv7L3p4O6/xaEEPvGuHyKHeK6B3+IW5bo94DuzG6OCi9r10xQ4N/ZT6/3WJVp6CfrzZtUd8/vYh7EiBqeYvKZm9jcgEfiG1nUY7Y1ntX6dtjSTFT9k6Ne2ZcybVUPWMJGw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
-
 using LicenseSpot.Framework;
 using SpaceClaim.Api.V242; // for Command (network toggle UI)
 using System;
+using System.Drawing;
 using System.IO;
 using System.Windows;
 
@@ -16,7 +16,7 @@ namespace AESCConstruct25.Licensing
     public static class ConstructLicenseSpot
     {
         private sealed class Construct25Anchor { }
-        public static bool IsDebugMode { get; set; } = true;
+        public static bool IsDebugMode { get; set; } = false;
         private static void Debug(string m) { if (IsDebugMode) MessageBox.Show(m, "License Debug"); }
 
         private static readonly Type AnchorType = typeof(Construct25Anchor);
@@ -34,6 +34,9 @@ namespace AESCConstruct25.Licensing
         private static readonly string ProgramData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
         private static readonly string BaseDir = Path.Combine(ProgramData, "IPManager");
         public static readonly string LicenseFilePath = Path.Combine(BaseDir, "AESC_License_Construct25.lic");
+
+        static Bitmap _active = new Bitmap(new MemoryStream(Resources.Network_Active));
+        static Bitmap _inactive = new Bitmap(new MemoryStream(Resources.Network_Inactive));
 
         // Public state for UI gating
         public static bool IsValid { get; private set; } = false;     // true only if: (node-locked genuine) OR (network genuine + checked-out)
@@ -110,14 +113,8 @@ namespace AESCConstruct25.Licensing
 
                 if (!IsValid)
                 {
-                    var exp = _license.GetTimeLimit()?.EndDate;
-                    string SafeProp(string k) { try { return _license.GetProperty(k)?.ToString() ?? ""; } catch { return ""; } }
-                    //MessageBox.Show(
-                    //    $"g1={g1} g2={g2} descOk={descOk}\n" +
-                    //    $"IsNetwork={IsNetwork} Conn={_license.IsValidConnection()}\n" +
-                    //    $"InvalidReason={_license.InvalidReason}\n" +
-                    //    $"Desc='{SafeProp("Description")}' Prod='{SafeProp("Product")}' Exp={exp:yyyy-MM-dd} desc from '{Path.GetFileName(LicenseFilePath)}'",
-                    //    "License validation flags");
+                    //var exp = _license.GetTimeLimit()?.EndDate;
+                    //string SafeProp(string k) { try { return _license.GetProperty(k)?.ToString() ?? ""; } catch { return ""; } }
                 }
 
                 UpdateNetworkButtonUI();
@@ -259,11 +256,11 @@ namespace AESCConstruct25.Licensing
                 bool connected = hasNet && lic.IsValidConnection();
 
                 cmd.IsEnabled = hasNet;
-                cmd.Text = connected ? "LicenseNetwork_Deactivate" : "LicenseNetwork_Activate";
+                cmd.Text = connected ? "Deactivate network license" : "Activate network license";
 
                 // Optional: swap icons if you prefer (keep or remove as needed)
-                // cmd.Image = connected ? new Bitmap(new MemoryStream(Resources.icons8_pause_squared_36px))
-                //                       : new Bitmap(new MemoryStream(Resources.icons8_next_36px));
+                 cmd.Image = connected ? _active
+                                       : _inactive;
             }
             catch { /* ignore */ }
         }
@@ -280,7 +277,6 @@ namespace AESCConstruct25.Licensing
             try
             {
                 var vinfo = new LicenseValidationInfo { LicenseFile = new LicenseFile(filePath) };
-                // Bind to THIS file only; no directory scanning.
                 return ExtendedLicenseManager.GetLicense(AnchorType, instance: null, info: vinfo, publicKey: _keyPair) as ExtendedLicense;
             }
             catch

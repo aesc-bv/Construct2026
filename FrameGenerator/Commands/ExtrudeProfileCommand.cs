@@ -37,6 +37,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     return;
                 }
 
+                var replace = ProfileReplaceHelper.PromptAndReplaceIfAny(win);
+                if (!replace.proceed)
+                    return;
+
                 // 1) Get the selected CurveSegment(s) in the active SpaceClaim view:
                 var trimmed = ProfileSelectionHelper.GetSelectedCurves(win);
                 var rawCurves = trimmed
@@ -47,12 +51,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
                 if (rawCurves.Count == 0)
                 {
-                    //MessageBox.Show(
-                    //    "Select at least one straight line or edge.",
-                    //    "Selection Required",
-                    //    MessageBoxButtons.OK,
-                    //    MessageBoxIcon.Warning
-                    //);
                     Application.ReportStatus("Select at least one straight line or edge.", StatusMessageType.Warning, null);
                     return;
                 }
@@ -75,12 +73,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 }
                 else
                 {
-                    //MessageBox.Show(
-                    //    "Error: invalid profile type or data. Cannot create extrusion.",
-                    //    "Error",
-                    //    MessageBoxButtons.OK,
-                    //    MessageBoxIcon.Error
-                    //);
                     Application.ReportStatus("Error: invalid profile type or data. Cannot create extrusion.", StatusMessageType.Error, null);
                     return;
                 }

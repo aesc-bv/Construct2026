@@ -152,6 +152,7 @@
     <Compile Include="FrameGenerator\Modules\Profiles\CircularProfile.cs" />
     <Compile Include="FrameGenerator\Modules\Profiles\RectangularProfile.cs" />
     <Compile Include="FrameGenerator\Modules\Profiles\ProfileBase.cs" />
+    <Compile Include="FrameGenerator\Utilities\ProfileReplaceHelper.cs" />
     <Compile Include="FrameGenerator\Utilities\RibCutOutSelectionHelper.cs" />
     <Compile Include="Resources1.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -261,8 +262,6 @@
     <Resource Include="FrameGenerator\UI\Images\Icon_Frame_6.png" />
     <Resource Include="FrameGenerator\UI\Images\Icon_Frame_6_Active.png" />
     <Resource Include="FrameGenerator\UI\Images\Icon_Joint_1.png" />
-    <Resource Include="FrameGenerator\UI\Images\Icon_Joint_2.png" />
-    <Resource Include="FrameGenerator\UI\Images\Icon_Joint_3.png" />
     <Resource Include="FrameGenerator\UI\Images\Icon_Joint_4.png" />
     <Resource Include="FrameGenerator\UI\Images\Icon_Joint_5.png" />
     <Resource Include="FrameGenerator\UI\Images\Icon_Joint_6.png" />
@@ -332,5 +331,29 @@
     </EmbeddedResource>
     <Resource Include="UIMain\Images\Ribbon\Icon_Update.png" />
     <Resource Include="UIMain\Images\Ribbon\Icon_Excel.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="FrameGenerator\UI\Images\Icon_Joint_2.png" />
+    <Resource Include="FrameGenerator\UI\Images\Icon_Joint_3.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Fastener\UI\images\DIN125A.png" />
+    <Resource Include="Fastener\UI\images\DIN433.png" />
+    <Resource Include="Fastener\UI\images\DIN439.png" />
+    <Resource Include="Fastener\UI\images\DIN6330.png" />
+    <Resource Include="Fastener\UI\images\DIN6334.png" />
+    <Resource Include="Fastener\UI\images\DIN7991.png" />
+    <Resource Include="Fastener\UI\images\DIN84.png" />
+    <Resource Include="Fastener\UI\images\DIN85.png" />
+    <Resource Include="Fastener\UI\images\DIN9021B.png" />
+    <Resource Include="Fastener\UI\images\DIN912.png" />
+    <Resource Include="Fastener\UI\images\DIN931.png" />
+    <Resource Include="Fastener\UI\images\DIN933.png" />
+    <Resource Include="Fastener\UI\images\DIN934.png" />
+    <Resource Include="Fastener\UI\images\DIN982.png" />
+    <Resource Include="Fastener\UI\images\DIN985.png" />
+    <Resource Include="Fastener\UI\images\ISO4032.png" />
+    <Resource Include="Fastener\UI\images\ISO4035.png" />
+    <Resource Include="Fastener\UI\images\ISO7380.png" />
   </ItemGroup>
 </Project>

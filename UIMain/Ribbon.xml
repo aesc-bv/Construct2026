@@ -14,10 +14,9 @@
 							getLabel="GetRibbonLabel"
 							size="large"
 							Enabled="False"/>
-					<!--label="Profiles"-->
+				</group>
 
-					<separator id="AESC.Construct.separator1"/>
-					<!-- sketch tools block -->
+				<group id="AESCConstruct25.ToolsGroup" getLabel="GetRibbonLabel">
 					<container id="AESC.Construct.SketchToolGroupContainer"
 					   layoutOrientation="horizontal"
 					   isGroup="false"
@@ -43,13 +42,13 @@
 									size="small"
 									showLabel="false"
 									showImage="true"/>
-							<button id="AESC.Construct.FrameGen.SetModeSection"
+							<button id="AESC.Construct.SetModeSection"
 									command="SetModeSection"
 									size="small"
 									showLabel="false"
 									showImage="true"/>
-							<button id="AESC.Construct.FrameGen.SetMode3D"
-									command="SetMode3D"
+							<button id="AESC.Construct.SetMode3D"
+									command="AESC.Construct.SetMode3D"
 									size="small"
 									showLabel="false"
 									showImage="true"/>
@@ -64,36 +63,31 @@
 							showImage="true"
 							showLabel="false"
 							style="imageOnly"/>
+				</group>
 
-					<separator id="AESC.Construct.separatorE"/>
-
+				<group id="AESCConstruct25.ExportGroup" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.ExportSTEPBtn"
 							command="AESCConstruct25.ExportSTEP"
 							getLabel="GetRibbonLabel"
 							size="large"
 							style="imageandtext"/>
-
-					<container id="ExportControls"
-					   layoutOrientation="vertical"
-					   isGroup="false"
-					   verticalAlign="middle">
-						<button id="AESCConstruct25.ExportBOMBtn"
-								command="AESCConstruct25.ExportBOM"
+					<button id="AESCConstruct25.ExportBOMBtn"
+							command="AESCConstruct25.ExportBOM"
+							getLabel="GetRibbonLabel"
+							size="large"
+							style="imageandtext"/>
+					<button>
+						<button id="AESCConstruct25.UpdateBOM"
+								command="AESCConstruct25.UpdateBOM"
 								getLabel="GetRibbonLabel"
 								size="large"
-								style="imageandtext">
-							<button id="AESCConstruct25.UpdateBOM"
-									command="AESCConstruct25.UpdateBOM"
-									getLabel="GetRibbonLabel"
-									size="large"
-									showLabel="true"/>
-							<button id="AESCConstruct25.ExportExcelBtn"
-									command="AESCConstruct25.ExportExcel"
-									getLabel="GetRibbonLabel"
-									size="large"
-									style="imageandtext"/>
-						</button>
-					</container>
+								showLabel="true"/>
+						<button id="AESCConstruct25.ExportExcelBtn"
+								command="AESCConstruct25.ExportExcel"
+								getLabel="GetRibbonLabel"
+								size="large"
+								style="imageandtext"/>
+					</button>
 				</group>
 
 				<group id="AESCConstruct25.PlateGroup" getLabel="GetRibbonLabel">
@@ -152,8 +146,8 @@
 						size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.UI" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.ActivateNetwork"
+				<group id="AESCConstruct25.Network" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.ActivateNetworkBtn"
 						command="AESCConstruct25.ActivateNetwork"
 						getLabel="GetRibbonLabel"
 						size="large"/>

@@ -203,6 +203,26 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] Network_Active {
+            get {
+                object obj = ResourceManager.GetObject("Network_Active", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Network_Inactive {
+            get {
+                object obj = ResourceManager.GetObject("Network_Inactive", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] ribCutout {
             get {
                 object obj = ResourceManager.GetObject("ribCutout", resourceCulture);

@@ -1,4 +1,5 @@
 ﻿using AESCConstruct25.Fastener.Module;
+using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -6,8 +7,11 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Media.Imaging;
+using Application = SpaceClaim.Api.V242.Application;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
 
@@ -28,6 +32,21 @@ namespace AESCConstruct25.UI
                 OnPropertyChanged(nameof(OverwriteDistance));
             }
         }
+
+        const string ImagesFolderPath = @"/AESCConstruct25;component/Fastener/UI/images/";
+
+        private string _boltImageSource;
+        public string BoltImageSource
+        {
+            get => _boltImageSource;
+            private set
+            {
+                if (_boltImageSource == value) return;
+                _boltImageSource = value;
+                OnPropertyChanged(nameof(BoltImageSource));
+            }
+        }
+
         private string CustomFolderPath =>
            Path.Combine(
                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -46,9 +65,6 @@ namespace AESCConstruct25.UI
             _module = new FastenerModule();
 
             // 2) populate type lists
-            //BoltTypeOptions = new ObservableCollection<string>(_module.BoltTypes);
-            //WasherTypeOptions = new ObservableCollection<string>(_module.WasherTypes);
-            //NutTypeOptions = new ObservableCollection<string>(_module.NutTypes);
             BoltTypeOptions = new ObservableCollection<string>(_module.BoltNames);
             WasherTopTypeOptions = new ObservableCollection<string>(_module.WasherNames);
             WasherBottomTypeOptions = new ObservableCollection<string>(_module.WasherNames);
@@ -129,12 +145,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(
-                    $"Failed to import custom fastener:\n{ex.Message}",
-                    "Import Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                Application.ReportStatus($"Failed to import custom fastener:\n{ex.Message}", StatusMessageType.Error, null);
                 return;
             }
 
@@ -143,12 +154,7 @@ namespace AESCConstruct25.UI
             SelectedCustomFile = Path.GetFileName(selectedPath);
             OnPropertyChanged(nameof(SelectedCustomFile));
 
-            System.Windows.MessageBox.Show(
-                "Custom fastener imported successfully.",
-                "Import Complete",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information
-            );
+            Application.ReportStatus("Custom fastener imported successfully.", StatusMessageType.Error, null);
         }
 
         // INotifyPropertyChanged...
@@ -170,6 +176,8 @@ namespace AESCConstruct25.UI
                 _selectedBoltType = value;
                 OnPropertyChanged(nameof(SelectedBoltType));
                 RefreshBoltSizes();
+                AutoPickBoltSize();
+                UpdateBoltImage();
             }
         }
 
@@ -194,6 +202,8 @@ namespace AESCConstruct25.UI
                 _selectedWasherTopType = value;
                 OnPropertyChanged(nameof(SelectedWasherTopType));
                 RefreshWasherTopSizes();
+                AutoPickWasherTopSize();
+                UpdateWasherTopImage();
             }
         }
 
@@ -211,6 +221,8 @@ namespace AESCConstruct25.UI
                 _selectedWasherBottomType = value;
                 OnPropertyChanged(nameof(SelectedWasherBottomType));
                 RefreshWasherBottomSizes();
+                AutoPickWasherBottomSize();
+                UpdateWasherBottomImage();
             }
         }
 
@@ -232,6 +244,8 @@ namespace AESCConstruct25.UI
                 _selectedNutType = value;
                 OnPropertyChanged(nameof(SelectedNutType));
                 RefreshNutSizes();
+                AutoPickNutSize();
+                UpdateNutImage();
             }
         }
         public string SelectedNutSize { get; set; }
@@ -393,36 +407,213 @@ namespace AESCConstruct25.UI
 
         private void InsertButton_Click(object sender, RoutedEventArgs e)
         {
-            // push UI state into module
-            //_module.SetBoltType(SelectedBoltType);
-            // Convert the UI‐picked Name into the actual bolt.type
+            // Map UI name → CSV type for geometry
             var realBoltType = _module.GetBoltTypeByName(SelectedBoltType);
             _module.SetBoltType(realBoltType);
             _module.SetBoltSize(SelectedBoltSize);
             _module.SetBoltLength(BoltLength);
+
             _module.SetIncludeWasherTop(IncludeWasherTop);
-            //_module.SetWasherTopType(SelectedWasherTopType);
             var realWasherTopType = _module.GetWasherTopTypeByName(SelectedWasherTopType);
             _module.SetWasherTopType(realWasherTopType);
             _module.SetWasherTopSize(SelectedWasherTopSize);
+
             _module.SetIncludeWasherBottom(IncludeWasherBottom);
-            //_module.SetWasherBottomType(SelectedWasherBottomType);
             var realWasherBottomType = _module.GetWasherTopTypeByName(SelectedWasherBottomType);
             _module.SetWasherBottomType(realWasherBottomType);
             _module.SetWasherBottomSize(SelectedWasherBottomSize);
+
             _module.SetIncludeNut(IncludeNut);
-            //_module.SetNutType(SelectedNutType);
             var realNutType = _module.GetNutTypeByName(SelectedNutType);
             _module.SetNutType(realNutType);
             _module.SetNutSize(SelectedNutSize);
+
             _module.SetUseCustomPart(UseCustomPart);
             _module.SetCustomFile(SelectedCustomFile);
             _module.SetDistance(DistanceMm);
             _module.SetLockDistance(LockDistance);
             _module.SetOverwriteDistance(OverwriteDistance);
 
-            // then invoke creation
+            // NEW: pass the user-facing names from the top comboboxes for naming
+            _module.SetBoltDisplayName(SelectedBoltType);
+            _module.SetWasherTopDisplayName(SelectedWasherTopType);
+            _module.SetWasherBottomDisplayName(SelectedWasherBottomType);
+            _module.SetNutDisplayName(SelectedNutType);
+
             _module.CreateFasteners();
         }
+
+
+        // helpers
+
+        private void UpdateBoltImage()
+        {
+            Logger.Log($"[FastenersControl] UpdateBoltImage for SelectedBoltType='{SelectedBoltType}'");
+            if (string.IsNullOrWhiteSpace(SelectedBoltType)) { BoltImage.Source = null; return; }
+
+            var csvType = _module.GetBoltTypeByName(SelectedBoltType); // e.g. "DIN931 - ISO4014"
+            Logger.Log($"[FastenersControl] Mapped to csvType='{csvType}'");
+            if (string.IsNullOrWhiteSpace(csvType)) { BoltImage.Source = null; return; }
+
+            var primary = ExtractPrimaryStandard(csvType);             // "DIN931"
+            var uri = new Uri($"{ImagesFolderPath}{primary}.png", UriKind.Relative);
+            BoltImage.Source = new BitmapImage(uri);
+        }
+
+        private void UpdateWasherTopImage()
+        {
+            Logger.Log($"[FastenersControl] UpdateWasherTopImage for SelectedWasherTopType='{SelectedWasherTopType}'");
+            if (string.IsNullOrWhiteSpace(SelectedWasherTopType)) { WasherTopImage.Source = null; return; }
+
+            var csvType = _module.GetWasherTopTypeByName(SelectedWasherTopType); // map UI name → CSV type
+            Logger.Log($"[FastenersControl] WasherTop csvType='{csvType}'");
+            if (string.IsNullOrWhiteSpace(csvType)) { WasherTopImage.Source = null; return; }
+
+            var primary = ExtractPrimaryStandard(csvType);
+            var uri = new Uri($"{ImagesFolderPath}{primary}.png", UriKind.Relative);
+            WasherTopImage.Source = new BitmapImage(uri);
+        }
+
+        private void UpdateWasherBottomImage()
+        {
+            Logger.Log($"[FastenersControl] UpdateWasherBottomImage for SelectedWasherBottomType='{SelectedWasherBottomType}'");
+            if (string.IsNullOrWhiteSpace(SelectedWasherBottomType)) { WasherBottomImage.Source = null; return; }
+
+            // Bottom washer uses the same lookup helper (your module exposes GetWasherTopTypeByName for both)
+            var csvType = _module.GetWasherTopTypeByName(SelectedWasherBottomType);
+            Logger.Log($"[FastenersControl] WasherBottom csvType='{csvType}'");
+            if (string.IsNullOrWhiteSpace(csvType)) { WasherBottomImage.Source = null; return; }
+
+            var primary = ExtractPrimaryStandard(csvType);
+            var uri = new Uri($"{ImagesFolderPath}{primary}.png", UriKind.Relative);
+            WasherBottomImage.Source = new BitmapImage(uri);
+        }
+
+        private void UpdateNutImage()
+        {
+            Logger.Log($"[FastenersControl] UpdateNutImage for SelectedNutType='{SelectedNutType}'");
+            if (string.IsNullOrWhiteSpace(SelectedNutType)) { NutImage.Source = null; return; }
+
+            var csvType = _module.GetNutTypeByName(SelectedNutType);  // map UI name → CSV type
+            Logger.Log($"[FastenersControl] Nut csvType='{csvType}'");
+            if (string.IsNullOrWhiteSpace(csvType)) { NutImage.Source = null; return; }
+
+            var primary = ExtractPrimaryStandard(csvType);
+            var uri = new Uri($"{ImagesFolderPath}{primary}.png", UriKind.Relative);
+            NutImage.Source = new BitmapImage(uri);
+        }
+
+
+        /// <summary>
+        /// For strings like "DIN931 - ISO4014" or "DIN912", returns "DIN931" / "DIN912".
+        /// </summary>
+        private static string ExtractPrimaryStandard(string csvType)
+        {
+            if (string.IsNullOrWhiteSpace(csvType))
+                return string.Empty;
+
+            // Split on '-' first (types often formatted as "DIN931 - ISO4014")
+            var firstPart = csvType.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries)[0];
+
+            // Then take the first whitespace-delimited token (defensive for "DIN931 ISO4014")
+            var token = firstPart.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0];
+            return token.Trim();
+        }
+
+        // Try to read the current hole radius (in mm) from the user’s selection.
+        // Returns true if successful and sets radiusMM > 0.
+        private static bool TryGetHoleRadiusMm(out double radiusMM)
+        {
+            radiusMM = 0;
+            Window window = Window.ActiveWindow;
+            Document doc = window?.Document;
+            Part rootPart = doc?.MainPart;
+
+            if (window == null || doc == null || rootPart == null)
+                return false;
+
+            // We deliberately skip calling CheckSelectedCircle here to avoid UI warnings during auto-pick.
+            // If no valid circle is selected, GetSizeCircle will yield 0 and we’ll fall back to first item.
+            double depthMM;
+            radiusMM = FastenerModule.GetSizeCircle(window, out depthMM);
+            return radiusMM > 0;
+        }
+
+        // Select the largest M-size whose radius (diameter/2) is <= radiusMM.
+        // comboBox items must be strings like "M6", "M8", etc. If no match, leaves selection unchanged.
+        private static void SelectClosestSize(System.Windows.Controls.ComboBox comboBox, double radiusMM)
+        {
+            if (comboBox == null || comboBox.Items.Count == 0)
+                return;
+
+            double maxSize = 0.0;
+            int selectedIndex = -1;
+
+            for (int i = 0; i < comboBox.Items.Count; i++)
+            {
+                string item = comboBox.Items[i]?.ToString()?.Trim();
+                if (string.IsNullOrEmpty(item)) continue;
+
+                if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
+                    double.TryParse(item.Substring(1), NumberStyles.Any, CultureInfo.InvariantCulture, out double diameter))
+                {
+                    // pick the largest diameter where diameter/2 <= radiusMM
+                    if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)
+                    {
+                        maxSize = diameter;
+                        selectedIndex = i;
+                    }
+                }
+            }
+
+            if (selectedIndex != -1)
+                comboBox.SelectedIndex = selectedIndex;
+        }
+
+        // Auto-pick helpers for each specific dropdown. If no circle / no match → first item.
+        private void AutoPickBoltSize()
+        {
+            if (BoltSizeCombo == null || BoltSizeCombo.Items.Count == 0) return;
+
+            if (TryGetHoleRadiusMm(out double radiusMM))
+                SelectClosestSize(BoltSizeCombo, radiusMM);
+
+            if (BoltSizeCombo.SelectedIndex < 0)
+                BoltSizeCombo.SelectedIndex = 0;
+        }
+
+        private void AutoPickWasherTopSize()
+        {
+            if (WasherTopSizeCombo == null || WasherTopSizeCombo.Items.Count == 0) return;
+
+            if (TryGetHoleRadiusMm(out double radiusMM))
+                SelectClosestSize(WasherTopSizeCombo, radiusMM);
+
+            if (WasherTopSizeCombo.SelectedIndex < 0)
+                WasherTopSizeCombo.SelectedIndex = 0;
+        }
+
+        private void AutoPickWasherBottomSize()
+        {
+            if (WasherBottomSizeCombo == null || WasherBottomSizeCombo.Items.Count == 0) return;
+
+            if (TryGetHoleRadiusMm(out double radiusMM))
+                SelectClosestSize(WasherBottomSizeCombo, radiusMM);
+
+            if (WasherBottomSizeCombo.SelectedIndex < 0)
+                WasherBottomSizeCombo.SelectedIndex = 0;
+        }
+
+        private void AutoPickNutSize()
+        {
+            if (NutSizeCombo == null || NutSizeCombo.Items.Count == 0) return;
+
+            if (TryGetHoleRadiusMm(out double radiusMM))
+                SelectClosestSize(NutSizeCombo, radiusMM);
+
+            if (NutSizeCombo.SelectedIndex < 0)
+                NutSizeCombo.SelectedIndex = 0;
+        }
+
     }
 }

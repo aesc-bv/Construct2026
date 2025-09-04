@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Application = SpaceClaim.Api.V242.Application;
 using Window = SpaceClaim.Api.V242.Window;
 
 namespace AESCConstruct25.UI
@@ -42,12 +43,7 @@ namespace AESCConstruct25.UI
                 var pairs = RibCutOutSelectionHelper.GetOverlappingPairs(bodies);
                 if (pairs.Count == 0)
                 {
-                    MessageBox.Show(
-                        "Please select two overlapping bodies.",
-                        "Rib Cut-Out",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
+                    Application.ReportStatus("Please select two overlapping bodies.", StatusMessageType.Warning, null);
                     return;
                 }
 

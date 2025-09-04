@@ -23,10 +23,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             if (sel == null || sel.Count == 0)
             {
-                //MessageBox.Show(
-                //    "Trim requires: select at least one profile (body/component/edge) and one face for the cutter.",
-                //    "Trim", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
                 Application.ReportStatus("Trim requires: select at least one profile (body/component/edge) and one face for the cutter.", StatusMessageType.Warning, null);
                 return false;
             }
@@ -44,10 +40,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
             if (!hasTarget || faceCount < 1)
             {
-                //MessageBox.Show(
-                //    "Trim requires: at least one profile (body/component/edge of target body) and one face for the cutter.\nPlease adjust your selection and try again.",
-                //    "Trim", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
                 Application.ReportStatus("Trim requires: at least one profile (body/component/edge of target body) and one face for the cutter.\nPlease adjust your selection and try again.", StatusMessageType.Warning, null);
                 return false;
             }
@@ -61,7 +53,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
             if (selectedComponents.Count < 1)
             {
-                //MessageBox.Show("Select at least two components to apply a joint.", "Selection Error");
                 Application.ReportStatus("Select at least two components to apply a joint.", StatusMessageType.Warning, null);
                 return;
             }
@@ -107,7 +98,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
             else if (jointType == "CutOut")
             {
-                Logger.Log("cutout!");
                 ExecuteCutOut(window);
                 return;
             }
@@ -258,12 +248,10 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 }
                 else
                 {
-                    //MessageBox.Show("No joint pair found, check line connections.");
                     Application.ReportStatus("No joint pair found, check line connections.", StatusMessageType.Warning, null);
                 }
             }
             if (updateBOM == true)
-                //CompareCommand.CompareSimple();
                 ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
             else
                 CompareCommand.CompareSimple();
@@ -272,35 +260,24 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
         public static void RestoreGeometry(Window window)
         {
-            //Logger.Log("RestoreGeometry: started");
-
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
             if (selectedComponents.Count == 0)
             {
-                //MessageBox.Show("Select at least one component to restore geometry.", "Selection Error");
                 Application.ReportStatus("Select at least one component to restore geometry.", StatusMessageType.Warning, null);
                 return;
             }
 
             JointModule.ResetComponentGeometryOnly(selectedComponents);
-            //Logger.Log("RestoreGeometry: complete");
         }
 
         public static void RestoreJoint(Window window)
         {
-            // Logger.Log("==== RestoreJoint START ====");
             WriteBlock.ExecuteTask("RestoreJoint", () =>
             {
                 // 1) Gather selection
                 var selected = JointSelectionHelper.GetSelectedComponents(window);
                 if (selected.Count < 2)
                 {
-                    //MessageBox.Show(
-                    //    "Select at least two components to restore joints.",
-                    //    "Restore Joint",
-                    //    MessageBoxButtons.OK,
-                    //    MessageBoxIcon.Warning
-                    //);
                     Application.ReportStatus("Select at least two components to restore joints.", StatusMessageType.Warning, null);
                     return;
                 }
@@ -366,7 +343,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 // 5) Execute resets (always extended profile)
                 foreach (var (comp, half, up, partners) in resetActions)
                 {
-                    // Logger.Log($"RestoreJoint: ResetHalfForJoint({comp.Name}, {half}, extendProfile: true)");
                     try
                     {
                         JointModule.ResetHalfForJoint(
@@ -378,21 +354,12 @@ namespace AESCConstruct25.FrameGenerator.Commands
                             partners
                         );
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Logger.Log($"RestoreJoint: ERROR on {comp.Name}.{half} → {ex.Message}");
+                        Application.ReportStatus($"Joint error: {ex.Message}", StatusMessageType.Error, null);
                     }
                 }
-
-                //MessageBox.Show(
-                //    "Joints restored: only the corner halves have been rebuilt (extended path).",
-                //    "Restore Joint",
-                //    MessageBoxButtons.OK,
-                //    MessageBoxIcon.Information
-                //);
-                // Logger.Log("RestoreJoint: complete");
             });
-            // Logger.Log("==== RestoreJoint END ====");
         }
 
         public static void ExecuteCutOut(Window window)
@@ -400,7 +367,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
             var comps = JointSelectionHelper.GetSelectedComponents(window);
             if (comps == null || comps.Count < 2)
             {
-                //MessageBox.Show("Select at least two profiles. The last selected will be cut by the others.", "Cut-Out");
                 Application.ReportStatus("Select at least two profiles. The last selected will be cut by the others.", StatusMessageType.Warning, null);
                 return;
             }
@@ -557,7 +523,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     bool phys = ArePhysicallyConnected(a, b);
                     bool tconn = jointType == "T" && IsTConnected(a, b);
 
-                    //Logger.Log($"Pair [{a.Name},{b.Name}]: phys={phys}, Tconn={tconn}");
                     if (phys || tconn)
                         yield return (a, b);
                 }

@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Application = SpaceClaim.Api.V242.Application;
 
 namespace AESCConstruct25.UI
 {
@@ -65,11 +66,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    ex.Message,
-                    "Engraving Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -78,7 +75,7 @@ namespace AESCConstruct25.UI
             try { EngravingService.ImprintToEngravingAndExport(); }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Engraving Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -87,7 +84,7 @@ namespace AESCConstruct25.UI
             try { EngravingService.ImprintBody(); }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Engraving Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -98,7 +95,7 @@ namespace AESCConstruct25.UI
             try { EngravingService.ImprintToEngravingAndExport(); }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Engraving Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
             }
         }
     }

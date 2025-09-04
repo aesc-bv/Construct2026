@@ -56,64 +56,71 @@
             <StackPanel x:Name="BoltGroup"
                         Tag="grpFastenersBolt"
                         Grid.Row="2"
-                        Margin="0,0,0,0"
-                        Orientation="Horizontal">
-                <Grid Margin="10">
+                        Margin="0,0,0,0">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="50" />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100" />
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                    <!-- now a Grid with same columns & margins as BoltGroup -->
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="50" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                    <TextBlock Tag="lblFasteners_Type"
-                               Text="Type"
-                               VerticalAlignment="Center" />
-                    <ComboBox x:Name="BoltTypeCombo"
-                              Grid.Column="1"
-                              Tag="FastenersText"
-                              ItemsSource="{Binding BoltTypeOptions}"
-                              SelectedItem="{Binding SelectedBoltType}"
-                              Margin="5,5,0,0"
-                              Style="{StaticResource ComboBoxFlatStyle}" />
+                        <TextBlock Tag="lblFasteners_Type"
+                                   Text="Name"
+                                   VerticalAlignment="Center" />
+                        <ComboBox x:Name="BoltTypeCombo"
+                                  Grid.Column="1"
+                                  Tag="FastenersText"
+                                  ItemsSource="{Binding BoltTypeOptions}"
+                                  SelectedItem="{Binding SelectedBoltType}"
+                                  Margin="5,5,0,0"
+                                  Style="{StaticResource ComboBoxFlatStyle}" />
 
-                    <TextBlock Tag="lblFasteners_Size"
-                               Grid.Row="1"
-                               Text="Size"
-                               VerticalAlignment="Center" />
-                    <ComboBox x:Name="BoltSizeCombo"
-                              Grid.Row="1"
-                              Grid.Column="1"
-                              Tag="FastenersToolTip"
-                              ItemsSource="{Binding BoltSizeOptions}"
-                              SelectedItem="{Binding SelectedBoltSize}"
-                              Margin="5,5,0,0"
-                              Style="{StaticResource ComboBoxFlatStyle}" />
+                        <TextBlock Tag="lblFasteners_Size"
+                                   Grid.Row="1"
+                                   Text="Size"
+                                   VerticalAlignment="Center" />
+                        <ComboBox x:Name="BoltSizeCombo"
+                                  Grid.Row="1"
+                                  Grid.Column="1"
+                                  Tag="FastenersToolTip"
+                                  ItemsSource="{Binding BoltSizeOptions}"
+                                  SelectedItem="{Binding SelectedBoltSize}"
+                                  Margin="5,5,0,0"
+                                  Style="{StaticResource ComboBoxFlatStyle}" />
 
-                    <TextBlock Tag="lblFasteners_Bolt_Length"
-                               Grid.Row="2"
-                               Text="Length"
-                               VerticalAlignment="Center" />
-                    <TextBox x:Name="BoltLengthTextBox"
+                        <TextBlock Tag="lblFasteners_Bolt_Length"
+                                   Grid.Row="2"
+                                   Text="Length"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="BoltLengthTextBox"
                              HorizontalAlignment="Left"
                              Grid.Row="2"
                              Grid.Column="1"
                              Tag="FastenersToolTip"
                              Text="{Binding BoltLength}"
                              Width="60"
-                             Margin="5,5,0,0" />
-                </Grid>
-                <Image Grid.Row="0"
-                       Grid.Column="0"
-                       Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
-                       Height="70"
-                       Margin="15,0,0,0" />
-            </StackPanel>
+                                 Margin="5,5,0,0" />
+                    </Grid>
+                    <Image Grid.Row="0"
+                        Grid.Column="1"
+                        x:Name="BoltImage"
+                        Stretch="Uniform"
+                        Height="70"
+                        Margin="15,0,0,0" />
+            </Grid>
+        </StackPanel>
 
-            <TextBlock Grid.Row="3"
+        <TextBlock Grid.Row="3"
                        Style="{StaticResource TitleTextStyle}"
                        Tag="WasherTop"
                        Text="Washer Top"
@@ -129,13 +136,16 @@
                           Tag="chkFastenersInclude"
                           IsChecked="{Binding IncludeWasherTop}"
                           Content="Include" />
-                <StackPanel Margin="0"
-                            Orientation="Horizontal">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100" />
+                    </Grid.ColumnDefinitions>
                     <!-- now a Grid with same columns & margins as BoltGroup -->
                     <Grid Margin="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="50" />
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -143,7 +153,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Tag="lblFasteners_Type"
-                                   Text="Type"
+                                   Text="Name"
                                    VerticalAlignment="Center"
                                    Grid.Row="0"
                                    Grid.Column="0" />
@@ -169,11 +179,12 @@
                                   Style="{StaticResource ComboBoxFlatStyle}" />
                     </Grid>
                     <Image Grid.Row="0"
-                           Grid.Column="0"
-                           Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
+                           Grid.Column="1"
+                           x:Name="WasherTopImage"
+                           Stretch="Uniform"
                            Height="70"
                            Margin="15,0,0,0" />
-                </StackPanel>
+                </Grid>
             </StackPanel>
 
             <TextBlock Grid.Row="5"
@@ -192,13 +203,16 @@
                           Tag="chkFastenersInclude"
                           IsChecked="{Binding IncludeWasherBottom}"
                           Content="Include" />
-                <StackPanel Margin="0"
-                            Orientation="Horizontal">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100" />
+                    </Grid.ColumnDefinitions>
                     <!-- now a Grid with same columns & margins as BoltGroup -->
                     <Grid Margin="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="50" />
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -206,7 +220,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Tag="lblFasteners_Type"
-                                   Text="Type"
+                                   Text="Name"
                                    VerticalAlignment="Center"
                                    Grid.Row="0"
                                    Grid.Column="0" />
@@ -232,11 +246,12 @@
                                   Style="{StaticResource ComboBoxFlatStyle}" />
                     </Grid>
                     <Image Grid.Row="0"
-                           Grid.Column="0"
-                           Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
+                           Grid.Column="1"
+                           x:Name="WasherBottomImage"
+                           Stretch="Uniform"
                            Height="70"
                            Margin="15,0,0,0" />
-                </StackPanel>
+                </Grid>
             </StackPanel>
 
             <TextBlock Grid.Row="7"
@@ -255,14 +270,16 @@
                           Tag="chkFastenersInclude"
                           IsChecked="{Binding IncludeNut}"
                           Content="Include" />
-                <StackPanel Margin="0"
-                            Orientation="Horizontal">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100" />
+                    </Grid.ColumnDefinitions>
                     <!-- now a Grid with same columns & margins as BoltGroup -->
                     <Grid Margin="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="50" />
-                            <ColumnDefinition Width="120" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -270,7 +287,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Tag="lblFasteners_Type"
-                                   Text="Type"
+                                   Text="Name"
                                    VerticalAlignment="Center"
                                    Grid.Row="0"
                                    Grid.Column="0" />
@@ -296,11 +313,12 @@
                                   Style="{StaticResource ComboBoxFlatStyle}" />
                     </Grid>
                     <Image Grid.Row="0"
-                           Grid.Column="0"
-                           Source="/AESCConstruct25;component/UIMain/Images/AESC_Logo.png"
+                           Grid.Column="1"
+                           x:Name="NutImage"
+                           Stretch="Uniform"
                            Height="70"
                            Margin="15,0,0,0" />
-                </StackPanel>
+                </Grid>
             </StackPanel>
 
             <Separator Grid.Row="9"

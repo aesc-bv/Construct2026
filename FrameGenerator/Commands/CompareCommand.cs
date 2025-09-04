@@ -20,7 +20,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 var window = Window.ActiveWindow;
                 if (window == null)
                 {
-                    //MessageBox.Show("No active window found.", "Compare Bodies", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     Application.ReportStatus("No active window found.", StatusMessageType.Warning, null);
                     return;
                 }
@@ -36,8 +35,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
                 if (bodies.Count == 0)
                 {
-                    //MessageBox.Show("No bodies found in the main part.", "Compare Bodies", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
                     Application.ReportStatus("No bodies found in the main part.", StatusMessageType.Warning, null);
                     return;
                 }
@@ -90,7 +87,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     }
                     catch (Exception ex)
                     {
-                        //MessageBox.Show($"Error processing body for name/length:\n{ex.Message}", "Compare Bodies", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         Application.ReportStatus($"Error processing body for name/length:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
@@ -113,7 +109,6 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     }
                     catch (Exception ex)
                     {
-                        //MessageBox.Show($"Error updating Construct_Tubelength:\n{ex.Message}", "Compare Bodies", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         Application.ReportStatus($"Error updating Construct_Tubelength:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }

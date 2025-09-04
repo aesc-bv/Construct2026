@@ -1,4 +1,5 @@
-﻿using AESCConstruct25.UI;
+﻿using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -270,6 +271,7 @@ public class Connector
 
 
             boundary.Add(CurveSegment.Create(p1, p2));
+
             if (HasRounding)
             {
                 Point pCenter3 = p3 - chamferOrRadius * dirZ;
@@ -284,7 +286,9 @@ public class Connector
 
                 boundary.Add(selectedCurve);
 
-                boundary.Add(CurveSegment.Create(p3, p4));
+                if (chamferOrRadius != halfWidth2)
+                    boundary.Add(CurveSegment.Create(p3, p4));
+
                 Point pCenter4 = p4 - chamferOrRadius * dirZ;
 
                 itc1 = CurveSegment.CreateArc(pCenter4, p4, p5, dirY);
@@ -301,7 +305,8 @@ public class Connector
             else // chamfer
             {
                 boundary.Add(CurveSegment.Create(p2, p3));
-                boundary.Add(CurveSegment.Create(p3, p4));
+                if (chamferOrRadius != halfWidth2)
+                    boundary.Add(CurveSegment.Create(p3, p4));
                 boundary.Add(CurveSegment.Create(p4, p5));
             }
             boundary.Add(CurveSegment.Create(p5, p6));
@@ -357,6 +362,7 @@ public class Connector
         Point p01 = center - halfWidth2 * dirX; // Top left
         Point p06 = center + halfWidth2 * dirX; // Top right
 
+        Logger.Log($"chamferOrRadius geo: {chamferOrRadius}, halfWidth2: {halfWidth2}");
 
 
         if (chamferOrRadius == 0) // no chamfer/radius
@@ -420,7 +426,8 @@ public class Connector
 
                 boundary.Add(selectedCurve);
 
-                boundary.Add(CurveSegment.Create(p3, p4));
+                if (chamferOrRadius != halfWidth2)
+                    boundary.Add(CurveSegment.Create(p3, p4));
                 Point pCenter4 = p4 - chamferOrRadius * dirZ;
 
                 itc1 = CurveSegment.CreateArc(pCenter4, p4, p5, dirY);
@@ -437,7 +444,10 @@ public class Connector
             else // chamfer
             {
                 boundary.Add(CurveSegment.Create(p2, p3));
-                boundary.Add(CurveSegment.Create(p3, p4));
+
+                if (chamferOrRadius != halfWidth2)
+                    boundary.Add(CurveSegment.Create(p3, p4));
+
                 boundary.Add(CurveSegment.Create(p4, p5));
             }
             boundary.Add(CurveSegment.Create(p5, p6));

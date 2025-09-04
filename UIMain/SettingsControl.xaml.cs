@@ -70,16 +70,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             Construct25.UpdateCommandTexts();
 
             PopulateCsvFilePathFields();
-
-            //Label_BOMLengthUnitComboBox.ItemsSource = UnitOptions;
-            //var unit = Settings.Default.LengthUnit;
-            //if (!UnitOptions.Contains(unit)) unit = "mm";
-            //Label_BOMLengthUnitComboBox.SelectedItem = unit;
-
-            //Label_BOMAnchorComboBox.ItemsSource = AnchorOptions;
-            //var anchor = Settings.Default.DocumentAnchor;
-            //if (!AnchorOptions.Contains(anchor)) anchor = "BottomRight";
-            //Label_BOMAnchorComboBox.SelectedItem = anchor;
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -122,13 +112,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
             AnchorYTextBox.Text = Settings.Default.TableAnchorY.ToString();
 
-            // corner enum
-            //var corner = Settings.Default.TableLocationPoint;
-            //if (CornerComboBox.Items.Contains(corner))
-            //    CornerComboBox.SelectedItem = corner;
-            //else
-            //    CornerComboBox.SelectedIndex = 0;
-
             // License block
             SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? "";
             LicenseStatusValue.Text = ConstructLicenseSpot.Status;
@@ -148,7 +131,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             // Table corner (LocationPoint)
             CornerComboBox.ItemsSource = AnchorOptions;
             CornerComboBox.SelectedItem = Settings.Default.TableLocationPoint;
-
 
             // Localize all named elements
             Localization.Language.LocalizeFrameworkElement(this);
@@ -207,7 +189,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 var path = txt.Text.Trim();
                 if (!string.IsNullOrWhiteSpace(path))
                 {
-                    // Logger.Log($"Saving setting [{settingKey}] = {path}");
                     Settings.Default[settingKey] = path;
                 }
             }
@@ -223,12 +204,10 @@ namespace AESCConstruct25.FrameGenerator.UI
             try
             {
                 Settings.Default.Save();
-                //MessageBox.Show("Settings saved.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
                 Application.ReportStatus("Settings saved.", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                //MessageBox.Show($"Error saving settings:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.ReportStatus($"Error saving settings:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -238,7 +217,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             var serial = SerialNumberTextBox.Text.Trim();
             if (string.IsNullOrEmpty(serial))
             {
-                //MessageBox.Show("Please enter a serial number first.", "Activate", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Application.ReportStatus("Please enter a serial number first.", StatusMessageType.Warning, null);
                 return;
             }
@@ -249,11 +227,13 @@ namespace AESCConstruct25.FrameGenerator.UI
             var expiration = ConstructLicenseSpot.CurrentLicense?.GetTimeLimit()?.EndDate;
             LicenseDetailsValue.Text = expiration.HasValue ? expiration.Value.ToShortDateString() : string.Empty;
 
-            AESCConstruct25.Construct25.RefreshLicenseUI();
+            if (SerialNumberTextBox.Text is string sn)
+                Settings.Default.SerialNumber = sn;
+
+            Construct25.RefreshLicenseUI();
 
             if (ok)
                 Application.ReportStatus("License activated.", StatusMessageType.Information, null);
-            //Application.ReportStatus("Please enter a serial number first.", StatusMessageType.Warning, null);
         }
 
         private void ComboBox_Language_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -266,23 +246,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // re-translate this panel
                 Localization.Language.LocalizeFrameworkElement(this);
 
-                //AESCConstruct25.Localization.Language.InvalidateRibbon();                // ribbon text
-                UIMain.UIManager.UpdateCommandTexts();                   // sidebar/floating commands
+                UIMain.UIManager.UpdateCommandTexts();
                 Construct25.UpdateCommandTexts();
             }
         }
 
         private void PopulateCsvFilePathFields()
         {
-            // Logger.Log("=== PopulateCsvFilePathFields (Using Settings Keys) ===");
-
             CsvPathsPanel.Children.Clear();
-
-            //string baseDir = Path.Combine(
-            //    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            //    "AESCConstruct"
-            //);
-            // Logger.Log($"Base directory: {baseDir}");
 
             // Mapping: Label → Setting Name
             var settingMap = new Dictionary<string, string>
@@ -304,48 +275,56 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             foreach (var kvp in settingMap)
             {
-                string label = kvp.Key;
+                string labelText = kvp.Key;
                 string settingKey = kvp.Value;
 
                 string relPath = (string)Settings.Default[settingKey];
-                string fullPath = relPath;// Path.IsPathRooted(relPath) ? relPath : Path.Combine(baseDir, relPath);
+                string fullPath = relPath;
 
-                // Logger.Log($"Adding UI for '{label}' from setting '{settingKey}' → {fullPath}");
-
-                CsvPathsPanel.Children.Add(new Label
+                // Create a 2x2 grid (Col0: *, Col1: 30) (Row0: Auto, Row1: Auto)
+                var grid = new Grid
                 {
-                    Content = label,
-                    FontWeight = FontWeights.Bold,
                     Margin = new Thickness(0, 5, 0, 0)
-                });
-
-                var row = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Margin = new Thickness(0, 2, 0, 0)
                 };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-                // the path TextBox
+                // Label at (0,0)
+                var lbl = new Label
+                {
+                    Content = labelText,
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 2)
+                };
+                Grid.SetColumn(lbl, 0);
+                Grid.SetRow(lbl, 0);
+                grid.Children.Add(lbl);
+
+                // TextBox at (0,1)
                 var txt = new TextBox
                 {
                     Text = fullPath,
                     Tag = settingKey,
-                    Width = 195
                 };
+                Grid.SetColumn(txt, 0);
+                Grid.SetRow(txt, 1);
+                grid.Children.Add(txt);
 
-                // the browse‐icon Button
+                // Browse button at (1,1)
                 var btn = new Button
                 {
                     Width = 16,
                     Height = 16,
-                    Margin = new Thickness(5, 0, 0, 0),
+                    Margin = new Thickness(2, 0, 2, 0),
                     Tag = settingKey,
                     Background = System.Windows.Media.Brushes.Transparent,
                     BorderBrush = System.Windows.Media.Brushes.Transparent,
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(0),
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
                 };
-                // load your browse.png (put it in Resources and mark “Resource” in the project)
                 var icon = new System.Windows.Controls.Image
                 {
                     Source = new System.Windows.Media.Imaging.BitmapImage(
@@ -354,13 +333,15 @@ namespace AESCConstruct25.FrameGenerator.UI
                 };
                 btn.Content = icon;
                 btn.Click += BrowseCsvButton_Click;
+                Grid.SetColumn(btn, 1);
+                Grid.SetRow(btn, 1);
+                grid.Children.Add(btn);
 
-                // assemble
-                row.Children.Add(txt);
-                row.Children.Add(btn);
-                CsvPathsPanel.Children.Add(row);
+                // Add the grid (containing label, textbox, button) to the panel
+                CsvPathsPanel.Children.Add(grid);
             }
         }
+
 
         private void BrowseCsvButton_Click(object sender, RoutedEventArgs e)
         {
@@ -396,6 +377,16 @@ namespace AESCConstruct25.FrameGenerator.UI
                 foreach (SettingsProperty prop in settings.Properties)
                 {
                     var name = prop.Name;
+
+                    if (string.Equals(name, "SerialNumber", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.Equals(name, "LicenseValid", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.Equals(name, "NetworkLogUser_Enabled", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     var value = settings[name];
 
                     if (value is StringCollection sc)
@@ -422,20 +413,14 @@ namespace AESCConstruct25.FrameGenerator.UI
                 if (dlg.ShowDialog() == true)
                 {
                     File.WriteAllText(dlg.FileName, json);
-                    //MessageBox.Show("Settings exported:\n" + dlg.FileName, "Export Settings",
-                    //    MessageBoxButton.OK, MessageBoxImage.Information);
                     Application.ReportStatus("Settings exported:\n" + dlg.FileName, StatusMessageType.Information, null);
                 }
             }
             catch (System.Exception ex)
             {
-                //MessageBox.Show("Export failed:\n" + ex.Message, "Export Settings",
-                //    MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.ReportStatus("Export failed:\n" + ex.Message, StatusMessageType.Error, null);
             }
         }
-
-        // Keep your existing usings (you already have System.Text.Json, etc.)
 
         private void ImportSettingsButton_Click(object sender, RoutedEventArgs e)
         {
@@ -454,20 +439,27 @@ namespace AESCConstruct25.FrameGenerator.UI
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 if (data == null)
                 {
-                    //MessageBox.Show("Invalid JSON.", "Import Settings",
-                    //    MessageBoxButton.OK, MessageBoxImage.Warning);
                     Application.ReportStatus("Invalid JSON.", StatusMessageType.Error, null);
                     return;
                 }
 
-                var s = AESCConstruct25.Properties.Settings.Default;
+                var s = Settings.Default;
 
                 foreach (var kv in data)
                 {
+                    if (string.Equals(kv.Key, "SerialNumber", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.Equals(kv.Key, "LicenseValid", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.Equals(kv.Key, "NetworkLogUser_Enabled", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     try
                     {
                         // Try to get the current value to determine the target type.
-                        var current = s[kv.Key];               // throws if setting does not exist
+                        var current = s[kv.Key];
                         var targetType = current?.GetType() ?? typeof(string);
 
                         // Convert JSON -> target type, then assign.
@@ -476,7 +468,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                     catch
                     {
-                        // Unknown setting name or assignment failed: skip silently (by request).
                     }
                 }
 
@@ -517,8 +508,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                         ? new TypeNamePair { Type = parts[0], Name = parts[1] }
                         : new TypeNamePair { Type = entry, Name = "" });
                 }
-                // If you set ItemsSource elsewhere already, no need to reassign; otherwise:
-                // TypesDataGrid.ItemsSource = _pairs;
 
                 // Rebuild CSV path rows from settings
                 PopulateCsvFilePathFields();
@@ -528,14 +517,10 @@ namespace AESCConstruct25.FrameGenerator.UI
                 UIMain.UIManager.UpdateCommandTexts();
                 Construct25.UpdateCommandTexts();
 
-                //MessageBox.Show("Settings imported.", "Import Settings",
-                //    MessageBoxButton.OK, MessageBoxImage.Information);
                 Application.ReportStatus("Settings imported.", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                //MessageBox.Show("Import failed:\n" + ex.Message, "Import Settings",
-                //    MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.ReportStatus("Import failed:\n" + ex.Message, StatusMessageType.Error, null);
             }
         }
@@ -623,6 +608,5 @@ namespace AESCConstruct25.FrameGenerator.UI
                 return null;
             }
         }
-
     }
 }

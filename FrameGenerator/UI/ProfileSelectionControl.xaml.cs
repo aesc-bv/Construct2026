@@ -16,9 +16,11 @@ using Application = SpaceClaim.Api.V242.Application;
 using Document = SpaceClaim.Api.V242.Document;
 using DXFProfile = AESCConstruct25.FrameGenerator.Utilities.DXFProfile;
 using Image = System.Windows.Controls.Image;
+using Matrix = SpaceClaim.Api.V242.Geometry.Matrix;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using Orientation = System.Windows.Controls.Orientation;
 using Path = System.IO.Path;
+using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Settings = AESCConstruct25.Properties.Settings;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
@@ -27,11 +29,6 @@ namespace AESCConstruct25.FrameGenerator.UI
 {
     public partial class ProfileSelectionControl : UserControl
     {
-        private static string logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "AESCConstruct25_Log.txt"
-        );
-
         private string selectedProfile = "";
         private string selectedProfileString = "";
         private string selectedProfileImage = "";
@@ -39,10 +36,12 @@ namespace AESCConstruct25.FrameGenerator.UI
         private List<string> csvFieldNames = new List<string>();
         private List<string[]> csvDataRows = new List<string[]>();
         private List<string> csvRowNames = new List<string>();
-        private Dictionary<string, System.Windows.Controls.TextBox> inputFieldMap
-            = new Dictionary<string, System.Windows.Controls.TextBox>();
+        private Dictionary<string, TextBox> inputFieldMap
+            = new Dictionary<string, TextBox>();
         private string selectedDXFPath = "";
         private List<ITrimmedCurve> dxfContours = null;
+
+        private readonly Dictionary<string, string> _lastSizeByProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         public double rotationAngle = 0.0;
 
@@ -60,12 +59,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                //MessageBox.Show(
-                //    $"Failed to initialize ProfileSelectionControl:\n{ex.Message}",
-                //    "Initialization Error",
-                //    MessageBoxButton.OK,
-                //    MessageBoxImage.Error
-                //);
                 Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -108,8 +101,6 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             GenerateButton.IsEnabled = profileSelected;
 
-            // Logger.Log($"[Profile] selected? {profileSelected}");
-
             // Swap image
             if (GenerateProfileButtonIcon != null)
             {
@@ -117,7 +108,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
                     : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
 
-                // Logger.Log($"GenerateButton: setting image src to {uriString}");
                 GenerateProfileButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
             }
@@ -128,13 +118,11 @@ namespace AESCConstruct25.FrameGenerator.UI
                 GenerateProfileButtonText.Foreground = profileSelected
                     ? Brushes.White : (Brush)FindResource("TextDark");
                 GenerateProfileButtonText.FontWeight = FontWeights.Bold;
-                // Logger.Log($"GenerateButton text updated: Foreground={GenerateProfileButtonText.Foreground}, Weight={GenerateProfileButtonText.FontWeight}");
             }
 
             // Joint logic
             bool jointSelected = JointGroupContainer.Children.OfType<RadioButton>().Any(rb => rb.IsChecked == true);
             GenerateJoint.IsEnabled = jointSelected;
-            // Logger.Log($"[Joint] selected? {jointSelected}");
 
             if (GenerateJointButtonIcon != null)
             {
@@ -143,7 +131,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
                 GenerateJointButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
-                // Logger.Log($"GenerateJoint: setting image src to {uriString}");
             }
 
             if (GenerateJointButtonText != null)
@@ -151,7 +138,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 GenerateJointButtonText.Foreground = jointSelected
                     ? Brushes.White : (Brush)FindResource("TextDark");
                 GenerateJointButtonText.FontWeight = FontWeights.Bold;
-                // Logger.Log($"GenerateJoint text updated: Foreground={GenerateJointButtonText.Foreground}, Weight={GenerateJointButtonText.FontWeight}");
             }
         }
 
@@ -178,8 +164,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (!(sender is RadioButton selectedRb))
                 return;
 
-            // Logger.Log($"ProfileButton_Checked fired for {selectedRb.Name}");
-
             var btn = GenerateButton;
             btn.IsEnabled = true;
 
@@ -199,31 +183,25 @@ namespace AESCConstruct25.FrameGenerator.UI
             foreach (var rb in ProfileGroupContainer.Children.OfType<RadioButton>())
             {
                 Image img = FindFirstImageChild(rb);
-                // Logger.Log($"  checking rb={rb.Name}, img null? {img == null}");
                 if (img == null) continue;
 
                 var uriStr = img.Source?.ToString();
-                // Logger.Log($"    current uri: {uriStr}");
                 if (string.IsNullOrEmpty(uriStr))
                     continue;
 
                 if (rb == selectedRb)
                 {
-                    // Logger.Log("    is selected: applying active");
                     if (uriStr.EndsWith(".png") && !uriStr.Contains("_Active"))
                     {
                         var activeUri = uriStr.Replace(".png", "_Active.png");
-                        // Logger.Log($"      setting Source to {activeUri}");
                         img.Source = new BitmapImage(new Uri(activeUri, UriKind.RelativeOrAbsolute));
                     }
                 }
                 else
                 {
-                    // Logger.Log("    is not selected: ensuring normal");
                     if (uriStr.Contains("_Active.png"))
                     {
                         var normalUri = uriStr.Replace("_Active.png", ".png");
-                        // Logger.Log($"      setting Source to {normalUri}");
                         img.Source = new BitmapImage(new Uri(normalUri, UriKind.RelativeOrAbsolute));
                     }
                 }
@@ -333,12 +311,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             string filePath = GetProfileCsvPathFromSettings(profileType);
             if (filePath == null || !File.Exists(filePath))
             {
-                //MessageBox.Show(
-                //    $"Could not find CSV for profile type '{profileType}'.",
-                //    "CSV Not Found",
-                //    MessageBoxButton.OK,
-                //    MessageBoxImage.Warning
-                //);
                 Application.ReportStatus($"Could not find CSV for profile type '{profileType}'.", StatusMessageType.Error, null);
                 return;
             }
@@ -381,28 +353,23 @@ namespace AESCConstruct25.FrameGenerator.UI
                         }
                         else
                         {
-                            //MessageBox.Show(
-                            //    $"Mismatched CSV row:\n{line}",
-                            //    "CSV Format Warning",
-                            //    MessageBoxButton.OK,
-                            //    MessageBoxImage.Warning
-                            //);
                             Application.ReportStatus($"Mismatched CSV row:\n{line}", StatusMessageType.Error, null);
                         }
                     }
 
+                    int idx = 0;
+                    if (_lastSizeByProfile.TryGetValue(profileType, out var lastName))
+                    {
+                        var found = csvRowNames.FindIndex(n => string.Equals(n, lastName, StringComparison.OrdinalIgnoreCase));
+                        if (found >= 0) idx = found;
+                    }
+
                     if (SizeComboBox.Items.Count > 0)
-                        SizeComboBox.SelectedIndex = 0;
+                        SizeComboBox.SelectedIndex = idx;
                 }
             }
             catch (Exception ex)
             {
-                //MessageBox.Show(
-                //    $"Failed to load CSV:\n{ex.Message}",
-                //    "CSV Load Error",
-                //    MessageBoxButton.OK,
-                //    MessageBoxImage.Error
-                //);
                 Application.ReportStatus($"Failed to load CSV:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -420,6 +387,13 @@ namespace AESCConstruct25.FrameGenerator.UI
                     {
                         inputFieldMap[csvFieldNames[i]].Text = selectedValues[i];
                     }
+                }
+
+                if (!string.IsNullOrEmpty(selectedProfile) &&
+                SizeComboBox.SelectedIndex >= 0 &&
+                SizeComboBox.SelectedIndex < csvRowNames.Count)
+                {
+                    _lastSizeByProfile[selectedProfile] = csvRowNames[SizeComboBox.SelectedIndex];
                 }
             }
         }
@@ -554,11 +528,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    //MessageBox.Show(
-                    //    $"Failed to open DXF:\n{ex.Message}",
-                    //    "DXF → Profile",
-                    //    MessageBoxButton.OK,
-                    //    MessageBoxImage.Error);
                     Application.ReportStatus($"Failed to open DXF:\n{ex.Message}", StatusMessageType.Information, null);
                     return;
                 }
@@ -577,12 +546,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // 5) Copy the profile‐string to the clipboard
                 Clipboard.SetText(profile.ProfileString);
 
-                // 6) Let the user know that the string was copied
-                //MessageBox.Show(
-                //    $"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)",
-                //    "DXF → Profile",
-                //    MessageBoxButton.OK,
-                //    MessageBoxImage.Information);
                 Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
 
                 //
@@ -597,11 +560,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    //MessageBox.Show(
-                    //$"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}",
-                    //"DXF → Profile",
-                    //MessageBoxButton.OK,
-                    //MessageBoxImage.Warning);
                     Application.ReportStatus($"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}", StatusMessageType.Error, null);
                     return;
                 }
@@ -626,12 +584,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    //MessageBox.Show(
-                    //    $"Failed to save preview image to disk:\n{ex.Message}",
-                    //    "DXF → Profile",
-                    //    MessageBoxButton.OK,
-                    //    MessageBoxImage.Warning);
-
                     Application.ReportStatus($"Failed to save preview image to disk:\n{ex.Message}", StatusMessageType.Error, null);
                     // If saving PNG fails, omit the image path in CSV
                     imageFileName = "";
@@ -669,8 +621,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                         sw.WriteLine($"{profile.Name};{escapedProfile};{imageRel}");
                     }
 
-                    //System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    //{
                     LoadUserProfiles();
 
                     // Auto-check the newest one (so ProfileButton_Checked fires immediately)
@@ -679,15 +629,9 @@ namespace AESCConstruct25.FrameGenerator.UI
                                      .LastOrDefault();
                     if (newestRb != null)
                         newestRb.IsChecked = true;
-                    //});
                 }
                 catch (Exception ex)
                 {
-                    //MessageBox.Show(
-                    //    $"Failed to update CSV:\n{ex.Message}",
-                    //    "DXF → Profile",
-                    //    MessageBoxButton.OK,
-                    //    MessageBoxImage.Warning);
                     Application.ReportStatus($"Failed to update CSV:\n{ex.Message}", StatusMessageType.Error, null);
                 }
 
@@ -715,11 +659,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                     catch (Exception ex)
                     {
-                        //MessageBox.Show(
-                        //    $"Failed to render saved preview image:\n{ex.Message}",
-                        //    "DXF Preview Error",
-                        //    MessageBoxButton.OK,
-                        //    MessageBoxImage.Warning);
                         Application.ReportStatus($"Failed to render saved preview image:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
@@ -797,12 +736,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                             }
                             catch (Exception ex)
                             {
-                                //MessageBox.Show(
-                                //    $"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}",
-                                //    "Profile Image Error",
-                                //    MessageBoxButton.OK,
-                                //    MessageBoxImage.Warning
-                                //);
                                 Application.ReportStatus($"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
                             }
                         }
@@ -844,7 +777,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                         BorderThickness = new Thickness(0),
                         VerticalAlignment = System.Windows.VerticalAlignment.Top,
                         HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-                        Margin = new Thickness(0, 2, 12, 0),
+                        Margin = new Thickness(0, 8, 12, 0),
                         ToolTip = "Remove this profile"
                     };
 
@@ -879,12 +812,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                         }
                         catch (Exception ex)
                         {
-                            //MessageBox.Show(
-                            //    $"Failed to update CSV when deleting profile:\n{ex.Message}",
-                            //    "Profile Delete Error",
-                            //    MessageBoxButton.OK,
-                            //    MessageBoxImage.Warning
-                            //);
                             Application.ReportStatus($"Failed to update CSV when deleting profile:\n{ex.Message}", StatusMessageType.Error, null);
                         }
 
@@ -899,12 +826,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 }
                                 catch (Exception ex)
                                 {
-                                    //MessageBox.Show(
-                                    //    $"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}",
-                                    //    "Profile Delete Error",
-                                    //    MessageBoxButton.OK,
-                                    //    MessageBoxImage.Warning
-                                    //);
                                     Application.ReportStatus($"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
                                 }
                             }
@@ -924,12 +845,6 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                //MessageBox.Show(
-                //    $"Error loading user profiles:\n{ex.Message}",
-                //    "Profile Load Error",
-                //    MessageBoxButton.OK,
-                //    MessageBoxImage.Warning
-                //);
                 Application.ReportStatus($"Error loading user profiles:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
@@ -943,15 +858,9 @@ namespace AESCConstruct25.FrameGenerator.UI
                 if (win == null)
                     return;
 
-                //var existingNames = win.Document.MainPart
-                //              .GetChildren<Component>()
-                //              .Select(c => c.Name)
-                //              .ToHashSet();
                 var existingComps = win.Document.MainPart
                   .GetChildren<Component>()
                   .ToHashSet();
-
-
 
                 double.TryParse(
                     RotationAngleTextBox.Text,
@@ -959,7 +868,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                     CultureInfo.InvariantCulture,
                     out rotationAngle
                 );
-                // Logger.Log($"anglerot{rotationAngle}");
 
                 var oldOri = Application.UserOptions.WorldOrientation;
                 Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
@@ -970,26 +878,16 @@ namespace AESCConstruct25.FrameGenerator.UI
                      && inputFieldMap.Count == 0
                      && string.IsNullOrEmpty(selectedProfileString))
                     {
-                        //System.Windows.MessageBox.Show(
-                        //    "Please select a profile (built-in or user-saved) or load a DXF file before generating.",
-                        //    "Selection Required",
-                        //    MessageBoxButton.OK,
-                        //    MessageBoxImage.Warning);
-
                         Application.ReportStatus("Please select a profile (built-in or user-saved) or load a DXF file before generating.", StatusMessageType.Warning, null);
                         return;
                     }
 
                     bool isHollow = HollowCheckBox.IsChecked == false;
                     bool updateBOM = UpdateBOM.IsChecked == true;
-                    // Logger.Log($"updateBOM {updateBOM}");
-                    // Logger.Log($"AESCConstruct25: Generate Button Clicked.\n");
-
                     //
                     // ─── 1) USER‐SAVED PROFILE (selectedProfileString != "") ───────────────────────────────
                     //
                     // Log exactly the raw string (with no trailing “.”):
-                    // Logger.Log($"AESCConstruct25 custom: {selectedProfileString}\n");
                     if (!string.IsNullOrEmpty(selectedProfileString))
                     {
                         // ─── 1a) SPLIT INTO INDIVIDUAL CURVE STRINGS ───────────────────────────────────────
@@ -1002,7 +900,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                         {
                             string loopStr = loopStrings[loopIndex].Trim();
 
-                            // Now split that loop on spaces → each “S…E…” or “S…E…M…” piece
                             string[] curveChunks = loopStr.Split(' ');
 
                             for (int i = 0; i < curveChunks.Length; i++)
@@ -1117,8 +1014,6 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                         try
                         {
-                            //WriteBlock.ExecuteTask("Generate Profile (DXF)", () =>
-                            //{
                             ExtrudeProfileCommand.ExecuteExtrusion(
                                 selectedProfile,   // “DXF”
                                 dxfContours,       // List<ITrimmedCurve>
@@ -1129,7 +1024,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                                 updateBOM,
                                 ""
                             );
-                            //});
                         }
                         catch (Exception)
                         {
@@ -1191,9 +1085,6 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                         dataDict["Name"] = csvRowNames[SizeComboBox.SelectedIndex];
 
-                        //WriteBlock.ExecuteTask("Generate Profile (built-in)", () =>
-                        //{
-                        // Logger.Log($"profile{dataDict}");
                         ExtrudeProfileCommand.ExecuteExtrusion(
                             selectedProfile,  // e.g. "Rectangular", "H", etc.
                             dataDict,    // numeric‐based sizes
@@ -1204,7 +1095,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                             updateBOM,
                             ""
                         );
-                        //});
                     }
                     catch (Exception)
                     {
@@ -1274,9 +1164,6 @@ namespace AESCConstruct25.FrameGenerator.UI
                 {
                     ExecuteJointCommand.ExecuteJoint(window, spacing, jointType, updateBOM);
                 });
-
-                // close the sidebar
-                //JointSidebar.CloseSidebar();
             }
             finally
             {
@@ -1404,6 +1291,242 @@ namespace AESCConstruct25.FrameGenerator.UI
                     }
                 }
             }
+        }
+
+        private void DeleteProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            {
+                var win = Window.ActiveWindow;
+                if (win == null)
+                    return;
+
+                WriteBlock.ExecuteTask("Delete Construct Profile", () =>
+                {
+                    try
+                    {
+                        var sel = win.ActiveContext?.Selection;
+                        if (sel == null || sel.Count == 0)
+                        {
+                            Application.ReportStatus("Select a line, edge, face or curve that belongs to a profile component.", StatusMessageType.Warning, null);
+                            return;
+                        }
+
+                        Logger.Log($"sel.Count : {sel.Count}");
+                        // Try every picked item; delete the first eligible component we can find.
+                        foreach (var picked in sel)
+                        {
+                            Logger.Log($"Picked item type: {picked?.GetType().Name}");
+                            var comp = TryGetOwningComponent(win.Document, picked);
+                            Logger.Log($"Picked comp: {comp.Name}");
+                            if (comp == null) continue;
+
+                            var part = comp.Template; // Component.Template is the owning Part (not .Master)  ← fixes CS1061
+                            Logger.Log($"Picked part: {part}");
+                            if (part == null) continue;
+
+                            // Presence of AESC_Construct marks our "Construct" components (profiles & plates). 
+                            // Profiles set it to 'true', plates set "Plates" — key presence is enough. 
+                            var props = part.CustomProperties;
+                            bool isConstruct = props.ContainsKey("AESC_Construct");
+                            if (!isConstruct)
+                                continue;
+
+                            // Best-effort: restore hidden original (top-level) curves; ConstructCurve lives inside the component
+                            // and will be removed with the component.
+                            TryUnhideOriginalCurves(win.Document, comp);
+                            comp.Delete();
+
+                            Application.ReportStatus(
+                                $"Deleted profile component \"{part.DisplayName}\" and restored original curve visibility (where applicable).",
+                                StatusMessageType.Information, null);
+                            //return;
+                        }
+
+                        //Application.ReportStatus("No Construct profile component found on the current selection.", StatusMessageType.Warning, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.ReportStatus($"Delete Profile failed: {ex.Message}", StatusMessageType.Error, null);
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Find the Component under MainPart that owns the picked item.
+        /// Works for IDesign* wrappers and raw Design* objects (curve/edge/face/body),
+        /// and for selecting the Component itself.
+        /// </summary>
+        private static Component TryGetOwningComponent(Document doc, object picked)
+        {
+            if (picked == null || doc == null) return null;
+
+            // Unwrap common selection wrappers (IDesign*) to their Design* masters
+            DesignCurve dc = null;
+            DesignEdge de = null;
+            DesignFace df = null;
+            DesignBody db = null;
+
+            if (picked is Component c0) return c0;
+
+            if (picked is IDesignCurve idc) dc = idc.Master;
+            else if (picked is DesignCurve dc0) dc = dc0;
+
+            if (picked is IDesignEdge ide) de = ide.Master;
+            else if (picked is DesignEdge de0) de = de0;
+
+            if (picked is IDesignFace idf) df = idf.Master;
+            else if (picked is DesignFace df0) df = df0;
+
+            if (picked is IDesignBody idb) db = idb.Master;
+            else if (picked is DesignBody db0) db = db0;
+
+            // If we have an owning DesignCurve (e.g., selecting ConstructCurve or any curve inside a Part),
+            // find the component whose Template contains that exact DesignCurve instance.
+            foreach (var comp in doc.MainPart.GetChildren<Component>())
+            {
+                var part = comp.Template;
+                if (part == null) continue;
+
+                if (dc != null)
+                {
+                    foreach (var c in part.GetChildren<DesignCurve>())
+                        if (ReferenceEquals(c, dc))
+                            return comp;
+                }
+
+                // For face/edge: compare geometry Body to each DesignBody.Shape in the Part.
+                // (DesignFace.Shape.Body / DesignEdge.Shape.Body is a Modeler.Body we can match)
+                if (de != null)
+                {
+                    var geomBody = de.Shape.Body;
+                    if (part.Bodies.Any(b => b.Shape == geomBody))
+                        return comp;
+                }
+                if (df != null)
+                {
+                    var geomBody = df.Shape.Body;
+                    if (part.Bodies.Any(b => b.Shape == geomBody))
+                        return comp;
+                }
+
+                // For DesignBody directly
+                if (db != null && part.Bodies.Any(b => ReferenceEquals(b, db)))
+                    return comp;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Make original (top-level) design curves visible again in all open views.
+        /// Skips any curve named "ConstructCurve" (those live inside the component and are deleted with it).
+        /// </summary>
+        private static void TryUnhideOriginalCurves(Document doc, Component comp)
+        {
+            try
+            {
+                if (doc == null || comp == null || comp.Template == null)
+                    return;
+
+                var viewContexts = Window.GetWindows(doc)
+                                         .Where(w => w != null && w.Document == doc)
+                                         .Select(w => w.ActiveContext as IAppearanceContext)
+                                         .Where(ctx => ctx != null)
+                                         .ToList();
+
+                // Collect world-space endpoints from all ConstructCurve(s) inside the component
+                Matrix placement = comp.Placement; // component local → document/world
+                var constructWorldEnds = new List<(Point A, Point B)>();
+
+                foreach (var c in comp.Template.GetChildren<DesignCurve>())
+                {
+                    if (!string.Equals(c.Name, "ConstructCurve", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (TryGetCurveEndpointsLocal(c, out var aLocal, out var bLocal))
+                    {
+                        var aWorld = placement * aLocal;
+                        var bWorld = placement * bLocal;
+                        constructWorldEnds.Add((aWorld, bWorld));
+                    }
+                }
+
+                if (constructWorldEnds.Count == 0)
+                    return;
+
+                const double tol = 1e-5;
+
+                bool MatchesAnyConstructEnds(Point p0, Point p1)
+                {
+                    foreach (var pair in constructWorldEnds)
+                    {
+                        var A = pair.A;
+                        var B = pair.B;
+
+                        // same orientation
+                        if (PointsEqual(p0, A, tol) && PointsEqual(p1, B, tol))
+                            return true;
+                        // reversed
+                        if (PointsEqual(p0, B, tol) && PointsEqual(p1, A, tol))
+                            return true;
+                    }
+                    return false;
+                }
+
+                // Unhide only the original curves in MainPart that match those endpoints
+                foreach (var curve in doc.MainPart.GetChildren<DesignCurve>())
+                {
+                    if (string.Equals(curve.Name, "ConstructCurve", StringComparison.OrdinalIgnoreCase))
+                        continue; // top-level helpers should not exist; skip defensively
+
+                    if (!TryGetCurveEndpointsLocal(curve, out var p0, out var p1))
+                        continue;
+
+                    if (!MatchesAnyConstructEnds(p0, p1))
+                        continue;
+
+                    curve.SetVisibility(null, true);
+                    foreach (var ctx in viewContexts)
+                        curve.SetVisibility(ctx, true);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        // Reads endpoints in the curve's own (local) part coordinates.
+        // (unchanged from your version)
+        private static bool TryGetCurveEndpointsLocal(DesignCurve dc, out Point start, out Point end)
+        {
+            start = default(Point);
+            end = default(Point);
+
+            var shape = dc.Shape;
+
+            var seg = shape as CurveSegment;
+            if (seg != null)
+            {
+                start = seg.StartPoint;
+                end = seg.EndPoint;
+                return true;
+            }
+
+            var trimmed = shape as ITrimmedCurve;
+            if (trimmed != null)
+            {
+                start = trimmed.StartPoint;
+                end = trimmed.EndPoint;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool PointsEqual(Point a, Point b, double tol)
+        {
+            return (a - b).Magnitude <= tol;
         }
 
         private void RotationAngleTextBox_TextChanged(object sender, TextChangedEventArgs e)

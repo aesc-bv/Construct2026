@@ -1,4 +1,5 @@
 ﻿using AESCConstruct25.Plates.Modules;
+using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Application = SpaceClaim.Api.V242.Application;
 using Settings = AESCConstruct25.Properties.Settings;
 
 namespace AESCConstruct25.UI
@@ -41,14 +43,10 @@ namespace AESCConstruct25.UI
 
             try
             {
-                // 1) Load CSV
-                var folder = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "AESCConstruct", "Plates");
                 var csvPath = Settings.Default.PlatesProperties;
 
                 if (!File.Exists(csvPath))
-                    throw new FileNotFoundException("PlatesProperties.csv not found", csvPath);
+                    throw new FileNotFoundException($"{Settings.Default.PlatesProperties} not found", csvPath);
 
                 int lineNum = 1;
                 foreach (var line in File.ReadAllLines(csvPath).Skip(1))
@@ -78,12 +76,7 @@ namespace AESCConstruct25.UI
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"Error parsing PlatesProperties.csv at line {lineNum}:\n{ex.Message}",
-                            "CSV Parse Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning
-                        );
+                        Application.ReportStatus($"Error parsing PlatesProperties.csv at line {lineNum}:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
 
@@ -94,12 +87,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to load plate properties:\n{ex.Message}",
-                    "Plates Data Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                Application.ReportStatus($"Failed to load plate properties:\n{ex.Message}", StatusMessageType.Error, null);
             }
 
             if (SelectedProfileType != null)
@@ -130,14 +118,21 @@ namespace AESCConstruct25.UI
                 UpdatePlateImage();
 
                 ProfileSizes.Clear();
-                foreach (var name in _records
+
+                var names = _records
                     .Where(r => r.Type == value)
                     .Select(r => r.Name)
                     .Distinct()
-                    .OrderBy(n => n))
-                {
+                    .ToList();
+
+                IEnumerable<string> ordered =
+                    names.All(IsNumericString)
+                        ? names.OrderBy(n => ParseDoubleSafe(n))
+                        : names.OrderBy(n => NaturalSortKey(n), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var name in ordered)
                     ProfileSizes.Add(name);
-                }
+
                 SelectedProfileSize = ProfileSizes.FirstOrDefault();
                 OnPropertyChanged(nameof(ProfileSizes));
                 UpdateFieldLabelsAndVisibility();
@@ -179,7 +174,7 @@ namespace AESCConstruct25.UI
             HoleDiameter = rec.HoleDiameter;
             Thickness = rec.Thickness;
             FilletRadius = rec.FilletRadius;
-            InsertInMiddle = rec.InsertInMiddle;
+            //InsertInMiddle = rec.InsertInMiddle;
         }
 
         private string _angle = "0";
@@ -252,7 +247,7 @@ namespace AESCConstruct25.UI
             set { _filletRadius = value; OnPropertyChanged(nameof(FilletRadius)); }
         }
 
-        private bool _insertInMiddle;
+        private bool _insertInMiddle = true;
         public bool InsertInMiddle
         {
             get => _insertInMiddle;
@@ -276,6 +271,17 @@ namespace AESCConstruct25.UI
         {
             double val;
             return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out val) ? val : 0;
+        }
+
+        private static bool IsNumericString(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            // Accept "12", "12.5", "12,5"
+            return System.Text.RegularExpressions.Regex.IsMatch(s.Trim(), @"^\d+(?:[.,]\d+)?$");
+        }
+        private static string NaturalSortKey(string input)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(input ?? "", @"\d+", m => m.Value.PadLeft(10, '0'));
         }
 
         private double GetValueOrZero(string value, Visibility vis)
@@ -312,45 +318,30 @@ namespace AESCConstruct25.UI
             }
             catch (FormatException ex)
             {
-                MessageBox.Show(
-                    $"Invalid input format: {ex.Message}\nPlease check all numeric fields.",
-                    "Input Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                Application.ReportStatus($"Invalid input format: {ex.Message}\nPlease check all numeric fields.", StatusMessageType.Error, null);
             }
             catch (OverflowException ex)
             {
-                MessageBox.Show(
-                    $"Input value is too large or too small: {ex.Message}",
-                    "Input Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                Application.ReportStatus($"Input value is too large or too small: {ex.Message}", StatusMessageType.Error, null);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Unexpected error: {ex.Message}",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
+                Application.ReportStatus($"Unexpected error: {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
         private void UpdateFieldLabelsAndVisibility()
         {
             // Default: show all, standard labels
-            L1Label = "L1"; L1Visible = Visibility.Visible;
-            L2Label = "L2"; L2Visible = Visibility.Visible;
+            L1Label = "l1"; L1Visible = Visibility.Visible;
+            L2Label = "l2"; L2Visible = Visibility.Visible;
             Count1Label = "#"; Count1Visible = Visibility.Visible;
-            B1Label = "B1"; B1Visible = Visibility.Visible;
-            B2Label = "B2"; B2Visible = Visibility.Visible;
+            B1Label = "b1"; B1Visible = Visibility.Visible;
+            B2Label = "b2"; B2Visible = Visibility.Visible;
             Count2Label = "#"; Count2Visible = Visibility.Visible;
-            DLabel = "D"; DVisible = Visibility.Visible;
+            DLabel = "d"; DVisible = Visibility.Visible;
             TLabel = "T"; TVisible = Visibility.Visible;
-            RLabel = "R"; RVisible = Visibility.Visible;
+            RLabel = "r"; RVisible = Visibility.Visible;
 
             if (SelectedProfileType == "Blind flange")
             {
@@ -375,10 +366,10 @@ namespace AESCConstruct25.UI
             }
             else if (SelectedProfileType == "UNP")
             {
-                L1Label = "L1"; L1Visible = Visibility.Visible;
-                B1Label = "B1"; B1Visible = Visibility.Visible;
+                L1Label = "l1"; L1Visible = Visibility.Visible;
+                B1Label = "b1"; B1Visible = Visibility.Visible;
                 TLabel = "T"; TVisible = Visibility.Visible;
-                RLabel = "R"; RVisible = Visibility.Visible;
+                RLabel = "r"; RVisible = Visibility.Visible;
                 // Hide all others
                 L2Visible = Count1Visible = B2Visible = Count2Visible = DVisible = Visibility.Collapsed;
             }

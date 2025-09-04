@@ -51,6 +51,14 @@ namespace AESCConstruct25.Fastener.Module
         _nuts.FirstOrDefault(n => n.Name == name)?.type
         ?? throw new InvalidOperationException($"Unknown nut name '{name}'");
 
+        static string boltDisplayName, washerTopDisplayName, washerBottomDisplayName, nutDisplayName;
+
+        public void SetBoltDisplayName(string n) => boltDisplayName = n;
+        public void SetWasherTopDisplayName(string n) => washerTopDisplayName = n;
+        public void SetWasherBottomDisplayName(string n) => washerBottomDisplayName = n;
+        public void SetNutDisplayName(string n) => nutDisplayName = n;
+
+
         public IEnumerable<string> BoltSizesFor(string selectedName)
         {
             // find all underlying types for that name
@@ -406,15 +414,20 @@ namespace AESCConstruct25.Fastener.Module
                     if (File.Exists(_addinPathProfiles + "\\Fasteners\\Custom\\" + customFile))
                         customPartPath = _addinPathProfiles + "\\Fasteners\\Custom\\" + customFile;
 
-                    // TODO:
-                    // - handle custom part
-                    // - Lock parts
-
                     ///// Create Geometry     
-                    string boltName = boltType.Split(' ')[0] + " " + boltSize + " x " + (parBoltL).ToString();
-                    string washerTopName = washerTopType.Split(' ')[0] + " " + washerTopSize;
-                    string washerBottomName = washerBottomType.Split(' ')[0] + " " + washerBottomSize;
-                    string nutName = nutType.Split(' ')[0] + " " + nutSize;
+                    //string boltName = boltType.Split(' ')[0] + " " + boltSize + " x " + (parBoltL).ToString();
+                    //string washerTopName = washerTopType.Split(' ')[0] + " " + washerTopSize;
+                    //string washerBottomName = washerBottomType.Split(' ')[0] + " " + washerBottomSize;
+                    //string nutName = nutType.Split(' ')[0] + " " + nutSize;
+                    string boltName =
+                        $"{(string.IsNullOrWhiteSpace(boltDisplayName) ? _bolt.Name : boltDisplayName)} {boltSize} x {parBoltL}";
+                    string washerTopName =
+                        $"{(string.IsNullOrWhiteSpace(washerTopDisplayName) ? _washerTop.Name : washerTopDisplayName)} {washerTopSize}";
+                    string washerBottomName =
+                        $"{(string.IsNullOrWhiteSpace(washerBottomDisplayName) ? _washerBottom.Name : washerBottomDisplayName)} {washerBottomSize}";
+                    string nutName =
+                        $"{(string.IsNullOrWhiteSpace(nutDisplayName) ? _nut.Name : nutDisplayName)} {nutSize}";
+
 
                     foreach (PlacementData PD in placementDatas)
                     {
@@ -525,7 +538,7 @@ namespace AESCConstruct25.Fastener.Module
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString());
+                Application.ReportStatus($"Fastener Error {ex.ToString()}", StatusMessageType.Error, null);
             }
         }
 

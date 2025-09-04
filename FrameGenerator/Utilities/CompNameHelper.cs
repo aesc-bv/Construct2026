@@ -105,9 +105,9 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             }
 
             // ─── 7) Token values ─────────────────────────────────────────────────
-            var p1 = ((int)wMm).ToString(CultureInfo.InvariantCulture);
-            var p2 = ((int)hMm).ToString(CultureInfo.InvariantCulture);
-            var lengthStr = ((int)(length * 1000)).ToString(CultureInfo.InvariantCulture);
+            var p1 = ((double)wMm).ToString(CultureInfo.InvariantCulture);
+            var p2 = ((double)hMm).ToString(CultureInfo.InvariantCulture);
+            var lengthStr = ((double)(length * 1000)).ToString(CultureInfo.InvariantCulture);
             //// Logger.Log($"[SetNameAndLength] tokens: p1={p1}, p2={p2}, length={lengthStr}");
 
             // ─── 8) Replace tokens ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -44,6 +45,12 @@ namespace AESCConstruct25
                 if (!isCommandRegistered)
                 {
                     bool valid = ConstructLicenseSpot.IsValid;
+
+                    //AESC.Construct.SetMode3D
+                    var set3DConstruct = Command.Create("AESC.Construct.SetMode3D");
+                    set3DConstruct.Hint = "3D mode without converting closed line loops to surfaces";
+                    set3DConstruct.Executing += (s, e) => setMode3D();
+                    set3DConstruct.KeepAlive(true);
 
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
@@ -137,6 +144,7 @@ namespace AESCConstruct25
                     // Network license toggle — create the command BEFORE the ribbon needs it
                     var cmdNet = Command.Create("AESCConstruct25.ActivateNetwork");
                     cmdNet.IsEnabled = true;                 // let UpdateNetworkButtonUI refine this later
+                    cmdNet.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
                     cmdNet.KeepAlive(true);                  // IMPORTANT: prevent GC
                     cmdNet.Executing += (s, e) =>            // Use Executing (not Executed)
                     {
@@ -155,12 +163,6 @@ namespace AESCConstruct25
 
                             if (!lic.IsNetwork)
                             {
-                                //System.Windows.MessageBox.Show(
-                                //    "Current license is not a network license.",
-                                //    "Network License",
-                                //    System.Windows.MessageBoxButton.OK,
-                                //    System.Windows.MessageBoxImage.Information);
-
                                 Application.ReportStatus("Current license is not a network license.", StatusMessageType.Warning, null);
                                 return;
                             }
@@ -177,19 +179,12 @@ namespace AESCConstruct25
                         }
                         catch (Exception ex)
                         {
-                            //System.Windows.MessageBox.Show(
-                            //    "Network license toggle failed:\n" + ex.Message,
-                            //    "Network License",
-                            //    System.Windows.MessageBoxButton.OK,
-                            //    System.Windows.MessageBoxImage.Error);
-
                             Application.ReportStatus("Network license toggle failed:\n" + ex.Message, StatusMessageType.Warning, null);
                         }
                     };
 
                     // Initial button state (enabled/disabled) based on license type
                     ConstructLicenseSpot.UpdateNetworkButtonUI();
-
 
                     // Sidebar commands
                     var _ = Localization.Language.Translate("Settings");
@@ -205,6 +200,36 @@ namespace AESCConstruct25
             catch (Exception)
             {
                 return false;
+            }
+        }
+        public static void setMode3D()
+        {
+
+            try
+            {
+                // Find all smaller bends that are in the same part as the selected bend.
+                var curveList = new List<IDesignCurve>();
+                foreach (var curve in Window.ActiveWindow.ActiveContext.Root.GetDescendants<IDesignCurve>())
+                {
+                    if (curve.IsVisible(null))
+                    {
+                        curveList.Add(curve);
+                        curve.SetVisibility(null, false);
+                    }
+                }
+
+                Window.ActiveWindow.InteractionMode = InteractionMode.Solid;
+                Command.Execute("Select");
+
+                foreach (var curve in curveList)
+                {
+                    curve.SetVisibility(null, true);
+                }
+            }
+
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
             }
         }
 
@@ -235,6 +260,9 @@ namespace AESCConstruct25
 
             cmd = Command.GetCommand("AESCConstruct25.ExportSTEP");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
+
+            cmd = Command.GetCommand("AESCConstruct25.ActivateNetwork");
+            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetworkBtn");
         }
 
         private Image loadImg(byte[] bytes)
@@ -408,6 +436,8 @@ namespace AESCConstruct25
                     return Localization.Language.Translate("Ribbon.Button.Settings");
                 case "AESCConstruct25.ConnectorSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Connector");
+                case "AESCConstruct25.ActivateNetworkBtn":
+                    return Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
 
                 case "AESCConstruct25.DockBtn":
                     // Reflect current toggle state by reading the command’s Text,
@@ -425,6 +455,7 @@ namespace AESCConstruct25
         }
 
         public string GetEngravingLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.Engraving");
+        public string GetNetworkLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
         public string GetCustomPropertiesLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.CustomProperties");
 
         private void LoadDXFProfiles_Execute(object sender, EventArgs e)

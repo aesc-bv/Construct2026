@@ -549,8 +549,6 @@
 
     <Style x:Key="GenerateButtonStyle"
            TargetType="Button">
-        <Setter Property="Width"
-                Value="125" />
         <Setter Property="Height"
                 Value="30" />
         <Setter Property="FontWeight"

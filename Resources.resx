@@ -169,4 +169,10 @@
   <data name="Menu_Connector" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>UIMain\Images\Ribbon\Menu_Connector.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="Network_Inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\afbeelding (3).png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="Network_Active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\afbeelding (2).png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>

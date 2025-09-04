@@ -94,7 +94,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <CheckBox x:Name="connectorDynamicHeight"
                                   Tag="connectorDynamicHeight"
@@ -107,7 +107,8 @@
                                    HorizontalAlignment="Center"
                                    Margin="0,0,10,0"
                                    Grid.Column="1"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="If available height is smaller than input height, adjust automatically." />
                         <TextBlock Tag="ConnectorHeightText"
                                    x:Name="ConnectorHeightText"
                                    Text="Height"
@@ -131,7 +132,7 @@
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Tag="connectorWidth1Text"
                                    x:Name="connectorWidth1Text"
@@ -156,7 +157,7 @@
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Tag="connectorWidth2Text"
                                    x:Name="connectorWidth2Text"
@@ -194,7 +195,7 @@
                                      Margin="0,0,10,0"
                                      VerticalAlignment="Center"
                                      Style="{x:Null}"
-                                     IsChecked="True"/>
+                                     IsChecked="True" />
                         <TextBlock Tag="connectorRadiusText"
                                    x:Name="connectorRadiusText"
                                    TextAlignment="Center"
@@ -219,7 +220,7 @@
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Tag="connectorRadiusChamferText"
                                    x:Name="connectorRadiusChamferText"
@@ -244,7 +245,7 @@
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Tag="connectorToleranceText"
                                    x:Name="connectorToleranceText"
@@ -252,7 +253,8 @@
                                    Margin="0,0,10,0"
                                    Grid.Column="0"
                                    HorizontalAlignment="Left"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="Distance between connector and target body." />
                         <TextBox Tag="connectorTolerance"
                                  x:Name="connectorTolerance"
                                  TextAlignment="Center"
@@ -269,7 +271,7 @@
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Tag="connectorLocationText"
                                    x:Name="connectorLocationText"
@@ -277,7 +279,8 @@
                                    Margin="0,0,10,0"
                                    Grid.Column="0"
                                    HorizontalAlignment="Left"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="Offset value. Can be positive or negative." />
                         <TextBox Tag="connectorLocation"
                                  x:Name="connectorLocation"
                                  TextAlignment="Center"
@@ -299,7 +302,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <CheckBox x:Name="connectorCornerCutout"
                                   Tag="connectorCornerCutout"
@@ -312,7 +315,8 @@
                                    HorizontalAlignment="Left"
                                    Margin="0,0,10,0"
                                    Grid.Column="1"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="Circular cutout on bottom of connector." />
                         <TextBox Tag="connectorCornerCutoutValue"
                                  x:Name="connectorCornerCutoutValue"
                                  TextAlignment="Center"
@@ -330,27 +334,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <CheckBox x:Name="connectorShowTolerance"
-                                  Tag="connectorShowTolerance"
-                                  Margin="0,0,10,0"
-                                  VerticalAlignment="Center"
-                                  Grid.Column="0" />
-                        <TextBlock Tag="connectorShowToleranceText"
-                                   x:Name="connectorShowToleranceText"
-                                   Text="Show tolerance"
-                                   HorizontalAlignment="Left"
-                                   Margin="0,0,10,0"
-                                   Grid.Column="1"
-                                   VerticalAlignment="Center" />
-                    </Grid>
-
-                    <Grid Grid.Row="12"
-                          Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <CheckBox x:Name="connectorCornerCutoutRadius"
                                   Tag="connectorCornerCutoutRadius"
@@ -376,7 +360,7 @@
                         </TextBox>
                     </Grid>
 
-                    <Grid Grid.Row="13"
+                    <Grid Grid.Row="12"
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -393,10 +377,11 @@
                                    HorizontalAlignment="Left"
                                    Margin="0,0,10,0"
                                    Grid.Column="1"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="If unchecked, connector gets placed on&#x0a;the center of the selected edge.&#x0a;If checked, the connector gets placed&#x0a;on the point you selected on the&#x0a;edge." />
                     </Grid>
 
-                    <Grid Grid.Row="14"
+                    <Grid Grid.Row="13"
                           Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -413,18 +398,39 @@
                                    HorizontalAlignment="Left"
                                    Margin="0,0,10,0"
                                    Grid.Column="1"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center"
+                                   ToolTip="When creating a conenctor on a cylinder,&#x0a;determines if the edge faces are parallel&#x0a;to each other (checked) or aligned to the&#x0a;center of the cylinder (unchecked)"/>
                     </Grid>
 
-                    <Separator Grid.Row="15"
+                    <Separator Grid.Row="14"
                                Margin="0,10,0,0" />
-                    
+
                     <wfi:WindowsFormsHost x:Name="picDrawingHost"
-                                          Grid.Row="16"
+                                          Grid.Row="15"
                                           Margin="8"
                                           Width="200"
                                           Height="200" />
-                    
+
+                    <Grid Grid.Row="16"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorShowTolerance"
+                                  Tag="connectorShowTolerance"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorShowToleranceText"
+                                   x:Name="connectorShowToleranceText"
+                                   Text="Show tolerance"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+
                     <Button Tag="CreatePlate"
                             Content="Create"
                             Grid.Row="17"
