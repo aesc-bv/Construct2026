@@ -260,7 +260,8 @@ namespace AESCConstruct25.UI
             {
                 "HEA base" or "HEA cap" or "IPE base" or "IPE cap" or "HEA support" or "HEB support" => "2",
                 "UNP" => "3",
-                "Flat flange" or "Blind flange" => "1",
+                "Blind flange" => "4",
+                "Flat flange" => "1",
                 _ => "1"
             };
 

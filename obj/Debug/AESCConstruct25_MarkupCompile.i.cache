@@ -16,5 +16,5 @@ DEBUG;TRACE
 35885196726
 Connector\UI\ConnectorControl.xaml;CustomComponent\UI\CustomComponentControl.xaml;Engraving\UI\EngravingControl.xaml;Fastener\UI\FastenersControl.xaml;FrameGenerator\UI\ProfileSelectionControl.xaml;UIMain\SettingsControl.xaml;Plates\UI\PlatesControl.xaml;RibCutout\UI\RibCutOut.xaml;
 
-True
+False
 

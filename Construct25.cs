@@ -38,7 +38,7 @@ namespace AESCConstruct25
 
                 Api.AttachToSession(session);
 
-                bool LicenseValid = ConstructLicenseSpot.CheckLicense();
+                bool LicenseValid = ConstructLicenseSpot.CheckLicense(); 
 
                 ConstructLicenseSpot.EnsureNetworkDeactivatedOnStartup();
 
@@ -49,6 +49,7 @@ namespace AESCConstruct25
                     //AESC.Construct.SetMode3D
                     var set3DConstruct = Command.Create("AESC.Construct.SetMode3D");
                     set3DConstruct.Hint = "3D mode without converting closed line loops to surfaces";
+                    set3DConstruct.Image = Command.GetCommand("SetMode3D").Image;
                     set3DConstruct.Executing += (s, e) => setMode3D();
                     set3DConstruct.KeepAlive(true);
 
@@ -279,6 +280,7 @@ namespace AESCConstruct25
 
         public void Disconnect()
         {
+
         }
 
         private static void SetEnabled(string commandId, bool enabled)

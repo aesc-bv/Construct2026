@@ -356,4 +356,7 @@
     <Resource Include="Fastener\UI\images\ISO4035.png" />
     <Resource Include="Fastener\UI\images\ISO7380.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Plates\UI\Images\Img_Measures_Plate_4.png" />
+  </ItemGroup>
 </Project>
