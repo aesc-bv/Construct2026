@@ -53,6 +53,11 @@ namespace AESCConstruct25
                     set3DConstruct.Executing += (s, e) => setMode3D();
                     set3DConstruct.KeepAlive(true);
 
+                    // Bind Alt+D to this command (only if not already taken)
+                    const Keys altD = Keys.Alt | Keys.D;
+                    if (Command.GetCommand(altD) == null)
+                        set3DConstruct.Shortcuts = new[] { altD };
+
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
                     exportExcel.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
@@ -280,7 +285,6 @@ namespace AESCConstruct25
 
         public void Disconnect()
         {
-
         }
 
         private static void SetEnabled(string commandId, bool enabled)
