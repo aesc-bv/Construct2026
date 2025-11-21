@@ -1,4 +1,9 @@
-﻿using System;
+﻿/*
+ Language provides CSV-based runtime localization support.
+ It loads translations from languageConstruct.csv and applies them to WPF controls based on Tag identifiers.
+*/
+
+using System;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -14,6 +19,7 @@ namespace AESCConstruct25.Localization
         private static readonly DataTable _translations = new DataTable();
         private static string[] _columns;
 
+        // Loads the translation CSV into an in-memory DataTable keyed by translation id.
         public static void LoadCSV()
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
@@ -52,6 +58,7 @@ namespace AESCConstruct25.Localization
             }
         }
 
+        // Looks up a localized string for the given id using the configured language, with English and id fallback.
         public static string Translate(string id)
         {
             if (string.IsNullOrEmpty(id)) return string.Empty;
@@ -75,6 +82,7 @@ namespace AESCConstruct25.Localization
             return id;
         }
 
+        // Recursively walks a WPF element tree and replaces content for tagged elements with translated text.
         public static void LocalizeFrameworkElement(FrameworkElement root)
         {
             if (root == null) return;

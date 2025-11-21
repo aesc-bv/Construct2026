@@ -1,4 +1,9 @@
-﻿using AESCConstruct25.FrameGenerator.UI;
+﻿/*
+ UIManager centralizes registration and localization of Construct25 sidebar commands
+ and manages their hosting either as docked SpaceClaim panels or in a floating WPF window.
+*/
+
+using AESCConstruct25.FrameGenerator.UI;
 using AESCConstruct25.Licensing;
 using AESCConstruct25.UI;
 using SpaceClaim.Api.V242;
@@ -66,6 +71,8 @@ namespace AESCConstruct25.UIMain
         private static Command DockToggleCommandHolder;
         static Bitmap _undock = new Bitmap(new MemoryStream(Resources.Menu_Undock));
         static Bitmap _dock = new Bitmap(new MemoryStream(Resources.Menu_Dock));
+
+        // Registers all sidebar and dock toggle commands with SpaceClaim and wires them to UI handlers.
         public static void RegisterAll()
         {
             bool valid = ConstructLicenseSpot.IsValid;
@@ -152,6 +159,7 @@ namespace AESCConstruct25.UIMain
             );
         }
 
+        // Refreshes sidebar command enabled state based on license validity and updates texts.
         public static void RefreshLicenseUI()
         {
             bool valid = ConstructLicenseSpot.IsValid;
@@ -167,12 +175,14 @@ namespace AESCConstruct25.UIMain
             UpdateCommandTexts();
         }
 
+        // Sets the IsEnabled property of a SpaceClaim command by id.
         private static void SetEnabled(string commandId, bool enabled)
         {
             var c = Command.GetCommand(commandId);
             if (c != null) c.IsEnabled = enabled;
         }
 
+        // Creates and configures a SpaceClaim command including icon, text, and execute delegate.
         private static void Register(string name, string text, string hint, byte[] icon, Action execute, bool enabled)
         {
             var cmd = Command.Create(name);
@@ -188,6 +198,7 @@ namespace AESCConstruct25.UIMain
             cmd.KeepAlive(true);
         }
 
+        // Toggles between docked and floating UI modes and refreshes the toggle command icon and text.
         private static void ToggleMode()
         {
             _floatingMode = !_floatingMode;
@@ -214,6 +225,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
+        // Shows the requested panel either in floating or docked mode depending on current state.
         private static void Show(string panelKey)
         {
             _lastPanelKey = panelKey;
@@ -227,6 +239,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
+        // Closes the floating window if it exists by invoking Close on its dispatcher.
         private static void CloseFloatingWindow()
         {
             if (_floatingDispatcher != null)
@@ -238,6 +251,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
+        // Ensures the floating window exists and shows the requested panel in the floating host.
         private static void ShowFloating(string key)
         {
             Command.Execute("AESC.Construct.SetMode3D");
@@ -280,6 +294,7 @@ namespace AESCConstruct25.UIMain
             _floatingThread.Start();
         }
 
+        // Creates the top level WPF window that hosts the floating UI root for a given panel key.
         private static WpfWindow CreateFloatingWindow(string key)
         {
             var win = new WpfWindow
@@ -297,8 +312,7 @@ namespace AESCConstruct25.UIMain
             return win;
         }
 
-        // Root = [Top toolbar with 3 buttons] + [content host]
-        // Root = [Top toolbar with 3 buttons] + [content host]
+        // Builds the WPF visual tree for the floating window: toolbar plus content host.
         private static System.Windows.FrameworkElement CreateFloatingRoot(string key)
         {
             var root = new System.Windows.Controls.DockPanel();
@@ -372,6 +386,8 @@ namespace AESCConstruct25.UIMain
 
             return root;
         }
+
+        // Converts embedded byte[] resource data into a WPF ImageSource for use in WPF controls.
         private static ImageSource GetResourceImageWpf(byte[] bytes)
         {
             if (bytes == null || bytes.Length == 0) return null;
@@ -398,7 +414,7 @@ namespace AESCConstruct25.UIMain
 
         private enum Side { Left, Right }
 
-        // Creates a no-chrome, image-only WPF button with optional rotation
+        // Creates a chrome-less WPF icon button with optional rotation for snapping and restore actions.
         private static System.Windows.Controls.Button MakeIconButton(
             ImageSource icon,
             string tooltip,
@@ -448,8 +464,7 @@ namespace AESCConstruct25.UIMain
             return btn;
         }
 
-        // Return the same icon used by the Dock/Undock ribbon command as a WPF ImageSource.
-        // Tries Command.Image first; falls back to our cached bitmaps; finally to resource bytes.
+        // Resolves the dock toggle icon as a WPF ImageSource, preferring the current command image.
         private static ImageSource GetDockToggleIconWpf()
         {
             // 1) Try to pull the current Command image (System.Drawing.Image) and convert to WPF
@@ -487,7 +502,7 @@ namespace AESCConstruct25.UIMain
             return null;
         }
 
-        // Convert System.Drawing.Image → WPF ImageSource (frozen, safe to reuse)
+        // Converts a System.Drawing.Image to a frozen WPF ImageSource for cross-thread reuse.
         private static ImageSource ToImageSource(Image gdiImage)
         {
             try
@@ -513,6 +528,7 @@ namespace AESCConstruct25.UIMain
         }
 
 
+        // Positions the floating window snapped to the left or right edge of the current screen.
         private static void SnapFloatingToSide(WpfWindow win, Side side)
         {
             // Save restore bounds (once) before we change anything
@@ -553,6 +569,7 @@ namespace AESCConstruct25.UIMain
             win.Activate();
         }
 
+        // Restores the floating window to its last saved bounds before snapping.
         private static void RestoreFloatingBounds(WpfWindow win)
         {
             if (_restoreBounds is System.Windows.Rect r)
@@ -569,6 +586,7 @@ namespace AESCConstruct25.UIMain
             win.Activate();
         }
 
+        // Cleans up references when the floating window is closed by the user.
         private static void FloatingWindow_Closed(object sender, EventArgs e)
         {
             var win = (WpfWindow)sender;
@@ -578,6 +596,7 @@ namespace AESCConstruct25.UIMain
             _restoreBounds = null;
         }
 
+        // Recursively walks the WPF visual tree and ensures all TextBoxes are enabled and editable.
         private static void LogAndEnableWpfTextBoxes(DependencyObject parent)
         {
             if (parent == null) return;
@@ -598,6 +617,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
+        // Displays the requested panel in a docked SpaceClaim panel and initializes controls on demand.
         private static void ShowDocked(string key)
         {
             Command.Execute("AESC.Construct.SetMode3D");
@@ -622,9 +642,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
-        /// <summary>
-        /// Always new instance for floating to prevent parent conflicts.
-        /// </summary>
+        // Creates a new WPF UserControl instance for the requested sidebar key (used for floating mode).
         private static System.Windows.Controls.UserControl CreateControl(string key)
         {
             switch (key)
@@ -641,6 +659,7 @@ namespace AESCConstruct25.UIMain
             }
         }
 
+        // Updates localized texts for all sidebar and dock toggle commands.
         public static void UpdateCommandTexts()
         {
             // Sidebar buttons
@@ -675,16 +694,31 @@ namespace AESCConstruct25.UIMain
             }
         }
 
-        // Lazy initializers for docked panels
+        // Creates the Profile sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureProfile() { if (_profileControl == null) { _profileControl = new ProfileSelectionControl(); _profileHost = new ElementHost { Dock = DockStyle.Fill, Child = _profileControl }; } }
+
+        // Creates the Settings sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureSettings() { if (_settingsControl == null) { _settingsControl = new SettingsControl(); _settingsHost = new ElementHost { Dock = DockStyle.Fill, Child = _settingsControl }; } }
+
+        // Creates the Plate sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsurePlate() { if (_plateControl == null) { _plateControl = new PlatesControl(); _plateHost = new ElementHost { Dock = DockStyle.Fill, Child = _plateControl }; } }
+
+        // Creates the Fastener sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureFastener() { if (_fastenerControl == null) { _fastenerControl = new FastenersControl(); _fastenerHost = new ElementHost { Dock = DockStyle.Fill, Child = _fastenerControl }; } }
+
+        // Creates the RibCutOut sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureRibCutOut() { if (_ribCutOutControl == null) { _ribCutOutControl = new RibCutOutControl(); _ribCutOutHost = new ElementHost { Dock = DockStyle.Fill, Child = _ribCutOutControl }; } }
+
+        // Creates the CustomProperties sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureCustomProperties() { if (_customPropertiesControl == null) { _customPropertiesControl = new CustomComponentControl(); _customPropertiesHost = new ElementHost { Dock = DockStyle.Fill, Child = _customPropertiesControl }; } }
+
+        // Creates the Engraving sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureEngraving() { if (_engravingControl == null) { _engravingControl = new EngravingControl(); _engravingHost = new ElementHost { Dock = DockStyle.Fill, Child = _engravingControl }; } }
+
+        // Creates the Connector sidebar control and wraps it in a WinForms ElementHost.
         private static void EnsureConnector() { if (_connectorControl == null) { _connectorControl = new ConnectorControl(); _connectorHost = new ElementHost { Dock = DockStyle.Fill, Child = _connectorControl }; } }
 
+        // Converts raw icon bytes to a System.Drawing.Image used as SpaceClaim command icon.
         private static Image LoadImage(byte[] bytes)
         {
             try { return new Bitmap(new MemoryStream(bytes)); }

@@ -1,4 +1,10 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
+﻿/*
+ PlatesModule contains all geometry and part-creation logic for standard plates.
+ It validates UI parameters, reuses or creates plate parts with custom properties,
+ and inserts them as components on selected planar faces in the active SpaceClaim document.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities;
 using DocumentFormat.OpenXml.Wordprocessing;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
@@ -18,6 +24,7 @@ namespace AESCConstruct25.Plates.Modules
 {
     internal class PlatesModule
     {
+        // Entry point for the UI: validates and forwards plate parameters to createPart and reports errors to the user.
         public static void CreatePlateFromUI(
             string type, string sizeName, double angleDeg,
             double L1, double L2, int count1,
@@ -39,6 +46,7 @@ namespace AESCConstruct25.Plates.Modules
             }
         }
 
+        // Creates plate components on the selected planar faces in the active window using the given dimensions and options.
         private static void createPart(
             string type, string name,
             double angleDeg,
@@ -132,6 +140,7 @@ namespace AESCConstruct25.Plates.Modules
             });
         }
 
+        // Expands the selection into a list of planar DesignFaces with their transform to master and source object.
         private static List<(DesignFace df, Matrix toMaster, object src)>
         ExpandSelectionToPlanarFaces(ICollection<IDocObject> sel)
         {
@@ -187,8 +196,7 @@ namespace AESCConstruct25.Plates.Modules
             return outList;
         }
 
-
-
+        // Validates plate dimensions and hole layout for basic geometric consistency and spacing constraints.
         private static bool ValidateParams(
             string type,
             double L1, double B1, double T,
@@ -230,6 +238,7 @@ namespace AESCConstruct25.Plates.Modules
             return true;
         }
 
+        // Checks the current document for an existing plate Part with matching custom properties and returns it if found.
         private static Part CheckIfPartExists(
             string type, double L1, double L2, int Lnr,
             double B1, double B2, int Bnr,
@@ -242,6 +251,7 @@ namespace AESCConstruct25.Plates.Modules
             return null;
         }
 
+        // Builds the solid plate Body geometry for the given type using dimensions and hole parameters.
         private static Body CreatePlateBody(
             string type,
             double L1, double L2, int Lnr,
@@ -360,6 +370,7 @@ namespace AESCConstruct25.Plates.Modules
             return body;
         }
 
+        // Builds the base/cap contour (optionally chamfered) for UNP/support plates as a list of trimmed curves.
         private static List<ITrimmedCurve> getBaseCapContour(
             Point p, Direction dX, Direction dY,
             string type, double L1, double B1, double R)
@@ -408,8 +419,7 @@ namespace AESCConstruct25.Plates.Modules
             return list;
         }
 
-
-        // NEW: plane-aware overload used by 'support' (upright) and by the default (flat) path
+        // Creates a rounded rectangle plate body on an arbitrary plane, including a hole grid if requested.
         private static Body createRoundedRectangle(
             Plane profilePlane,
             double length, double length2, int nrL,
@@ -453,7 +463,7 @@ namespace AESCConstruct25.Plates.Modules
             return body;
         }
 
-        // OLD signature now just calls the plane-aware version with PlaneXY (keeps existing callers working)
+        // Legacy convenience overload: creates a rounded rectangle on PlaneXY, keeping existing callers working.
         private static Body createRoundedRectangle(
             double length, double length2, int nrL,
             double width, double width2, int nrW,
@@ -468,7 +478,7 @@ namespace AESCConstruct25.Plates.Modules
             );
         }
 
-
+        // Builds the rectangular (optionally corner-rounded) 2D contour for a plate on a given plane.
         private static List<ITrimmedCurve> CreateRectangleCurves(
             Plane profilePlane,
             double width,
@@ -512,6 +522,7 @@ namespace AESCConstruct25.Plates.Modules
             return curves;
         }
 
+        // Creates or reuses a plate component for one face, positions and rotates it according to the face and angle.
         private static void createPlate(
             Point p, Plane pl, Direction dZ,
             string type, string name, double ang,
@@ -530,47 +541,47 @@ namespace AESCConstruct25.Plates.Modules
             {
                 //WriteBlock.ExecuteTask("Create part", () =>
                 //{
-                    var plates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates")
-                                  ?? Part.Create(doc, "Plates")
-                                     .Also(pp => Component.Create(main, pp));
+                var plates = doc.Parts.FirstOrDefault(p => p.DisplayName == "Plates")
+                              ?? Part.Create(doc, "Plates")
+                                 .Also(pp => Component.Create(main, pp));
 
-                    var exist = CheckIfPartExists(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
-                    Component comp;
-                    if (exist != null)
+                var exist = CheckIfPartExists(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
+                Component comp;
+                if (exist != null)
+                {
+                    comp = Component.Create(plates, exist);
+                    comp.Transform(
+                        Matrix.CreateTranslation(
+                            Vector.Create(0.0, 0.0, 0.0)
+                        )
+                    );
+                }
+                else
+                {
+                    var b = CreatePlateBody(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
+                    if (b == null)
                     {
-                        comp = Component.Create(plates, exist);
-                        comp.Transform(
-                            Matrix.CreateTranslation(
-                                Vector.Create(0.0, 0.0, 0.0)
-                            )
-                        );
+                        return;
                     }
-                    else
-                    {
-                        var b = CreatePlateBody(type, L1, L2, Lnr, B1, B2, Bnr, T, R, D);
-                        if (b == null)
-                        {
-                            return;
-                        }
-                        var pb = Part.Create(doc, pn);
-                        DesignBody.Create(pb, pn, b);
-                        comp = Component.Create(plates, pb);
-                        CreateCustomPartPropertiesPlate(pb, type, L1, B1, T, L2, Lnr, B2, Bnr, D, R, ang);
-                    }
+                    var pb = Part.Create(doc, pn);
+                    DesignBody.Create(pb, pn, b);
+                    comp = Component.Create(plates, pb);
+                    CreateCustomPartPropertiesPlate(pb, type, L1, B1, T, L2, Lnr, B2, Bnr, D, R, ang);
+                }
 
-                    var frame = Frame.Create(p, dX, dY);
-                    if (frame.DirZ != dZ) frame = Frame.Create(p, -dX, dY);
-                    comp.Transform(Matrix.CreateMapping(frame));
+                var frame = Frame.Create(p, dX, dY);
+                if (frame.DirZ != dZ) frame = Frame.Create(p, -dX, dY);
+                comp.Transform(Matrix.CreateMapping(frame));
 
-                    if(type != "UNP" && !type.Contains("support")) 
-                    {
-                        if(ang != 0)
-                            comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), ang * Math.PI / 180));
-                    }
-                    else
-                    {
-                        comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), (ang + 90) * Math.PI / 180));
-                    }
+                if (type != "UNP" && !type.Contains("support"))
+                {
+                    if (ang != 0)
+                        comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), ang * Math.PI / 180));
+                }
+                else
+                {
+                    comp.Transform(Matrix.CreateRotation(Line.Create(p, dZ), (ang + 90) * Math.PI / 180));
+                }
                 //});
             }
             catch (Exception ex)
@@ -579,6 +590,7 @@ namespace AESCConstruct25.Plates.Modules
             }
         }
 
+        // Adds custom properties to a plate part so it can be identified and reused by geometry parameters.
         private static void CreateCustomPartPropertiesPlate(
             Part part, string type,
             double L1, double B1, double T,
@@ -608,6 +620,7 @@ namespace AESCConstruct25.Plates.Modules
             }
         }
 
+        // Compares a part's custom properties against the requested plate parameters to determine a match.
         private static bool CompareCustomProperties(
             Part part, string type,
             double L1, double L2, int Lnr,
@@ -644,8 +657,10 @@ namespace AESCConstruct25.Plates.Modules
             return true;
         }
     }
+
     internal static class Extensions
     {
+        // Fluent helper that executes an action on an object and then returns the same instance.
         public static T Also<T>(this T self, Action<T> act) { act(self); return self; }
     }
 }

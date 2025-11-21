@@ -1,4 +1,9 @@
-﻿using SpaceClaim.Api.V242.Geometry;
+﻿/*
+ RibCutOutSelectionHelper provides helper logic to derive overlapping body pairs.
+ It inspects a list of SpaceClaim Body instances and returns all pairs whose bounding boxes intersect.
+*/
+
+using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
 
@@ -6,6 +11,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 {
     public static class RibCutOutSelectionHelper
     {
+        // Returns all unique body pairs from the input list whose axis-aligned bounding boxes overlap in 3D.
         public static List<(Body A, Body B)> GetOverlappingPairs(List<Body> bodies)
         {
             var pairs = new List<(Body A, Body B)>();

@@ -1,4 +1,9 @@
-﻿using AESCConstruct25.UIMain;
+﻿/*
+ EngravingControl is a WPF user control that lets the user configure text, font and placement
+ for engravings or cut-outs, and delegates the actual operations to EngravingService.
+*/
+
+using AESCConstruct25.UIMain;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -11,6 +16,7 @@ namespace AESCConstruct25.UI
 {
     public partial class EngravingControl : UserControl
     {
+        // Initializes the engraving UI, sets default flags and font options, and binds the data context.
         public EngravingControl()
         {
             InitializeComponent();
@@ -42,6 +48,7 @@ namespace AESCConstruct25.UI
         public string Size { get; set; }
         public bool Center { get; set; }
 
+        // Handles “Add note” by parsing size and calling EngravingService.AddNote with current UI options.
         private void AddNoteButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -70,6 +77,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // Calls EngravingService to convert imprinted entities into engraving and export the result.
         private void ImprintToEngravingButton_Click(object sender, RoutedEventArgs e)
         {
             try { EngravingService.ImprintToEngravingAndExport(); }
@@ -79,6 +87,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // Calls EngravingService to imprint the current engraving geometry onto a selected body.
         private void ImprintBodyButton_Click(object sender, RoutedEventArgs e)
         {
             try { EngravingService.ImprintBody(); }
@@ -88,10 +97,9 @@ namespace AESCConstruct25.UI
             }
         }
 
-        // If you still have an “Imprint Lines” button, add this:
+        // Uses EngravingService to imprint selected lines as engraving and export (same path as imprint-to-engraving).
         private void ImprintLinesButton_Click(object sender, RoutedEventArgs e)
         {
-            // reuse ImprintToEngravingAndExport or implement separate logic
             try { EngravingService.ImprintToEngravingAndExport(); }
             catch (Exception ex)
             {

@@ -1,4 +1,9 @@
-﻿using SpaceClaim.Api.V242;
+﻿/*
+ ProfileReplaceHelper handles replacing Construct-generated profile components with their original driving curves.
+ It detects selected Construct components, prompts the user, unhides matching original lines, updates selection, and deletes the component instances.
+*/
+
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
@@ -13,11 +18,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 {
     public static class ProfileReplaceHelper
     {
-        /// <summary>
-        /// Main entry: if selection includes Construct profile component(s), ask user, restore originals, delete components.
-        /// Returns (proceed, restoredOriginalLines).
-        /// deleteAction: pass your existing delete logic here; if null, falls back to comp.Delete().
-        /// </summary>
+        // Entry point: optionally restores original curves for selected Construct profile components and deletes the components.
         public static (bool proceed, List<DesignCurve> originals)
             PromptAndReplaceIfAny(Window win, Action<IEnumerable<Component>> deleteAction = null)
         {
@@ -75,6 +76,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return (true, originals);
         }
 
+        // Finds all selected components whose template has an "AESC_Construct" custom property (Construct-generated profiles).
         public static HashSet<Component> FindConstructComponentsFromSelection(Window win)
         {
             var result = new HashSet<Component>();
@@ -98,6 +100,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return result;
         }
 
+        // Unhides original main-part DesignCurves that match the stored ConstructCurve endpoints of the given component.
         public static List<DesignCurve> UnhideAndGetOriginalCurves(Document doc, Component comp)
         {
             var restored = new List<DesignCurve>();
@@ -149,6 +152,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return restored;
         }
 
+        // Deletes all provided components, swallowing any API exceptions during deletion.
         public static void DeleteComponents(IEnumerable<Component> components)
         {
             foreach (var comp in components.Where(c => c != null).ToList())
@@ -157,6 +161,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             }
         }
 
+        // Converts a set of DesignCurves to simple ITrimmedCurve segments based on their endpoints.
         public static List<ITrimmedCurve> ToSegments(IEnumerable<DesignCurve> curves)
         {
             var list = new List<ITrimmedCurve>();
@@ -169,8 +174,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return list;
         }
 
-        // --------- low-level helpers ---------
-
+        // Tries to extract curve endpoints (Start/End) from a DesignCurve shape into local coordinates.
         private static bool TryGetCurveEndpointsLocal(DesignCurve dc, out Point start, out Point end)
         {
             start = default(Point);
@@ -188,6 +192,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return false;
         }
 
+        // Checks if a given segment matches any ConstructCurve endpoints (in either direction) within a tolerance.
         private static bool MatchesAnyConstructEnds(Point p0, Point p1, List<(Point A, Point B)> ends, double tol)
         {
             foreach (var (A, B) in ends)
@@ -198,9 +203,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return false;
         }
 
-        /// <summary>
-        /// Finds the owning Component for items like component, face, edge, body, curve, etc.
-        /// </summary>
+        // Resolves the owning Component for a picked item (component, face, edge, body, curve, etc.) in the active document.
         public static Component TryGetOwningComponent(Document doc, object picked)
         {
             if (picked == null || doc == null) return null;

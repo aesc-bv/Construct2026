@@ -1,4 +1,16 @@
-﻿using AESCConstruct25.Commands;
+﻿/*
+ ProfileSelectionControl is the main WPF UI for the FrameGenerator add-in.
+
+ It lets the user:
+ - Choose a built-in profile (Rectangular, Circular, H, L, U, T) with CSV-driven sizes.
+ - Import/convert DXF profiles, save them, and select user-defined profiles (with preview images).
+ - Configure placement offsets, hollow/solid options, rotation and BOM update flags.
+ - Generate profile solids via ExtrudeProfileCommand and optionally rotate new components.
+ - Configure and execute joints (miter, straight, T, cutout, trim) via ExecuteJointCommand.
+ - Delete generated Construct profile components and restore their original driving curves.
+*/
+
+using AESCConstruct25.Commands;
 using AESCConstruct25.FrameGenerator.Commands;
 using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
 using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
@@ -45,6 +57,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         public double rotationAngle = 0.0;
 
+        // Initializes the UI control, applies localization, loads user profiles and wires event handlers.
         public ProfileSelectionControl()
         {
             try
@@ -63,16 +76,19 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Returns the last rotation angle entered in the UI for use by external callers.
         public double GetRotationAngle()
         {
             return rotationAngle;
         }
 
+        // Applies localization to all framework elements in this control.
         private void LocalizeUI()
         {
             Localization.Language.LocalizeFrameworkElement(this);
         }
 
+        // Subscribes built-in profile radio buttons to update the generate button state.
         private void WireProfileButtonHandlers()
         {
             foreach (var rb in ProfileGroupContainer.Children.OfType<RadioButton>())
@@ -82,6 +98,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Subscribes joint type radio buttons to update the joint generate button state.
         private void WireJointButtonHandlers()
         {
             foreach (var rb in JointGroupContainer.Children.OfType<RadioButton>())
@@ -91,6 +108,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Enables or disables generate buttons and updates their icons and text styles based on selection.
         private void UpdateGenerateButtons()
         {
             bool profileSelected =
@@ -141,7 +159,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
-
+        // Recursively finds the first Image descendant in a visual subtree, or null if none is found.
         private static Image FindFirstImageChild(DependencyObject parent)
         {
             if (parent == null)
@@ -159,6 +177,8 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
             return null;
         }
+
+        // Handles selecting a profile radio button and configures the UI for built-in, DXF placeholder, or user profile.
         private void ProfileButton_Checked(object sender, RoutedEventArgs e)
         {
             if (!(sender is RadioButton selectedRb))
@@ -266,6 +286,8 @@ namespace AESCConstruct25.FrameGenerator.UI
                 ProfilePreviewImage.Visibility = Visibility.Collapsed;
             }
         }
+
+        // Resolves the CSV path for a given built-in profile type based on application settings.
         private string GetProfileCsvPathFromSettings(string profileType)
         {
             string relPath = null;
@@ -306,6 +328,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 );
         }
 
+        // Loads preset sizes for the selected built-in profile from CSV into combo and backing lists.
         private void LoadPresetSizes(string profileType)
         {
             string filePath = GetProfileCsvPathFromSettings(profileType);
@@ -374,6 +397,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Updates the dimension TextBox fields when a size is selected and remembers last used size per profile.
         private void SizeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (SizeComboBox.SelectedIndex >= 0 && SizeComboBox.SelectedIndex < csvDataRows.Count)
@@ -398,6 +422,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Rebuilds the dynamic dimension field grid based on csvFieldNames and seeds values from current size selection.
         private void UpdateDynamicFields()
         {
             DynamicFieldsGrid.Children.Clear();
@@ -470,6 +495,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             SizeComboBox_SelectionChanged(null, null);
         }
 
+        // Toggles visibility of profile size edit fields panel and refreshes dynamic fields.
         private void EditProfileSizes_Click(object sender, RoutedEventArgs e)
         {
             bool currentlyVisible = ProfileSizeEditFields.Visibility == Visibility.Visible;
@@ -479,6 +505,8 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             UpdateDynamicFields();
         }
+
+        // Displays the correct profile and placement images for the given built-in profile key.
         void ShowProfileImage(string imgKey)
         {
             if (string.IsNullOrEmpty(imgKey))
@@ -494,6 +522,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             PlacementFrame.Source = new BitmapImage(uri2);
         }
 
+        // Opens a DXF file, converts it into a DXFProfile, persists profile and preview, and updates the user profiles list.
         private void ConvertDXFButton_Click(object sender, RoutedEventArgs e)
         {
             // 1) Ask the user to select a DXF file
@@ -671,6 +700,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             });
         }
 
+        // Loads user-defined DXF profiles from CSV and builds the UI list with preview images and delete buttons.
         private void LoadUserProfiles()
         {
             UserProfilesGrid.Children.Clear();
@@ -850,6 +880,7 @@ namespace AESCConstruct25.FrameGenerator.UI
         }
 
 
+        // Generates the selected profile (user-saved, DXF or built-in) and optionally rotates new components.
         private void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
             WriteBlock.ExecuteTask("Generate Profile", () =>
@@ -1123,6 +1154,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             });
         }
 
+        // Placeholder for handling hollow checkbox state changes (currently unused).
         private void HollowCheckBox_Checked(object sender, RoutedEventArgs e)
         {
 
@@ -1131,6 +1163,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
         ////////////// joint 
 
+        // Parses joint options from the UI and executes the selected joint type via ExecuteJointCommand.
         private void GenerateJoint_Click(object sender, RoutedEventArgs e)
         {
             var oldOri = Application.UserOptions.WorldOrientation;
@@ -1171,6 +1204,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Calls ExecuteJointCommand.RestoreGeometry to undo joint geometry modifications for the active document.
         private void RestoreGeometry_Click(object sender, RoutedEventArgs e)
         {
             var oldOri = Application.UserOptions.WorldOrientation;
@@ -1192,6 +1226,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Calls ExecuteJointCommand.RestoreJoint to restore joint helper data in the active document.
         private void RestoreJoint_Click(object sender, RoutedEventArgs e)
         {
             var oldOri = Application.UserOptions.WorldOrientation;
@@ -1213,6 +1248,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Updates the placement icons so that the selected placement radio button shows an active image.
         private void PlacementRadio_Checked(object sender, RoutedEventArgs e)
         {
             if (!(sender is RadioButton selectedRb))
@@ -1243,7 +1279,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
-        // Visual tree helper function to find a descendant of type T
+        // Recursively searches the visual tree starting at parent for a descendant of type T.
         private static T FindDescendant<T>(DependencyObject parent) where T : DependencyObject
         {
             if (parent == null) return null;
@@ -1257,6 +1293,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             return null;
         }
 
+        // Filters the displayed user profiles in the grid based on the text entered in the search box.
         private void ProfileSearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             var filter = ProfileSearchBox.Text.Trim();
@@ -1293,6 +1330,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Deletes a selected Construct profile component and restores its original driving curves where possible.
         private void DeleteProfileButton_Click(object sender, RoutedEventArgs e)
         {
             {
@@ -1357,6 +1395,7 @@ namespace AESCConstruct25.FrameGenerator.UI
         /// Works for IDesign* wrappers and raw Design* objects (curve/edge/face/body),
         /// and for selecting the Component itself.
         /// </summary>
+        // Resolves the owning Component in MainPart for a picked geometry object or wrapper.
         private static Component TryGetOwningComponent(Document doc, object picked)
         {
             if (picked == null || doc == null) return null;
@@ -1422,6 +1461,7 @@ namespace AESCConstruct25.FrameGenerator.UI
         /// Make original (top-level) design curves visible again in all open views.
         /// Skips any curve named "ConstructCurve" (those live inside the component and are deleted with it).
         /// </summary>
+        // Restores visibility of original top-level curves that correspond to the component's ConstructCurve helpers.
         private static void TryUnhideOriginalCurves(Document doc, Component comp)
         {
             try
@@ -1496,8 +1536,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
-        // Reads endpoints in the curve's own (local) part coordinates.
-        // (unchanged from your version)
+        // Reads endpoints in the curve's own (local) part coordinates for either CurveSegment or ITrimmedCurve.
         private static bool TryGetCurveEndpointsLocal(DesignCurve dc, out Point start, out Point end)
         {
             start = default(Point);
@@ -1524,11 +1563,13 @@ namespace AESCConstruct25.FrameGenerator.UI
             return false;
         }
 
+        // Compares two geometry points with a given distance tolerance.
         private static bool PointsEqual(Point a, Point b, double tol)
         {
             return (a - b).Magnitude <= tol;
         }
 
+        // Placeholder handler for rotation angle text changes; rotation is read when generating profiles.
         private void RotationAngleTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
 

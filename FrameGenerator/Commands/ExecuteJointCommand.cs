@@ -1,4 +1,14 @@
-﻿using AESCConstruct25.FrameGenerator.Modules;
+﻿/*
+ ExecuteJointCommand orchestrates creation and management of frame joints between selected components.
+
+ It:
+ - Validates selection for trim and joint operations.
+ - Builds connected component pairs and applies different JointBase implementations (miter, straight, T, trim).
+ - Handles geometry splitting / resetting for joints and executes profile cut-outs.
+ - Provides helper predicates to detect connectivity and point-on-segment relationships in world space.
+*/
+
+using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.Modules.Joints;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
@@ -16,6 +26,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
     {
         public const string CommandName = "AESCConstruct25.ExecuteJoint";
 
+        // Validates that the current selection contains at least one target profile and one cutter face, otherwise reports a warning.
         private static bool ValidateTrimSelectionOrAlert(Window window)
         {
             var ctx = window?.ActiveContext;
@@ -47,6 +58,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             return true;
         }
 
+        // Entry point for applying a joint of the given type to selected components, handling trimming, pairing, and joint execution.
         public static void ExecuteJoint(Window window, double spacing, string jointType, bool updateBOM)
         {
             // 1) Gather selected components
@@ -257,7 +269,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 CompareCommand.CompareSimple();
         }
 
-
+        // Restores the original (un-jointed) geometry for the selected components by re-extruding their profiles.
         public static void RestoreGeometry(Window window)
         {
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
@@ -270,6 +282,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             JointModule.ResetComponentGeometryOnly(selectedComponents);
         }
 
+        // Attempts to restore previously created joints between selected components by resetting the appropriate halves.
         public static void RestoreJoint(Window window)
         {
             WriteBlock.ExecuteTask("RestoreJoint", () =>
@@ -362,6 +375,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             });
         }
 
+        // Cuts the last selected profile component by all previously selected profiles and cleans up the resulting bodies.
         public static void ExecuteCutOut(Window window)
         {
             var comps = JointSelectionHelper.GetSelectedComponents(window);
@@ -471,7 +485,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             });
         }
 
-
+        // Factory that maps jointType strings to concrete JointBase implementations (with Miter as default).
         private static JointBase CreateJoint(string jointType)
         {
             switch (jointType)
@@ -486,9 +500,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
-        /// <summary>
-        /// True if B’s start or end world‐point lies on A’s world‐segment.
-        /// </summary>
+        // Returns true when component B’s start or end world point lies on component A’s swept world segment.
         private static bool IsTConnected(Component a, Component b)
         {
             var segA = a.Template.Curves.OfType<DesignCurve>().FirstOrDefault()?.Shape as CurveSegment;
@@ -505,9 +517,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                    IsPointOnSegment(wB1, wA0, wA1);
         }
 
-        /// <summary>
-        /// Yields only physically‐connected or true T‐connected pairs.
-        /// </summary>
+        // Enumerates all component pairs that are either physically connected or valid T-connections (depending on jointType).
         private static IEnumerable<(Component, Component)> GetConnectedPairs(
             List<Component> comps,
             string jointType
@@ -529,6 +539,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        // Checks if a given start or end point of component A coincides (in world space) with either endpoint of component B.
         private static bool ArePointsConnected(Component a, Component b, string side)
         {
             var segA = a.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
@@ -543,6 +554,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             return (wA - wB0).Magnitude < tol || (wA - wB1).Magnitude < tol;
         }
 
+        // Returns true when any endpoint of A’s segment coincides with any endpoint of B’s segment in world space.
         private static bool ArePhysicallyConnected(Component a, Component b)
         {
             var segA = a.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
@@ -559,6 +571,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                    (a1 - b1).Magnitude < tol;
         }
 
+        // Tests whether a point lies on a finite segment (within tolerance) using colinearity and projection checks.
         public static bool IsPointOnSegment(Point p, Point segStart, Point segEnd)
         {
             Vector ab = segEnd - segStart;

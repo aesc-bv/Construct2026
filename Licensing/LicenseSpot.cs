@@ -1,7 +1,4 @@
-﻿//private static string _keyPair =
-//            "<RSAKeyValue><Modulus>pR07DDlVi/rcY1XeNkdFHdXEtbkk9zOBNx9MA+PwGMOMHfeA6c3cqFizdt/pcjR+p7SPwTP6L/K6DO6asU0KeSEoBwZZaTQ/UJyp4T/xJtrHpThJX5XaIf35ebp9zV1ETiYik+C0HbPVpZVrCZjRnf9waLRsO5UtTnZDQn8yvY0vtz7OlWBdHtTBO0EKmd+gXvR1K2pML/R2LLu4mpwbpv7L3p4O6/xaEEPvGuHyKHeK6B3+IW5bo94DuzG6OCi9r10xQ4N/ZT6/3WJVp6CfrzZtUd8/vYh7EiBqeYvKZm9jcgEfiG1nUY7Y1ntX6dtjSTFT9k6Ne2ZcybVUPWMJGw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-
-using LicenseSpot.Framework;
+﻿using LicenseSpot.Framework;
 using SpaceClaim.Api.V242; // for Command (network toggle UI)
 using System;
 using System.Diagnostics;

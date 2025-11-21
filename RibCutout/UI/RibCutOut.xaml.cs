@@ -1,4 +1,10 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
+﻿/*
+ RibCutOutControl is the WPF UI for creating rib cut-out (half-lap) joints.
+ It reads selection and user options from the panel, then calls the RibCutOut module
+ to create joints between overlapping bodies in the active SpaceClaim document.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
@@ -13,6 +19,7 @@ namespace AESCConstruct25.UI
 {
     public partial class RibCutOutControl : UserControl
     {
+        // Initializes the rib cut-out panel, sets the DataContext, and applies localization.
         public RibCutOutControl()
         {
             InitializeComponent();
@@ -20,6 +27,7 @@ namespace AESCConstruct25.UI
             Localization.Language.LocalizeFrameworkElement(this);
         }
 
+        // Handles the Create button click: validates selection, reads options, and invokes the rib cut-out creation.
         private void CreateButton_Click(object sender, RoutedEventArgs e)
         {
             var window = Window.ActiveWindow;

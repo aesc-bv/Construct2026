@@ -1,4 +1,9 @@
-﻿using SpaceClaim.Api.V242;
+﻿/*
+ JointSelectionHelper normalizes the current SpaceClaim selection into an ordered list of components.
+ It inspects selected objects, uses reflection to find ancestor Components when needed, and preserves the last-clicked component as the final item.
+*/
+
+using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +13,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 {
     public static class JointSelectionHelper
     {
+        // Returns an ordered list of Components based on the current selection, with the last-clicked component appended at the end.
         public static List<Component> GetSelectedComponents(Window window)
         {
             var sel = window?.ActiveContext?.Selection;

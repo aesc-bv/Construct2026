@@ -1,4 +1,10 @@
-﻿using AESCConstruct25.Licensing;
+﻿/*
+ SettingsControl is the WPF settings panel for Construct25.
+ It loads and saves user preferences (units, BOM placement, CSV paths, language),
+ integrates license activation and status display, and supports JSON export/import of all settings.
+*/
+
+using AESCConstruct25.Licensing;
 using AESCConstruct25.Properties;
 using Microsoft.Win32;
 using SpaceClaim.Api.V242;
@@ -40,12 +46,15 @@ namespace AESCConstruct25.FrameGenerator.UI
               Enum.GetNames(typeof(LocationPoint))
           );
 
+        // Initializes the settings control, hooks Loaded, and sets the DataContext.
         public SettingsControl()
         {
             InitializeComponent();
             this.Loaded += SettingsControl_Loaded;
             DataContext = this;
         }
+
+        // Handles first-time control load: initializes comboboxes, localization and CSV path fields.
         private void SettingsControl_Loaded(object sender, RoutedEventArgs e)
         {
             // 1) populate language combo with codes
@@ -73,6 +82,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             PopulateCsvFilePathFields();
         }
 
+        // Handles subsequent load: populates all fields from Settings and refreshes bindings and license info.
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             // 1) Load the Part naming textbox
@@ -145,6 +155,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             Construct25.UpdateCommandTexts();
         }
 
+        // Saves all settings from the UI into the Settings store and updates license and BOM configuration.
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             // Save Part naming
@@ -225,6 +236,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Tries to activate the license using the entered serial and updates UI/Settings on success.
         private void ActivateLicenseButton_Click(object sender, RoutedEventArgs e)
         {
             var serial = SerialNumberTextBox.Text.Trim();
@@ -254,6 +266,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Application.ReportStatus("License activated.", StatusMessageType.Information, null);
         }
 
+        // Updates language setting on selection change and re-localizes the panel and command texts.
         private void ComboBox_Language_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ComboBox_Language.SelectedItem is string langCode)
@@ -269,6 +282,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Builds the CSV path rows dynamically from Settings, including browse and open-folder buttons.
         private void PopulateCsvFilePathFields()
         {
             CsvPathsPanel.Children.Clear();
@@ -358,7 +372,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     Width = 16,
                     Height = 16,
                     Margin = new Thickness(2, 0, 2, 0),
-                    Tag = settingKey+"folderbtn",
+                    Tag = settingKey + "folderbtn",
                     Background = System.Windows.Media.Brushes.Transparent,
                     BorderBrush = System.Windows.Media.Brushes.Transparent,
                     ToolTip = "Open file location",
@@ -401,6 +415,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Handles the CSV browse button, opens file dialog, and writes the chosen path to the matching TextBox.
         private void BrowseCsvButton_Click(object sender, RoutedEventArgs e)
         {
             var btn = (Button)sender;
@@ -422,40 +437,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             textBox.Text = dlg.FileName;
         }
 
-        //public static void OpenFolder(string folderPath)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrWhiteSpace(folderPath))
-        //        {
-        //            Application.ReportStatus("No folder path provided.", StatusMessageType.Warning, null);
-        //            return;
-        //        }
-
-        //        // Expand %VAR% and normalize
-        //        var path = Environment.ExpandEnvironmentVariables(folderPath);
-        //        path = Path.GetFullPath(path);
-
-        //        if (!Directory.Exists(path))
-        //        {
-        //            Application.ReportStatus($"Folder not found:\n{path}", StatusMessageType.Warning, null);
-        //            return;
-        //        }
-
-        //        var psi = new ProcessStartInfo
-        //        {
-        //            FileName = "explorer.exe",
-        //            Arguments = $"\"{path}\"",
-        //            UseShellExecute = true
-        //        };
-        //        Process.Start(psi);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Application.ReportStatus("Could not open folder:\n" + ex.Message, StatusMessageType.Error, null);
-        //    }
-        //}
-
+        // Exports all settings (excluding license specific ones) to a JSON file chosen by the user.
         private void ExportSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -511,6 +493,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Imports settings from a JSON file, updates the Settings store and rebuilds the UI state.
         private void ImportSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -619,6 +602,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             }
         }
 
+        // Converts a JsonElement into a strongly typed value suitable for assigning to a Settings property.
         private static object CoerceJsonToType(JsonElement je, Type targetType)
         {
             try

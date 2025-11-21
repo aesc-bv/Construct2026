@@ -1,4 +1,14 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
+﻿/*
+ JointModule encapsulates joint-related operations for frame components.
+
+ It is responsible for:
+ - Rebuilding profile geometry from stored metadata (DXF/CSV/built-in) using ProfileModule.
+ - Optionally extending profiles along their path for joint construction and splitting them into halves.
+ - Building cutter frames and bidirectional cutter bodies, and applying boolean subtraction.
+ - Providing joint-specific reset logic (per half/side) used by miter and straight joints.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -14,11 +24,13 @@ namespace AESCConstruct25.FrameGenerator.Modules
 {
     public static class JointModule
     {
+        // Convenience overload that resets component geometry using a default up-vector and inferred construction curves.
         public static void ResetComponentGeometryOnly(List<Component> components)
         {
             ResetComponentGeometryOnly(components, Vector.Create(0, 1, 0), null);
         }
 
+        // Rebuilds component profile geometry (ExtrudedProfile) from stored metadata, using a forced local up-vector and optional curve cache.
         public static void ResetComponentGeometryOnly(
             List<Component> components,
             Vector forcedLocalUp,
@@ -143,6 +155,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
         }
 
+        // Rebuilds and extends component profiles along their path to give extra length for joint construction.
         public static void ResetComponentGeometryAndExtend(
             List<Component> components,
             Vector forcedLocalUp,
@@ -254,6 +267,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
 
 
 
+        // Builds a planar frame and small rectangular loop between two points, used to position debug or cutter geometry.
         public static (Plane, IList<ITrimmedCurve>) BuildDebugCutterFrameAndLoop(
             Point start,
             Point end,
@@ -315,6 +329,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             return (plane, loop);
         }
 
+        // Creates a body by extruding a loop forward and backward from a plane, merging the two resulting volumes if needed.
         public static Body CreateBidirectionalExtrudedBody(
             Plane plane,
             IList<ITrimmedCurve> loop,
@@ -363,6 +378,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
         }
 
+        // Subtracts the cutter body from the component’s ExtrudedProfile body inside the component’s local Part.
         public static void SubtractCutter(
             Component component,
             Body cutter
@@ -392,6 +408,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 Application.ReportStatus($"Joint error: {ex.Message}", StatusMessageType.Error, null);
             }
         }
+
+        // Determines which side of the plane should receive the long/short extrusion based on the curve direction toward the joint.
         public static (double forward, double backward) DetermineExtrusionDirection(
             Point curveJointPoint, Point curveFarPoint,
             Plane plane,
@@ -420,6 +438,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
         /// Splits the ExtrudedProfile (or merged halves) at its midpoint,
         /// using `localUp` to define the cutter plane orientation.
         /// </summary>
+        // Splits the component’s profile body into start/end halves around the path midpoint using a local up-vector.
         public static (Body bodyStart, Body bodyEnd) SplitBodyAtMidpoint(
              Component component,
              Vector localUp
@@ -535,7 +554,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             }
         }
 
-
+        // Rebuilds the component body so only one half is modified for the joint, preserving the far half and recombining the result.
         public static void ResetHalfForJoint(
             Component component,
             string connectionSide,

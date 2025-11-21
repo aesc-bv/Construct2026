@@ -1,4 +1,13 @@
-﻿using AESCConstruct25.FrameGenerator.Modules;
+﻿/*
+ ExtrudeProfileCommand wires the SpaceClaim "Extrude Profile" command into the UI.
+
+ It gathers the selected straight curves, resolves whether the profile comes from
+ CSV/built-in data or DXF contours, computes a deterministic local up vector per
+ path segment, and delegates the actual solid creation to ProfileModule.ExtrudeProfile.
+ Optionally it also updates the BOM after all extrusions are created.
+*/
+
+using AESCConstruct25.FrameGenerator.Modules;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
@@ -12,11 +21,13 @@ namespace AESCConstruct25.FrameGenerator.Commands
 {
     class ExtrudeProfileCommand : CommandCapsule
     {
+        // Registers the "Extrude Profile" command with SpaceClaim and sets its label/description.
         public const string CommandName = "AESCConstruct25.ExtrudeProfile";
 
         public ExtrudeProfileCommand()
             : base(CommandName, "Extrude Profile", null, "Extrudes a selected profile along selected lines or edges") { }
 
+        // Drives the full extrusion flow: reads selection, resolves profile source (CSV/DXF), and extrudes along each selected segment.
         public static void ExecuteExtrusion(
             string profileType,
             object profileDataOrContours,
@@ -159,6 +170,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                                 dcurve.SetVisibility(null, false);
                             }
 
+                            // Local helper: compares two points with a distance tolerance in model units.
                             bool PointsEqual(Point a, Point b, double tolerance)
                             {
                                 return (a - b).Magnitude < tolerance;
@@ -188,7 +200,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     if (updateBOM == true)
                         ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
                     //else
-                        //CompareCommand.CompareSimple();
+                    //CompareCommand.CompareSimple();
                 }
                 catch (Exception ex)
                 {
@@ -201,6 +213,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        // Computes a stable "up" vector for a given line direction, preferring +Z and falling back to +Y/+X if needed.
         static Vector CanonicalUpForLine(Vector dirVec)
         {
             const double tol = 1e-9;
@@ -213,6 +226,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             // Ensure we work with a unit direction
             var d = dirVec.Direction.ToVector();
 
+            // Projects an up-vector onto the plane perpendicular to the given axis (removes axis component).
             Vector ProjectOntoPlane(Vector up, Vector axisUnit)
             {
                 // Reject the component along the axis; result is perpendicular to the line
@@ -241,6 +255,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
         /// <summary>
         /// Returns another segment in 'all' that shares an endpoint with 'seg', or null.
         /// </summary>
+        // Finds the first other CurveSegment in the collection that touches seg within a small tolerance.
         private static CurveSegment FindConnectedSegment(CurveSegment seg, IEnumerable<CurveSegment> all)
         {
             const double tol = 1e-6;

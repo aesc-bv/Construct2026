@@ -1,4 +1,9 @@
-﻿using SpaceClaim.Api.V242;
+﻿/*
+ ProfileSelectionHelper extracts selected line geometry from the active SpaceClaim window.
+ It normalizes DesignCurves and DesignEdges (and their instances) into world-space ITrimmedCurve segments.
+*/
+
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +12,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
 {
     public static class ProfileSelectionHelper
     {
-        /// <summary>
-        /// Retrieves all selected curves (either DesignCurves or DesignEdges) as ITrimmedCurve objects in world space.
-        /// </summary>
+        // Returns all selected linear curves as world-space ITrimmedCurve segments, resolving both masters and instances.
         public static List<ITrimmedCurve> GetSelectedCurves(Window window)
         {
             var list = new List<ITrimmedCurve>();

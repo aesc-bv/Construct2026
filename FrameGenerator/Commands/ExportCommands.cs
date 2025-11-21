@@ -1,4 +1,14 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
+﻿/*
+ ExportCommands collects all BOM and export related functionality for the frame generator.
+
+ It can:
+ - Generate and place a BOM table on a drawing sheet in SpaceClaim (ExportBOM).
+ - Export the same BOM content to an Excel workbook (ExportExcel).
+ - Export all non-main parts as individual STEP files into a chosen folder (ExportSTEP).
+ It also contains helpers for cut-angle calculation and unit-aware length formatting.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.Properties;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -25,12 +35,11 @@ using Table = SpaceClaim.Api.V242.Table;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using Window = SpaceClaim.Api.V242.Window;
 
-
-
 namespace AESCConstruct25.FrameGenerator.Commands
 {
     public static class ExportCommands
     {
+        // Builds a BOM from all frame components and writes it as a table onto a drawing sheet (and clipboard text), honoring material/unit settings.
         public static void ExportBOM(Window window, bool update)
         {
             var doc = window?.Document;
@@ -62,7 +71,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
                     Command.Execute("NewDrawingSheet");
                     sheet = doc.DrawingSheets.FirstOrDefault();
                 }
-                catch {}
+                catch { }
 
                 if (sheet == null)
                 {
@@ -243,6 +252,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        // Exports the BOM to an .xlsx file on disk using OpenXML, then opens the file in the default spreadsheet application.
         public static void ExportExcel(Window window)
         {
             var doc = window?.Document;
@@ -375,7 +385,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
-
+        // Exports each non-main Part as an individual STEP file to a user-selected folder, optionally appending material to the filename.
         public static void ExportSTEP(Window window)
         {
             var doc = window?.Document;
@@ -466,7 +476,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
-        // Helper: create a text cell
+        // Creates an OpenXML text cell at (col,rowIndex) with string content for Excel export.
         static Cell MakeTextCell(string col, uint rowIndex, string text)
         {
             return new Cell
@@ -477,7 +487,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             };
         }
 
-        // Helper: create a numeric cell
+        // Creates an OpenXML numeric cell at (col,rowIndex) with an integer value for Excel export.
         static Cell MakeNumberCell(string col, uint rowIndex, int number)
         {
             return new Cell
@@ -487,6 +497,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 CellValue = new CellValue(number.ToString())
             };
         }
+
+        // Computes the start/end miter and bevel angles (X/Z) on the profile's end faces for a given component.
         public static (double xStart, double zStart, double xEnd, double zEnd) GetProfileCutAngles(Component comp)
         {
             const double tol = 1e-6;
@@ -546,6 +558,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             return (x0, z0, x1, z1);
         }
 
+        // Returns a formatted user-facing string with both end cut angles in "X/Z" notation, or "ERR" on failure.
         public static string GetCutString(Component comp)
         {
             try
@@ -560,12 +573,14 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        // Returns the currently configured length unit from settings (defaults to "mm" if unset).
         static string GetSelectedUnit()
         {
             var u = Settings.Default.LengthUnit;
             return string.IsNullOrWhiteSpace(u) ? "mm" : u;
         }
 
+        // Parses a length string that is stored as raw meters into a double value (culture tolerant).
         static bool TryParseMeters(string text, out double meters)
         {
             meters = 0;
@@ -582,6 +597,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             return false;
         }
 
+        // Converts a length in meters to the configured output unit (mm/cm/m/inch) for BOM display.
         static double FromMeters(double meters, string unit)
         {
             switch (unit)
@@ -594,6 +610,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             }
         }
 
+        // Formats a numeric meters string into the selected unit with a fixed numeric format for BOM/Excel output.
         static string FormatLengthFromMetersString(string rawMeters)
         {
             if (TryParseMeters(rawMeters, out var m))

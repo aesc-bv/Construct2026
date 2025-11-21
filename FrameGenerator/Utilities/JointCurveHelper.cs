@@ -1,4 +1,28 @@
-﻿using SpaceClaim.Api.V242;
+﻿/*
+ JointCurveHelper centralizes all curve- and line-based helper logic for Construct joints.
+
+ It provides:
+ - DrawExtendedCenterLine: draws an extended center line in world space for a local segment,
+   using the component’s Placement and a configurable scale.
+ - GetOffsetEdges: computes inner/outer offset lines in local space for a profile, based on:
+     • the world-space relation between this component and its neighbour
+     • a rotation-aware profile width (chooses w or h/b/D depending on RotationAngle)
+     • a signed offsetX custom property
+   It returns the two local Line objects plus the local perpendicular vector.
+ - IntersectLines / IntersectTLines: robust 3D line/segment intersection helpers in world space.
+ - CreateDebugCurve / FindSharedPoint: small utilities for visual debug geometry and common
+   corner detection.
+ - GetProfileWidth: reads Construct_* profile dimensions from custom properties (mm → m) and
+   picks the correct width depending on the profile’s RotationAngle.
+ - GetOffset: reads a numeric custom property as a double.
+ - PickDirection / PickTJointDirectionWorld: decide which side is “forward”/“backward”
+   for extrusion lengths, based on where the profile or its free end lies relative to
+   a plane’s Z axis (world direction of the joint/cutter).
+
+ DirectionExtensions adds a ToVector() helper to convert a Direction into a Vector.
+*/
+
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Drawing;
@@ -12,7 +36,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
     public static class JointCurveHelper
     {
         /// <summary>
-        /// Draws an extended center‐line in world‐space by transforming the local segment
+        /// Draws an extended center-line in world-space by transforming the local segment
         /// through its parent component’s Placement matrix.
         /// </summary>
         public static void DrawExtendedCenterLine(
@@ -50,7 +74,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
         }
 
         /// <summary>
-        /// From a local‐space segment and its neighbour, compute the two offset lines in world‐space.
+        /// From a local-space segment and its neighbour, compute the two offset lines in world-space.
         /// </summary>
         public static (Line inner, Line outer, Vector perp) GetOffsetEdges(
             Component component,
@@ -87,7 +111,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             Point wB1 = placementB * otherDC.EndPoint;
             Vector dB = (wB1 - wB0).Direction.ToVector();
 
-            // 3) Compute the shared‐plane normal:
+            // 3) Compute the shared-plane normal:
             Vector planeN = Vector.Cross(dA, dB);
             if (planeN.Magnitude < tol)
             {
@@ -126,7 +150,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             Vector p1 = Vector.Cross(planeN, dA).Direction.ToVector();
             Vector perpWorld = Vector.Dot(p1, bis) >= 0 ? p1 : -p1;
 
-            // 8) Convert that perp back into component‐local:
+            // 8) Convert that perp back into component-local:
             Point Wc = corner;
             Point Wc2 = Point.Create(corner.X + perpWorld.X,
                                      corner.Y + perpWorld.Y,
@@ -143,14 +167,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             double de = ((placementA * eL) - corner).Magnitude;
             Point baseLocal = ds > de + tol ? sL : eL;
 
-            // 10) Compute total shift = half the profile‐width + offsetX
-            //double halfWidth = width * 0.5;
-            //double shiftInner = halfWidth + offsetX;
-            //double shiftOuter = halfWidth - offsetX;
-
-            // 11) build the two local‐space offset lines
-            //var dirLocal = (eL - sL).Direction;
-            // interior‐side line (red in your debug)
+            // 10) Compute total shift = half the profile-width + offsetX
             Vector localX = Vector.Create(1, 0, 0);
             double flip = Vector.Dot(perpLocal, localX) >= 0
                           ? +1.0
@@ -211,25 +228,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             Line innerLocal = Line.Create(baseLocal + perpLocal * shiftInner, dirLocal);
             Line outerLocal = Line.Create(baseLocal - perpLocal * shiftOuter, dirLocal);
 
-            //12) debug‐draw(unchanged)
-            //double dbgLen = 0.1;
-            //{
-            //    var v = innerLocal.Direction.ToVector() * (dbgLen / 2);
-            //    CreateDebugCurve(part,
-            //        innerLocal.Origin - v,
-            //        innerLocal.Origin + v,
-            //        Color.Red,
-            //        "DEBUG_InnerOffset");
-            //}
-            //{
-            //    var v = outerLocal.Direction.ToVector() * (dbgLen / 2);
-            //    CreateDebugCurve(part,
-            //        outerLocal.Origin - v,
-            //        outerLocal.Origin + v,
-            //        Color.Green,
-            //        "DEBUG_OuterOffset");
-            //}
-
             return (innerLocal, outerLocal, perpLocal);
         }
 
@@ -272,7 +270,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             double s = (d * c - b * e) / denom;
             return p + d1 * s;
         }
-
 
         public static Point? IntersectTLines(
             Component componentA,
@@ -328,7 +325,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             return p + d1 * s;
         }
 
-
         public static void CreateDebugCurve(
             Part part,
             Point start,
@@ -352,6 +348,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                         return pA;
             return a.StartPoint;
         }
+
         public static double GetProfileWidth(Component comp)
         {
             // Helper to read a numeric custom property (mm → m)
@@ -406,104 +403,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             }
         }
 
-        //public static double GetProfileWidth(Component comp)
-        //{
-
-
-        //    if (comp.Template.CustomProperties
-        //            .TryGetValue("Construct_w", out var wp)
-        //        && double.TryParse(wp.Value.ToString(),
-        //                           NumberStyles.Any,
-        //                           CultureInfo.InvariantCulture,
-        //                           out var w_mm))
-        //    {
-        //        // convert from millimetres to metres for joint logic
-        //        return w_mm * 0.001;
-        //    }
-
-        //    var fullDb = comp.Template.Bodies
-        //                   .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-        //               ?? comp.Template.Bodies.FirstOrDefault(b => b.Shape != null);
-
-        //    if (fullDb != null)
-        //    {
-        //        var bb = fullDb.Shape.GetBoundingBox(Matrix.Identity, tight: true);
-        //        var seg = comp.Template.Curves
-        //                        .OfType<DesignCurve>()
-        //                        .FirstOrDefault()?.Shape as CurveSegment;
-        //        if (seg != null)
-        //        {
-        //            var d = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
-        //            var flat = Vector.Create(d.X, 0, d.Z).Direction.ToVector();
-        //            var perp = Vector.Cross(Vector.Create(0, 1, 0), flat).Direction.ToVector();
-
-        //            var corners = Box.Create(new[] { bb.MinCorner, bb.MaxCorner }).Corners;
-        //            var center = bb.Center;
-        //            double maxDist = corners
-        //                .Select(c => Math.Abs(Vector.Dot(perp, c - center)))
-        //                .Max();
-        //            return maxDist * 2.0;
-        //        }
-        //    }
-
-        //    return 0.0;
-        //}
-        //public static double GetProfileWidth(Component comp)
-        //{
-        //    const double tol = 1e-9;
-
-        //    // 1) Find a solid body to measure (prefer the fresh ExtrudedProfile)
-        //    var db = comp.Template.Bodies
-        //                 .FirstOrDefault(b => b.Name == "ExtrudedProfile" && b.Shape != null)
-        //          ?? comp.Template.Bodies.FirstOrDefault(b => b.Shape != null);
-        //    if (db?.Shape == null)
-        //        return 0.0;
-
-        //    // 2) Get the construction segment in PART-local space
-        //    var seg = comp.Template.Curves.OfType<DesignCurve>()
-        //                 .FirstOrDefault()?.Shape as CurveSegment;
-        //    if (seg == null)
-        //        return 0.0;
-
-        //    // 3) Build the oriented frame in WORLD:
-        //    //    ẑ = along the member (construction line)
-        //    //    ŷ = world-up projected to ⟂ ẑ (fallback to world-X if needed)
-        //    //    x̂ = ẑ × ŷ
-        //    Vector z = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
-        //    if (z.Magnitude < tol) return 0.0;
-
-        //    Vector up = Vector.Create(0, 1, 0);
-        //    up = up - Vector.Dot(up, z) * z;                  // reject z component
-        //    if (up.Magnitude < tol)
-        //    {
-        //        up = Vector.Create(1, 0, 0);
-        //        up = up - Vector.Dot(up, z) * z;
-        //        if (up.Magnitude < tol) return 0.0;           // degenerate edge case
-        //    }
-        //    up = up.Direction.ToVector();
-
-        //    Vector x = Vector.Cross(z, up);
-        //    if (x.Magnitude < tol) return 0.0;
-        //    x = x.Direction.ToVector();
-
-        //    Vector y = Vector.Cross(z, x).Direction.ToVector();
-
-        //    // Origin of the frame doesn’t affect extents; use world origin.
-        //    var frameWorld = Frame.Create(Point.Origin, x.Direction, y.Direction);
-
-        //    // 4) Compose transform for the OBB query:
-        //    //    Part-local → World (comp.Placement) → Frame-local (inverse of frame mapping)
-        //    Matrix worldFromFrame = Matrix.CreateMapping(frameWorld);      // frame-local → world
-        //    Matrix toFrameLocal = worldFromFrame.Inverse * comp.Placement; // part-local → frame-local
-
-        //    // 5) Tight AABB in our oriented frame; X-extent is the width
-        //    var bb = db.Shape.GetBoundingBox(toFrameLocal, tight: true);
-        //    var size = bb.MaxCorner - bb.MinCorner;
-
-        //    // Result is in model units (meters in your codebase).
-        //    return Math.Abs(size.X / 10000.0);
-        //}
-
         public static double GetOffset(Component comp, string key)
         {
             if (!comp.Template.CustomProperties.TryGetValue(key, out var prop))
@@ -539,8 +438,6 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                 : (longLen, shortLen);
         }
 
-        // inside JointCurveHelper.cs
-
         /// <summary>
         /// For a T-joint: picks forward/backward extrusion lengths by comparing
         /// the world-space vector from the T-point to the attached end of B
@@ -564,15 +461,15 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             if (rawB == null)
                 return (freeLen, attachLen);
 
-            // 2) World‐space point of the free end (not attached to A)
+            // 2) World-space point of the free end (not attached to A)
             Point worldFree = connectedAtStart
                 ? componentB.Placement * rawB.EndPoint
                 : componentB.Placement * rawB.StartPoint;
 
-            // 3) Vector from T‐point toward the FREE end
+            // 3) Vector from T-point toward the FREE end
             Vector toFree = (worldFree - pTworld).Direction.ToVector();
 
-            // 4) Cutter plane forward‐axis (+Z) in world
+            // 4) Cutter plane forward-axis (+Z) in world
             Vector planeZ = cutterPlane.Frame.DirZ.ToVector();
 
             // 5) Dot gives signed distance: 
@@ -587,9 +484,7 @@ namespace AESCConstruct25.FrameGenerator.Utilities
             else
                 return (forward: attachLen, backward: freeLen);
         }
-
     }
-
 
     public static class DirectionExtensions
     {

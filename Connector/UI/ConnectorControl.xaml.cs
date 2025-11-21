@@ -1,4 +1,10 @@
-﻿// SpaceClaim APIs
+﻿/* 
+ * ConnectorControl hosts the UI and preview logic for configuring and creating connector geometry
+ * in SpaceClaim: it reads presets from CSV, drives a WinForms drawing surface, builds ConnectorModel
+ * instances from the WPF UI, and applies 3D boolean edits to owner bodies and their neighbours.
+ */
+
+// SpaceClaim APIs
 using AESCConstruct25.FrameGenerator.Utilities;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Office2010.Excel;
@@ -48,6 +54,7 @@ namespace AESCConstruct25.UI
 
         private static readonly Dictionary<DesignBody, NeighbourIndepChoice> s_neighbourDecisionCache
             = new Dictionary<DesignBody, NeighbourIndepChoice>();
+
         private class ConnectorPresetRecord
         {
             public string Name { get; set; } = "";
@@ -78,6 +85,8 @@ namespace AESCConstruct25.UI
         private enum NeighbourIndepChoice { MakeIndependent, EditShared, Skip }
 
         private readonly List<ConnectorPresetRecord> _presets = new List<ConnectorPresetRecord>();
+
+        // Constructor wires up the WPF control, WinForms drawing host and localization, then initializes the connector UI.
         public ConnectorControl()
         {
             try
@@ -97,6 +106,8 @@ namespace AESCConstruct25.UI
                 Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
+
+        // InitializeDrawingHost creates and embeds the WinForms PictureBox used to preview the connector profile.
         private void InitializeDrawingHost()
         {
             try
@@ -135,6 +146,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // PicDrawing_Paint renders the current ConnectorModel instance onto the PictureBox graphics surface.
         private void PicDrawing_Paint(object sender, WF.PaintEventArgs e)
         {
             try
@@ -148,6 +160,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // LocalizeUI re-applies localization to the ConnectorControl UI elements.
         private void LocalizeUI()
         {
             Localization.Language.LocalizeFrameworkElement(this);
@@ -156,6 +169,7 @@ namespace AESCConstruct25.UI
         // === Legacy field (now strongly-typed via alias) ===
         private ConnectorModel connector;
 
+        // drawConnector rebuilds the ConnectorModel from the current UI values and refreshes the drawing.
         private void drawConnector()
         {
             try
@@ -169,18 +183,22 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // btnCreate_connector is the click handler that starts 3D connector creation from the current UI.
         private void btnCreate_connector(object sender, RoutedEventArgs e) => createConnector();
 
-        private void btnCreate_Test(object sender, RoutedEventArgs e){
+        // btnCreate_Test executes a test MakeIndependent command against the current selection.
+        private void btnCreate_Test(object sender, RoutedEventArgs e)
+        {
             Command.Execute("MakeIndependent");
         }
 
-        // === Legacy Enter/validate handlers adapted to WPF control names ===
-        // Map txtTubeLockHeight -> connectorHeight (the TextBox in your XAML)
+        // txtDouble_Validated validates the numeric input and triggers a connector redraw.
         private void txtDouble_Validated(object sender, EventArgs e)
         {
             ValidateAndDrawConnector();
         }
+
+        // txtDouble_KeyDown commits and redraws the connector when Enter is pressed in a numeric TextBox.
         private void txtDouble_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Enter)
@@ -189,6 +207,8 @@ namespace AESCConstruct25.UI
                 e.Handled = true; // swallow Enter
             }
         }
+
+        // ValidateAndDrawConnector checks connectorHeight for a valid double and redraws or warns the user.
         private void ValidateAndDrawConnector()
         {
             if (double.TryParse(connectorHeight?.Text, out _))
@@ -200,7 +220,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        // === Optional: call drawConnector on load (keeps legacy behavior) ===
+        // ConnectorControl_Loaded runs once when the control is loaded to wire UI events, load presets, and draw the initial connector.
         private void ConnectorControl_Loaded(object sender, RoutedEventArgs e)
         {
             try
@@ -213,6 +233,7 @@ namespace AESCConstruct25.UI
             catch (Exception ex) { } ////Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
         }
 
+        // LoadConnectorPresets reads connector presets from a CSV file and binds them into the preset combobox.
         private void LoadConnectorPresets()
         {
             try
@@ -304,7 +325,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-
+        // ConnectorPresetCombo_SelectionChanged applies the selected preset values into the connector UI and redraws.
         private void ConnectorPresetCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
@@ -329,6 +350,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // ApplyPresetToUi writes preset values into the bound TextBoxes/radios and keeps corner state consistent.
         private void ApplyPresetToUi(ConnectorPresetRecord p)
         {
             string F(double? v) => v.HasValue ? v.Value.ToString("0.###", CultureInfo.InvariantCulture) : "";
@@ -358,7 +380,7 @@ namespace AESCConstruct25.UI
             UpdateGenerateEnabled();
         }
 
-        // Helpers for CSV parsing
+        // DetectEncoding inspects the file BOM and returns the appropriate text encoding, defaulting to UTF8 without BOM.
         private static Encoding DetectEncoding(string path)
         {
             using var fs = File.OpenRead(path);
@@ -371,12 +393,14 @@ namespace AESCConstruct25.UI
             return new UTF8Encoding(false);
         }
 
+        // SplitCsv splits a simple delimiter-separated line into trimmed field strings.
         private static string[] SplitCsv(string line, char delimiter)
         {
             // simple split (fields expected to be plain values)
             return line.Split(delimiter).Select(s => s.Trim()).ToArray();
         }
 
+        // Get reads a typed value from the CSV header/column map or returns a fallback if not present or invalid.
         private static T Get<T>(Dictionary<string, int> headers, string[] cols, string key, T fallback)
         {
             if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return fallback;
@@ -389,6 +413,7 @@ namespace AESCConstruct25.UI
             catch { return fallback; }
         }
 
+        // GetDouble parses a nullable double from a CSV column using invariant culture semantics.
         private static double? GetDouble(Dictionary<string, int> headers, string[] cols, string key)
         {
             if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return null;
@@ -396,6 +421,7 @@ namespace AESCConstruct25.UI
             return null;
         }
 
+        // GetBool parses a tolerant boolean flag from a CSV column (supports 1/0, y/n, yes/no, true/false).
         private static bool? GetBool(Dictionary<string, int> headers, string[] cols, string key)
         {
             if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return null;
@@ -406,6 +432,7 @@ namespace AESCConstruct25.UI
             return null;
         }
 
+        // getFacesFromSelection selects the larger and smaller adjacent faces for a given edge based on area.
         private static void getFacesFromSelection(IDesignEdge selectedEdge, out DesignFace bigFace, out DesignFace smallFace)
         {
             bigFace = null;
@@ -432,6 +459,7 @@ namespace AESCConstruct25.UI
                 return;
         }
 
+        // FindExitDistance_NoCopy walks a ray through a body in its master space to find the exit distance from a starting point.
         private static double FindExitDistance_NoCopy(
             Body masterBody,             // body in its own MASTER space
             Point pStartMaster,          // start in same MASTER space
@@ -475,6 +503,8 @@ namespace AESCConstruct25.UI
             }
             return double.PositiveInfinity;
         }
+
+        // FindExitDistance_MasterSpace transforms a world-space ray into another body's master space and delegates to FindExitDistance_NoCopy.
         private static double FindExitDistance_MasterSpace(
             Body otherMaster,
             Matrix worldToOtherMaster,
@@ -489,6 +519,7 @@ namespace AESCConstruct25.UI
             return FindExitDistance_NoCopy(otherMaster, pStartM, dirM, maxT, tol, maxIters);
         }
 
+        // ComputeAvailableHeightAlongRay determines how much connector height fits along a ray before colliding with surrounding bodies.
         internal static double ComputeAvailableHeightAlongRay(
             Part searchRoot,
             DesignBody ownerBody,
@@ -558,6 +589,8 @@ namespace AESCConstruct25.UI
             double available = Math.Max(0.0, best);
             return Math.Max(0.0, Math.Min(req, available));
         }
+
+        // createConnector is the main entry that builds connector geometries on selected edges and applies all booleans and neighbour cuts.
         private void createConnector()
         {
             // local helper so this is fully drop-in
@@ -1213,6 +1246,8 @@ namespace AESCConstruct25.UI
                 swAll.Stop();
             }
         }
+
+        // MakeIndependentOcc executes MakeIndependent and finds the new occurrence corresponding to the original body.
         private static IDesignBody MakeIndependentOcc(IDesignBody occ)
         {
             if (occ == null) return null;
@@ -1259,6 +1294,8 @@ namespace AESCConstruct25.UI
 
             return occ;
         }
+
+        // NormalizeStemSuffixes renames component masters with a numeric suffix to avoid duplicate names.
         private static void NormalizeStemSuffixes(IDesignBody iBod)
         {
             if (iBod == null) return;
@@ -1286,6 +1323,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // ApplyOwnerEditsWithChoice applies connector unite/subtract operations to the owner master, respecting linked-body choices.
         private static bool ApplyOwnerEditsWithChoice(
             Part mainPart,
             IDesignBody iDesignBody,
@@ -1358,12 +1396,14 @@ namespace AESCConstruct25.UI
 
         private enum LinkedChoice { ThisOnly, AllLinked, Cancel }
 
+        // IsLinked checks whether a given occurrence shares its master with at least one other occurrence.
         private static bool IsLinked(IDesignBody occ, Part mainPart)
         {
             if (occ?.Master == null || mainPart == null) return false;
             return mainPart.GetDescendants<IDesignBody>().Count(x => x.Master == occ.Master) > 1;
         }
 
+        // AskLinkedChoice prompts the user on how to treat linked owner bodies for connector edits.
         private static LinkedChoice AskLinkedChoice(IDesignBody occ)
         {
             const string caption = "Linked bodies detected";
@@ -1386,7 +1426,7 @@ namespace AESCConstruct25.UI
             return LinkedChoice.Cancel;                                                     // Cancel or closed
         }
 
-        // Get all occurrences that reference the same DesignBody master as 'ownerOcc'
+        // GetAllLinkedOccurrences returns all occurrences in mainPart that reference the same master as ownerOcc.
         private static List<IDesignBody> GetAllLinkedOccurrences(Part mainPart, IDesignBody ownerOcc)
         {
             if (mainPart == null || ownerOcc?.Master == null) return new List<IDesignBody>();
@@ -1395,6 +1435,7 @@ namespace AESCConstruct25.UI
 
         private enum NeighbourBatchChoice { MakeIndependentAll, EditSharedAll, SkipAll }
 
+        // AskBatchForOwner prompts the user how to treat all linked neighbour bodies for a given owner.
         private static NeighbourBatchChoice AskBatchForOwner(IDesignBody ownerOcc, int hitCount)
         {
             var title = "Linked neighbours detected";
@@ -1415,6 +1456,7 @@ namespace AESCConstruct25.UI
             return NeighbourBatchChoice.SkipAll;
         }
 
+        // BoxesIntersect performs an AABB intersection test between two SpaceClaim boxes.
         private static bool BoxesIntersect(Box a, Box b)
         {
             var A0 = a.MinCorner; var A1 = a.MaxCorner;
@@ -1424,6 +1466,7 @@ namespace AESCConstruct25.UI
                   || A1.Z < B0.Z || A0.Z > B1.Z);
         }
 
+        // IntersectsNeighbour checks whether a mapped tool body actually intersects a neighbour occurrence.
         private static bool IntersectsNeighbour(IDesignBody ownerOcc, IDesignBody neighbourOcc, Body toolInOwnerMaster)
         {
             if (neighbourOcc?.Master?.Shape == null || toolInOwnerMaster == null) return false;
@@ -1436,6 +1479,7 @@ namespace AESCConstruct25.UI
             catch { return false; }
         }
 
+        // PropagateCutsForChoice applies connector cuts to neighbour bodies around the owner, honoring user batch decisions and caching.
         private static void PropagateCutsForChoice(
             Part mainPart,
             IDesignBody ownerOccForNeighbours,   // enumerate neighbours / pick ring
@@ -1582,7 +1626,7 @@ namespace AESCConstruct25.UI
         }
 
 
-        // Wrap a single tool body and unite it into the owner.
+        // UniteIntoOwner wraps a tool in a temporary DesignBody and unites it into the owner DesignBody.
         private static void UniteIntoOwner(DesignBody owner, Part part, Body tool)
         {
             if (owner == null || part == null || tool == null) return;
@@ -1603,7 +1647,7 @@ namespace AESCConstruct25.UI
             //}
         }
 
-        // Wrap a single tool body and subtract it from the owner.
+        // SubtractFromOwner wraps a tool in a temporary DesignBody and subtracts it from the owner DesignBody.
         private static void SubtractFromOwner(DesignBody owner, Part part, Body tool)
         {
             if (owner == null || part == null || tool == null) return;
@@ -1620,7 +1664,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        // NEW: foreach uniter — this is the “only change” you wanted.
+        // UniteEachIntoOwner iterates over all connector bodies and unites each into the owner master.
         private static void UniteEachIntoOwner(DesignBody owner, Part part, IEnumerable<Body> connectors)
         {
             if (owner == null || part == null || connectors == null) return;
@@ -1642,7 +1686,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-
+        // SubtractEachFromOwner iterates over all cutter bodies and subtracts each from the owner master.
         private static void SubtractEachFromOwner(DesignBody owner, Part part, IEnumerable<Body> cutters)
         {
             //Logger.Log($"[SubtractEachFromOwner] owner = null {owner == null}");
@@ -1669,9 +1713,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        // === PATTERN LOGIC (helper) ===
-        // Returns OCCurrence-space placement centers + tangents for the requested pattern.
-        // Throws with a clear message if 'n' won't fit given the occupied width (max W + 2*Tol).
+        // ComputePatternCentersOcc computes evenly spaced connector centers and tangents along an edge in occurrence space.
         private static List<(Point pOcc, Direction tanOcc)> ComputePatternCentersOcc(
             IDesignEdge iEdge,
             ConnectorModel c,
@@ -1795,6 +1837,7 @@ namespace AESCConstruct25.UI
             return centers;
         }
 
+        // getOppositeFace finds the opposite face to bigFace and returns thickness and direction for planar or cylindrical sheets.
         private DesignFace getOppositeFace(DesignFace smallFace, DesignFace bigFace, bool isPlanar, out double thickness, out Direction direction)
         {
             DesignFace returnFace = null;
@@ -1855,6 +1898,7 @@ namespace AESCConstruct25.UI
 
         }
 
+        // checkDesignEdge determines a stable placement point on the edge (either click location or curve midpoint).
         private bool checkDesignEdge(IDesignEdge iDesEdge, bool clickPosition, out Point midPointOcc)
         {
             midPointOcc = Point.Origin;
@@ -1919,7 +1963,7 @@ namespace AESCConstruct25.UI
             return false;
         }
 
-
+        // WireUiChangeHandlers attaches debounced change handlers to all relevant connector UI controls.
         private void WireUiChangeHandlers()
         {
             TextChangedEventHandler onText = OnTextChanged;
@@ -1989,8 +2033,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        //private void OnTextChanged(object sender, TextChangedEventArgs e) => DebouncedRedraw();
-        //private void OnRoutedChanged(object sender, RoutedEventArgs e) => DebouncedRedraw();
+        // OnTextChanged reacts to live text edits by scheduling a redraw and enforcing coupled UI rules.
         private void OnTextChanged(object sender, TextChangedEventArgs e)
         {
             DebouncedRedraw();
@@ -1999,6 +2042,7 @@ namespace AESCConstruct25.UI
             UpdateGenerateEnabled();
         }
 
+        // OnRoutedChanged reacts to routed events (focus changes, etc.) by redrawing and validating layout options.
         private void OnRoutedChanged(object sender, RoutedEventArgs e)
         {
             DebouncedRedraw();
@@ -2006,6 +2050,8 @@ namespace AESCConstruct25.UI
             EnforceRectCutExclusivity();
             UpdateGenerateEnabled();
         }
+
+        // OnSelectionChanged responds to preset combobox changes by redrawing and toggling the generate button state.
         private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             DebouncedRedraw();
@@ -2014,6 +2060,7 @@ namespace AESCConstruct25.UI
 
         private const double EPS = 1e-6;
 
+        // TryReadDouble parses a double from a TextBox using current or invariant cultures, with last-chance normalization.
         private bool TryReadDouble(TextBox tb, out double v)
         {
             v = 0;
@@ -2027,6 +2074,7 @@ namespace AESCConstruct25.UI
             return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
         }
 
+        // IsReliefAllowed enforces End Relief constraints against current width settings and rectangular cut options.
         private bool IsReliefAllowed(out string reason)
         {
             reason = null;
@@ -2050,6 +2098,8 @@ namespace AESCConstruct25.UI
 
             return true;
         }
+
+        // EnforceRectCutExclusivity keeps rectangular-cut and End Relief UI states mutually consistent.
         private void EnforceRectCutExclusivity()
         {
             // If Rectangular cut is ON, force End Relief to 0 and disable it.
@@ -2078,6 +2128,8 @@ namespace AESCConstruct25.UI
                     connectorRectangularCut.IsChecked = true;
             }
         }
+
+        // UpdateGenerateEnabled toggles the create button based on whether current settings are valid (including relief rules).
         private void UpdateGenerateEnabled()
         {
             var btn = this.FindName("btnCreateConnector") as System.Windows.Controls.Button
@@ -2102,6 +2154,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // OnTextBoxKeyDown intercepts Enter presses to trigger a debounced redraw instead of default behavior.
         private void OnTextBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -2111,6 +2164,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // DebouncedRedraw coalesces UI changes and triggers a delayed connector rebuild and UI validation.
         private void DebouncedRedraw()
         {
             if (_uiDebounce == null)
@@ -2129,6 +2183,7 @@ namespace AESCConstruct25.UI
             _uiDebounce.Start();
         }
 
+        // ComputeBoundsMm calculates a tight bounding box in mm around the connector with optional tolerance and top radius features.
         private static (double minX, double maxX, double minY, double maxY) ComputeBoundsMm(ConnectorModel c, bool showTolerance)
         {
             // Inputs in mm
@@ -2172,6 +2227,7 @@ namespace AESCConstruct25.UI
             return (minX, maxX, minY, maxY);
         }
 
+        // EnforceCornerCoupling disables the extra top corner radius feature when a main corner radius/chamfer is set.
         private void EnforceCornerCoupling()
         {
             // If there’s a main corner radius/chamfer value, disable the top-pair “cutout radius” feature.
@@ -2188,6 +2244,8 @@ namespace AESCConstruct25.UI
                 if (connectorCornerCutoutRadiusValue != null) connectorCornerCutoutRadiusValue.IsEnabled = true;
             }
         }
+
+        // DrawConnector renders a scaled 2D representation of the connector profile (plus tolerance outlines) onto the Graphics.
         private void DrawConnector(Graphics g, ConnectorModel connector)
         {
             try
@@ -2455,11 +2513,15 @@ namespace AESCConstruct25.UI
                 ////Logger.Log($"DrawConnector error: {ex}");
             }
         }
+
+        // InvalidateDrawing requests a repaint of the PictureBox to show the latest connector preview.
         private void InvalidateDrawing()
         {
             try { picDrawing?.Invalidate(); }
             catch (Exception ex) { }////Logger.Log($"InvalidateDrawing error: {ex}"); }
         }
+
+        // CheckSelectedEdgeWidth ensures the connector bottom width does not exceed the available length on the selected edge.
         private bool CheckSelectedEdgeWidth()
         {
             var win = Window.ActiveWindow;
@@ -2539,7 +2601,7 @@ namespace AESCConstruct25.UI
             return (availableWidthMm - c.Width1) >= 0.0;
         }
 
-        // Map a tool body defined in the OWNER's master space into a TARGET occurrence's master space.
+        // MapTool remaps a tool body from the owner's master space into a target occurrence's master space via world space.
         private static Body MapTool(Body toolInOwnerMaster, IDesignBody ownerOcc, IDesignBody targetOcc)
         {
             var mapped = toolInOwnerMaster.Copy();

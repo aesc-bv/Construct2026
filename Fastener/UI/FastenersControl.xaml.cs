@@ -1,4 +1,9 @@
-﻿using AESCConstruct25.Fastener.Module;
+﻿/*
+ FastenersControl is a WPF user control that manages UI for selecting and inserting fasteners
+ (bolts, washers, nuts, and optional custom parts) and delegates geometry creation to FastenerModule.
+*/
+
+using AESCConstruct25.Fastener.Module;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using System;
@@ -55,6 +60,7 @@ namespace AESCConstruct25.UI
                "Custom"
            );
 
+        // Initializes the fasteners UI, loads module data, sets defaults, and populates type/size lists.
         public FastenersControl()
         {
             InitializeComponent();
@@ -90,6 +96,7 @@ namespace AESCConstruct25.UI
             LoadCustomFileList();
         }
 
+        // Scans the Custom folder for supported fastener files and updates the custom-file dropdown.
         private void LoadCustomFileList()
         {
             Directory.CreateDirectory(CustomFolderPath);
@@ -112,7 +119,7 @@ namespace AESCConstruct25.UI
             SelectedCustomFile = CustomFileOptions.FirstOrDefault();
         }
 
-        // Handles the Browse… button click
+        // Handles the Browse… button to import a custom fastener file into the shared Custom folder.
         private void BrowseCustomButton_Click(object sender, RoutedEventArgs e)
         {
             string selectedPath;
@@ -157,7 +164,7 @@ namespace AESCConstruct25.UI
             Application.ReportStatus("Custom fastener imported successfully.", StatusMessageType.Error, null);
         }
 
-        // INotifyPropertyChanged...
+        // Raises INotifyPropertyChanged for bound properties.
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged(string prop)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
@@ -282,7 +289,7 @@ namespace AESCConstruct25.UI
         public int DistanceMm { get; set; } = 20;
         public bool LockDistance { get; set; }
 
-        // Called when Bolt-Type changes
+        // Refreshes the bolt-size options and selects the first size for the current bolt type.
         private void RefreshBoltSizes()
         {
             var sizes = _module.BoltSizesFor(SelectedBoltType).ToList();
@@ -308,6 +315,7 @@ namespace AESCConstruct25.UI
         /// Called when SelectedWasherTopType changes.
         /// Populates only the Top washer‐size list.
         /// </summary>
+        // Refreshes the washer-top size options and selects the first size for the current top washer type.
         private void RefreshWasherTopSizes()
         {
             var sizes = _module.WasherSizesFor(SelectedWasherTopType).ToList();
@@ -321,6 +329,7 @@ namespace AESCConstruct25.UI
         /// Called when SelectedWasherBottomType changes.
         /// Populates only the Bottom washer‐size list.
         /// </summary>
+        // Refreshes the washer-bottom size options and selects the first size for the current bottom washer type.
         private void RefreshWasherBottomSizes()
         {
             var sizes = _module.WasherSizesFor(SelectedWasherBottomType).ToList();
@@ -330,7 +339,7 @@ namespace AESCConstruct25.UI
             OnPropertyChanged(nameof(SelectedWasherBottomSize));
         }
 
-        // Called when Nut-Type changes
+        // Refreshes nut-size options and selects the first size for the current nut type.
         private void RefreshNutSizes()
         {
             var sizes = _module.NutSizesFor(SelectedNutType).ToList();
@@ -346,6 +355,7 @@ namespace AESCConstruct25.UI
         //    // you can call your CheckSize logic here
         //    FastenerModule.CheckSize();
         //}
+        // Handles the Get Sizes button by reading the selected hole and auto-selecting closest M-sizes in all combos.
         private void GetSizesButton_Click(object sender, RoutedEventArgs e)
         {
             Window window = Window.ActiveWindow;
@@ -405,6 +415,7 @@ namespace AESCConstruct25.UI
             SelectClosestSize(WasherBottomSizeCombo);
         }
 
+        // Gathers all UI selections and delegates fastener creation to the FastenerModule.
         private void InsertButton_Click(object sender, RoutedEventArgs e)
         {
             // Map UI name → CSV type for geometry
@@ -446,6 +457,7 @@ namespace AESCConstruct25.UI
 
         // helpers
 
+        // Updates the bolt preview image based on the selected bolt type and its primary standard.
         private void UpdateBoltImage()
         {
             // Logger.Log($"[FastenersControl] UpdateBoltImage for SelectedBoltType='{SelectedBoltType}'");
@@ -460,6 +472,7 @@ namespace AESCConstruct25.UI
             BoltImage.Source = new BitmapImage(uri);
         }
 
+        // Updates the top washer preview image based on the selected washer top type and its primary standard.
         private void UpdateWasherTopImage()
         {
             // Logger.Log($"[FastenersControl] UpdateWasherTopImage for SelectedWasherTopType='{SelectedWasherTopType}'");
@@ -474,6 +487,7 @@ namespace AESCConstruct25.UI
             WasherTopImage.Source = new BitmapImage(uri);
         }
 
+        // Updates the bottom washer preview image based on the selected washer bottom type and its primary standard.
         private void UpdateWasherBottomImage()
         {
             // Logger.Log($"[FastenersControl] UpdateWasherBottomImage for SelectedWasherBottomType='{SelectedWasherBottomType}'");
@@ -489,6 +503,7 @@ namespace AESCConstruct25.UI
             WasherBottomImage.Source = new BitmapImage(uri);
         }
 
+        // Updates the nut preview image based on the selected nut type and its primary standard.
         private void UpdateNutImage()
         {
             // Logger.Log($"[FastenersControl] UpdateNutImage for SelectedNutType='{SelectedNutType}'");
@@ -507,6 +522,7 @@ namespace AESCConstruct25.UI
         /// <summary>
         /// For strings like "DIN931 - ISO4014" or "DIN912", returns "DIN931" / "DIN912".
         /// </summary>
+        // Extracts the primary standard token (e.g. "DIN931") from a combined CSV fastener type string.
         private static string ExtractPrimaryStandard(string csvType)
         {
             if (string.IsNullOrWhiteSpace(csvType))
@@ -520,8 +536,7 @@ namespace AESCConstruct25.UI
             return token.Trim();
         }
 
-        // Try to read the current hole radius (in mm) from the user’s selection.
-        // Returns true if successful and sets radiusMM > 0.
+        // Try to read the current hole radius (in mm) from the user’s selection; returns true when > 0.
         private static bool TryGetHoleRadiusMm(out double radiusMM)
         {
             radiusMM = 0;
@@ -539,8 +554,7 @@ namespace AESCConstruct25.UI
             return radiusMM > 0;
         }
 
-        // Select the largest M-size whose radius (diameter/2) is <= radiusMM.
-        // comboBox items must be strings like "M6", "M8", etc. If no match, leaves selection unchanged.
+        // Selects the largest M-size in the given combo whose radius fits inside the given hole radius.
         private static void SelectClosestSize(System.Windows.Controls.ComboBox comboBox, double radiusMM)
         {
             if (comboBox == null || comboBox.Items.Count == 0)
@@ -570,7 +584,7 @@ namespace AESCConstruct25.UI
                 comboBox.SelectedIndex = selectedIndex;
         }
 
-        // Auto-pick helpers for each specific dropdown. If no circle / no match → first item.
+        // Automatically picks an appropriate bolt size based on selected hole radius, with fallback to first item.
         private void AutoPickBoltSize()
         {
             if (BoltSizeCombo == null || BoltSizeCombo.Items.Count == 0) return;
@@ -582,6 +596,7 @@ namespace AESCConstruct25.UI
                 BoltSizeCombo.SelectedIndex = 0;
         }
 
+        // Automatically picks an appropriate top washer size based on selected hole radius, with fallback to first item.
         private void AutoPickWasherTopSize()
         {
             if (WasherTopSizeCombo == null || WasherTopSizeCombo.Items.Count == 0) return;
@@ -593,6 +608,7 @@ namespace AESCConstruct25.UI
                 WasherTopSizeCombo.SelectedIndex = 0;
         }
 
+        // Automatically picks an appropriate bottom washer size based on selected hole radius, with fallback to first item.
         private void AutoPickWasherBottomSize()
         {
             if (WasherBottomSizeCombo == null || WasherBottomSizeCombo.Items.Count == 0) return;
@@ -604,6 +620,7 @@ namespace AESCConstruct25.UI
                 WasherBottomSizeCombo.SelectedIndex = 0;
         }
 
+        // Automatically picks an appropriate nut size based on selected hole radius, with fallback to first item.
         private void AutoPickNutSize()
         {
             if (NutSizeCombo == null || NutSizeCombo.Items.Count == 0) return;

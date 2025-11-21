@@ -1,4 +1,10 @@
-﻿using AESCConstruct25.Plates.Modules;
+﻿/*
+ PlatesControl is the WPF UI for inserting standard plates based on a CSV definition.
+ It loads plate definitions, exposes selectable types and sizes, maps CSV fields to UI,
+ and passes validated parameters to PlatesModule.CreatePlateFromUI to build geometry in SpaceClaim.
+*/
+
+using AESCConstruct25.Plates.Modules;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
@@ -35,6 +41,7 @@ namespace AESCConstruct25.UI
 
         private readonly List<PlateRecord> _records = new List<PlateRecord>();
 
+        // Initializes the plate control, loads CSV records, populates type list, and sets up localization.
         public PlatesControl()
         {
             InitializeComponent();
@@ -98,6 +105,8 @@ namespace AESCConstruct25.UI
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
+
+        // Raises the PropertyChanged event for WPF data binding.
         private void OnPropertyChanged(string prop) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         #endregion
@@ -159,6 +168,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // Copies the currently selected plate record values into the bottom input fields.
         private void PopulateBottomFields()
         {
             var rec = _records.FirstOrDefault(r =>
@@ -254,6 +264,7 @@ namespace AESCConstruct25.UI
             set { _insertInMiddle = value; OnPropertyChanged(nameof(InsertInMiddle)); }
         }
 
+        // Updates the measure image path according to the selected plate type.
         private void UpdatePlateImage()
         {
             string imageSuffix = SelectedProfileType switch
@@ -268,28 +279,34 @@ namespace AESCConstruct25.UI
             SelectedImageSource = $"/AESCConstruct25;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
         }
 
+        // Parses a string to double using invariant culture, returning 0 on failure.
         private double ParseDoubleSafe(string text)
         {
             double val;
             return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out val) ? val : 0;
         }
 
+        // Checks whether the string is numeric (optionally with decimal separator).
         private static bool IsNumericString(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return false;
             // Accept "12", "12.5", "12,5"
             return System.Text.RegularExpressions.Regex.IsMatch(s.Trim(), @"^\d+(?:[.,]\d+)?$");
         }
+
+        // Builds a key for natural (human-friendly) sorting of strings with embedded numbers.
         private static string NaturalSortKey(string input)
         {
             return System.Text.RegularExpressions.Regex.Replace(input ?? "", @"\d+", m => m.Value.PadLeft(10, '0'));
         }
 
+        // Returns the numeric value if the associated field is visible, otherwise 0.
         private double GetValueOrZero(string value, Visibility vis)
         {
             return vis == Visibility.Visible ? ParseDoubleSafe(value) : 0;
         }
 
+        // Handles the Create button; gathers and converts all inputs and calls PlatesModule.CreatePlateFromUI.
         private void CreateButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -331,6 +348,7 @@ namespace AESCConstruct25.UI
             }
         }
 
+        // Adjusts labels and visibility of measurement fields depending on the selected plate type.
         private void UpdateFieldLabelsAndVisibility()
         {
             // Default: show all, standard labels

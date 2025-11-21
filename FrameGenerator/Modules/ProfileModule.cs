@@ -1,4 +1,14 @@
-﻿using AESCConstruct25.FrameGenerator.Modules.Profiles;
+﻿/*
+ ProfileModule generates and manages frame/profile components along a selected path in SpaceClaim.
+
+ It is responsible for:
+ - Building a stable 3D frame from a path curve, offset and local up vector.
+ - Creating the correct cross-section geometry (built-in or DXF/CSV based) and extruding it along the path.
+ - Creating or reusing SpaceClaim components, assigning metadata + layers and constructing hidden helper curves.
+ - Providing utilities for profile argument extraction, axis selection, naming and custom property management.
+*/
+
+using AESCConstruct25.FrameGenerator.Modules.Profiles;
 using AESCConstruct25.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
@@ -19,6 +29,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
 {
     public static class ProfileModule
     {
+        // Builds the profile cross-section, extrudes it along the selected curve and inserts or reuses a component in the document.
         public static void ExtrudeProfile(
             Window window,
             string profileType,
@@ -173,6 +184,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             db.Layer = framesLayer;
         }
 
+        // Returns the world axis vector that is most orthogonal to the given vector v.
         private static Vector MostOrthogonalWorldAxis(Vector v)
         {
             var axes = new[] { Vector.Create(0, 0, 1), Vector.Create(0, 1, 0), Vector.Create(1, 0, 0) };
@@ -186,6 +198,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             return best;
         }
 
+        // Maps the profile type + profileData dictionary into the ordered argument list expected by the profile classes.
         private static string[] GetArgs(string profileType, Dictionary<string, string> pd)
         {
             string g(string k) => pd != null && pd.TryGetValue(k, out var v) ? v : "0";
@@ -201,6 +214,8 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 default: return pd?.Values.ToArray() ?? Array.Empty<string>();
             }
         }
+
+        // Returns the logical profile name from profileData["Name"], or an empty string if not present.
         private static string GetProfileName(Dictionary<string, string> profileData)
         {
             if (profileData != null
@@ -218,7 +233,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
         }
 
 
-        // --- your existing CreateComponent (unchanged) ---
+        // Creates a new Part/Component for the profile, assigns metadata, layers and helper curves, and returns the component.
         private static Component CreateComponent(
             Document doc,
             string profileType,
@@ -295,6 +310,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             CreateCustomProperty(part, "Name", profileName);
 
             // helper to parse a numeric parameter
+            // Parses a numeric value from profileData[key] using invariant culture, returning 0.0 on failure.
             double GetNum(string key)
             {
                 if (!profileData.TryGetValue(key, out var raw))
@@ -388,6 +404,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
             return comp;
         }
 
+        // Creates or updates a custom property on the given Part, storing newValue as a string.
         private static void CreateCustomProperty(Part part, string key, object newValue)
         {
             // 1) Convert newValue to a string

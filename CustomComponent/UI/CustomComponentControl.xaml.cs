@@ -1,4 +1,9 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
+﻿/*
+ CustomComponentControl lets users apply, update and remove document/component custom
+ properties in SpaceClaim based on CSV templates, for both the active document and components.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities;
 using AESCConstruct25.Properties;
 using SpaceClaim.Api.V242;
 using System;
@@ -21,6 +26,7 @@ namespace AESCConstruct25.UI
         // Map display name -> full path so button handlers can open the file later
         private readonly Dictionary<string, string> _templateMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        // Resolves a CSV path that may be relative (under ProgramData\AESCConstruct) or absolute.
         private string ResolveCsvPath(string relOrAbs)
         {
             if (string.IsNullOrWhiteSpace(relOrAbs))
@@ -35,6 +41,7 @@ namespace AESCConstruct25.UI
                 );
         }
 
+        // Initializes the custom component control UI, localization and loads template options.
         public CustomComponentControl()
         {
             InitializeComponent();
@@ -47,18 +54,18 @@ namespace AESCConstruct25.UI
             LoadTemplateOptions();
         }
 
-        // Templates dropdown
+        // Templates dropdown backing collection and selected item.
         public ObservableCollection<string> TemplateOptions { get; }
         public string SelectedTemplate { get; set; }
 
-        // Expose full path of the selected template (optional helper for button handlers)
+        // Returns the full file path for the currently selected template name, if any.
         private string GetSelectedTemplateFullPath()
         {
             if (string.IsNullOrWhiteSpace(SelectedTemplate)) return null;
             return _templateMap.TryGetValue(SelectedTemplate, out var full) ? full : null;
         }
 
-        // Scan the configured folder for all .csv templates and populate the dropdown
+        // Scans the configured folder for CSV templates and populates the TemplateOptions list.
         private void LoadTemplateOptions()
         {
             _templateMap.Clear();
@@ -107,10 +114,7 @@ namespace AESCConstruct25.UI
                 StatusMessageType.Information, null);
         }
 
-        // --- Button handlers ---
-        // Inside AESCConstruct25.UI.CustomComponentControl
-
-        // --- Button handlers ---
+        // Handles “Add document properties” button: merges CSV-defined props into Document.CustomProperties.
         private void AddDocPropsButton_Click(object sender, RoutedEventArgs e)
         {
             string runId = Guid.NewGuid().ToString("N");
@@ -201,6 +205,7 @@ namespace AESCConstruct25.UI
             Logger.Log($"[AddDocProps:{runId}] DONE");
         }
 
+        // Handles “Delete document properties” button: removes Document.CustomProperties that are listed in the CSV template.
         private void DeleteDocPropsButton_Click(object sender, RoutedEventArgs e)
         {
             string runId = Guid.NewGuid().ToString("N");
@@ -290,7 +295,7 @@ namespace AESCConstruct25.UI
         }
 
 
-        // --- Helpers ---
+        // Dumps all current document custom properties to the log, with type and value information.
         private static void DumpDocProps(Document doc, string label, string runId)
         {
             Logger.Log($"[DumpDOC:{runId}] ---- {label} ----");
@@ -307,7 +312,7 @@ namespace AESCConstruct25.UI
             Logger.Log($"[DumpDOC:{runId}] ---- total {i} ----");
         }
 
-        // Read CSV as ordered (Key, DefaultValue). Supports comma or semicolon separators, quoted values, comment lines (# or //).
+        // Reads a template CSV into ordered (Key, DefaultValue) tuples, with flexible separators and comments.
         private static List<(string Key, string DefaultValue)> ReadTemplateProperties(string csvFullPath, string runId, bool skipHeaderRow)
         {
             Logger.Log($"[CSV:{runId}] Reading '{csvFullPath}'...");
@@ -353,9 +358,7 @@ namespace AESCConstruct25.UI
             return result;
         }
 
-        // Keep existing values. Re-create in the order:
-        // 1) All CSV keys (existing value if present, otherwise CSV default)
-        // 2) All remaining existing keys (not in CSV), preserving their relative order.
+        // Rebuilds Document.CustomProperties in CSV-driven order, preserving existing values and trailing keys.
         private static void RebuildDocPropertiesInOrder(
             Document doc,
             List<(string Key, string DefaultValue)> csvProps,
@@ -408,6 +411,7 @@ namespace AESCConstruct25.UI
             Logger.Log($"[RebuildDOC:{runId}] END");
         }
 
+        // Tries to delete a document custom property using either static APIs or instance Delete() via reflection.
         private static bool TryDeleteCustomProperty(CustomPropertyDictionary dict, string key, string runId)
         {
             try
@@ -464,7 +468,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-
+        // Creates a document-level custom property via the SpaceClaim API or via dictionary fallbacks.
         private static void CreateDocumentCustomProperty(Document doc, string key, string value, string runId)
         {
             try
@@ -518,7 +522,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        // Return existing custom properties in their current enumeration order.
+        // Enumerates existing document custom properties and returns them as key/value strings.
         private static List<KeyValuePair<string, string>> GetExistingDocProps(Document doc, string runId)
         {
             Logger.Log($"[ExistDOC:{runId}] Enumerating Document.CustomProperties...");
@@ -539,6 +543,7 @@ namespace AESCConstruct25.UI
             return list;
         }
 
+        // Uses reflection to extract the underlying Value object from a custom property entry.
         private static object GetCustomPropertyValueObject(object customPropEntry)
         {
             if (customPropEntry == null) return null;
@@ -546,6 +551,7 @@ namespace AESCConstruct25.UI
             return p != null ? p.GetValue(customPropEntry) : null;
         }
 
+        // Returns existing part-level custom properties for a Part as key/value strings.
         private static List<KeyValuePair<string, string>> GetExistingPartProps(Part part)
         {
             var list = new List<KeyValuePair<string, string>>();
@@ -559,7 +565,7 @@ namespace AESCConstruct25.UI
             return list;
         }
 
-
+        // Normalizes an arbitrary value into a string (bools lowercased, numeric via invariant culture).
         private static string FormatValueAsString(object value)
         {
             if (value == null) return string.Empty;
@@ -572,7 +578,7 @@ namespace AESCConstruct25.UI
             return value.ToString();
         }
 
-        // Create property (always string). Do NOT overwrite semantics are enforced by the rebuild logic (we keep old values).
+        // Creates or updates a part custom property as a string; rebuild logic controls overwrite semantics.
         private static void CreateCustomProperty(Part part, string key, object newValue)
         {
             string valueString;
@@ -598,6 +604,7 @@ namespace AESCConstruct25.UI
                 CustomPartProperty.Create(part, key, valueString);
         }
 
+        // Deletes a part-level custom property if it exists (case-insensitively) on the Part.
         private static void DeletePartProperty(Part part, string key)
         {
             if (part == null || string.IsNullOrWhiteSpace(key)) return;
@@ -611,6 +618,7 @@ namespace AESCConstruct25.UI
                 kv.Value.Delete(); // instance method per V242 API
         }
 
+        // Rebuilds a Part's custom properties from CSV order while preserving non-CSV properties at the end.
         private static void RebuildPartPropertiesInOrder(
             Part part,
             List<(string Key, string DefaultValue)> csvProps)
@@ -637,7 +645,7 @@ namespace AESCConstruct25.UI
                 CreateCustomProperty(part, kv.Key, kv.Value);
         }
 
-        // Split by comma or semicolon, honoring quotes.
+        // Splits a single CSV line into fields, handling quotes and comma/semicolon separators.
         private static List<string> SplitCsvLineFlexible(string line)
         {
             var result = new List<string>();
@@ -660,6 +668,7 @@ namespace AESCConstruct25.UI
             return result;
         }
 
+        // Trims wrapping double quotes from a string if both first and last characters are quotes.
         private static string TrimQuotes(string s)
         {
             if (string.IsNullOrEmpty(s)) return s;
@@ -669,6 +678,7 @@ namespace AESCConstruct25.UI
             return s;
         }
 
+        // Applies template properties from the selected CSV to all currently selected Components.
         private void AddToSelectionButton_Click(object sender, RoutedEventArgs e)
         {
             var window = Window.ActiveWindow;
@@ -709,7 +719,7 @@ namespace AESCConstruct25.UI
             Application.ReportStatus("Component properties added to selection.", StatusMessageType.Information, null);
         }
 
-
+        // Deletes template-defined properties from all currently selected Components based on the CSV keys.
         private void DeleteFromSelectionButton_Click(object sender, RoutedEventArgs e)
         {
             var window = Window.ActiveWindow;
@@ -752,8 +762,7 @@ namespace AESCConstruct25.UI
             Application.ReportStatus("Component properties deleted from selection.", StatusMessageType.Information, null);
         }
 
-
-
+        // Applies template-defined properties to all components in the main part of the active document.
         private void AddToAllButton_Click(object sender, RoutedEventArgs e)
         {
             var window = Window.ActiveWindow;
@@ -795,7 +804,7 @@ namespace AESCConstruct25.UI
             Application.ReportStatus("Component properties added to all components.", StatusMessageType.Information, null);
         }
 
-
+        // Deletes template-defined properties from all components in the main part of the active document.
         private void DeleteFromAllButton_Click(object sender, RoutedEventArgs e)
         {
             var window = Window.ActiveWindow;
@@ -839,9 +848,7 @@ namespace AESCConstruct25.UI
             Application.ReportStatus("Deleted component properties from all components.", StatusMessageType.Information, null);
         }
 
-
-
-        // Simple, C# 7.3–compatible: use only the current selection and filter to Component.
+        // Returns only Component instances from the current SpaceClaim selection, logging them for diagnostics.
         private static List<Component> GetSelectedComponents(Window window)
         {
             var sel = window?.ActiveContext?.Selection;

@@ -1,4 +1,10 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities; // Logger
+﻿/*
+ RibCutOutModule contains the geometric core for creating half-lap rib cut-out joints.
+ It builds local frames from body edges, constructs cutter prisms and optional weld-round cylinders,
+ and subtracts them from body pairs to form the final joint geometry.
+*/
+
+using AESCConstruct25.FrameGenerator.Utilities; // Logger
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -28,19 +34,24 @@ namespace AESCConstruct25.RibCutout.Modules
 
         const double edgeOffset = 100.0;
 
+        // Formats a double using invariant culture with up to 8 decimals.
         static string F(double d) => d.ToString("0.########", CultureInfo.InvariantCulture);
 
+        // Returns the geometric center point of a box.
         static Point CenterOf(Box box)
         {
             var v = 0.5 * (box.MinCorner.Vector + box.MaxCorner.Vector);
             return Point.Create(v.X, v.Y, v.Z);
         }
 
+        // Normalizes a vector; returns original if its magnitude is near zero.
         static Vector VNorm(Vector v)
         {
             var m = Math.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
             return (m > 1e-12) ? Vector.Create(v.X / m, v.Y / m, v.Z / m) : v;
         }
+
+        // Computes the cross product of two vectors.
         static Vector VCross(Vector a, Vector b)
         {
             return Vector.Create(
@@ -50,6 +61,7 @@ namespace AESCConstruct25.RibCutout.Modules
             );
         }
 
+        // Draws debug axis lines (X, Y, Z) in the given frame inside the active part.
         static void AddAxes(Frame f, string name, double len = 0.01)
         {
             var o = f.Origin;
@@ -58,6 +70,7 @@ namespace AESCConstruct25.RibCutout.Modules
             AddPolyline(new[] { o, o + f.DirZ.ToVector() * len }, $"{name}/Z", Color.Blue);
         }
 
+        // Creates colored debug line segments in the active part between successive points.
         static void AddPolyline(IReadOnlyList<Point> pts, string name, Color color)
         {
             if (s_part == null || pts == null || pts.Count < 2)
@@ -73,6 +86,7 @@ namespace AESCConstruct25.RibCutout.Modules
             }
         }
 
+        // Derives a local orthogonal frame for a body based on its edge directions and extents.
         static Frame CreateLocalFrameFromEdges(Body body)
         {
             // 1. Gather all edge directions in world space
@@ -165,6 +179,7 @@ namespace AESCConstruct25.RibCutout.Modules
             );
         }
 
+        // Builds a rectangular prism in a local frame, applying tolerance and optional middle tolerance.
         static Body MakeRectPrism(Frame local, double x0, double y0, double z0, double x1, double y1, double z1, double toleranceMM, bool middleTolerance, bool perpendicularCut)
         {
             // Apply tolerance in X and Z directions (widen symmetrically)
@@ -198,6 +213,7 @@ namespace AESCConstruct25.RibCutout.Modules
             return body;
         }
 
+        // Transforms local frame coordinates (lx, ly, lz) into world coordinates.
         static Point ToWorld(Frame f, double lx, double ly, double lz)
         {
             var ox = f.Origin.X; var oy = f.Origin.Y; var oz = f.Origin.Z;
@@ -210,7 +226,7 @@ namespace AESCConstruct25.RibCutout.Modules
             return p;
         }
 
-        // Creates two cylinders on the split-side corners of 'cutter' and returns them as Body shapes.
+        // Creates weld-round cylinders at the split-side corners based on cutter frame and split line.
         // - 'local' is the frame used to create the cutter
         // - 'yMid' is the split line (near side) in that same local frame
         // - 'weldRoundRadius' is in millimeters (converted to meters here)
@@ -315,6 +331,7 @@ namespace AESCConstruct25.RibCutout.Modules
             return result;
         }
 
+        // Main entry: creates half-lap joints for each body pair, including optional weld rounds and logging.
         public static void CreateHalfLapJoints(
             Document doc,
             List<(Body A, Body B)> pairs,

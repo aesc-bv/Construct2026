@@ -1,4 +1,18 @@
-﻿//////using System;
+﻿/*
+ RotateComponentCommand centralizes all rotation logic for Construct components.
+
+ Active implementation:
+ - Rotates each component around the axis defined by its (ConstructCurve) profile in world space.
+ - Keeps that axis curve visually fixed by rebuilding it in the new local frame after rotation.
+ - Accumulates the total rotation in the Part’s "RotationAngle" custom property.
+
+ Differences with commented variants:
+ - Top legacy block (//////...): rotates only the DesignBody.Shape around a local curve axis; it does not change Component.Placement and only touches the body, so the component transform stays unchanged.
+ - Middle legacy ApplyRotation (under the XML summary): rotates the component around its local Z axis through the component origin, not around the actual profile/ConstructCurve axis.
+ - Bottom legacy block (after the active class): rotates the component around the first curve axis and additionally "bakes" the same rotation into all template DesignCurves; it also has helpers to reapply the stored RotationAngle to components or detached Body instances.
+*/
+
+//////using System;
 //////using System.Collections.Generic;
 //////using System.Linq;
 //////using AESCConstruct25.FrameGenerator.Modules;
@@ -93,6 +107,7 @@ namespace AESCConstruct25.Commands
 {
     public static class RotateComponentCommand
     {
+        // Legacy Execute overload: rotates all currently selected components by a given angle using the old ApplyRotation implementation above.
         //public static void Execute(Window window, double rotationAngleDegrees)
         //{
         //    if (window == null) return;
@@ -101,6 +116,7 @@ namespace AESCConstruct25.Commands
         //    ApplyRotation(window, components, rotationAngleDegrees);
         //}
 
+        // Legacy helper: reads "RotationAngle" from each component and reapplies it using the old ApplyRotation overload without re-storing the property.
         //public static void ApplyStoredRotation(Window window, List<Component> components)
         //{
         //    if (window == null || components == null) return;
@@ -122,6 +138,7 @@ namespace AESCConstruct25.Commands
         /// then counter–rotates that curve so it remains fixed in world space.
         /// Also accumulates a "RotationAngle" custom property on the Part.
         /// </summary>
+        // Legacy ApplyRotation: rotates around local Z through the component origin, not around the ConstructCurve axis, and then rebuilds only the first DesignCurve.
         //public static void ApplyRotation(
         //    Window window,
         //    List<Component> components,
@@ -199,6 +216,8 @@ namespace AESCConstruct25.Commands
         //        }
         //    }
         //}
+
+        // Rotates each component around its (ConstructCurve) axis in world space, keeps that axis curve visually fixed, and updates the "RotationAngle" part property.
         public static void ApplyRotation(
             Window window,
             List<Component> components,
@@ -470,4 +489,3 @@ namespace AESCConstruct25.Commands
 //        }
 //    }
 //}
-
