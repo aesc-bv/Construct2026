@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -112,6 +113,11 @@ namespace AESCConstruct25.FrameGenerator.UI
             AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
             AnchorYTextBox.Text = Settings.Default.TableAnchorY.ToString();
 
+            var lic = ConstructLicenseSpot.CurrentLicense;
+            LicenseTypeValue.Text = lic == null
+                ? string.Empty
+                : (lic.IsNetwork ? "Network" : "Local");
+
             // License block
             SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? "";
             LicenseStatusValue.Text = ConstructLicenseSpot.Status;
@@ -156,8 +162,15 @@ namespace AESCConstruct25.FrameGenerator.UI
             Settings.Default.MatInBOM = Checkbox_BOMMaterial.IsChecked == true;
             Settings.Default.MatInSTEP = Checkbox_STEPMaterial.IsChecked == true;
 
+
             // Refresh license state from disk (no modal)
             ConstructLicenseSpot.CheckLicense();
+
+            var lic = ConstructLicenseSpot.CurrentLicense;
+            LicenseTypeValue.Text = lic == null
+                ? string.Empty
+                : (lic.IsNetwork ? "Network" : "Local");
+
             LicenseStatusValue.Text = ConstructLicenseSpot.Status;
             var expiration = ConstructLicenseSpot.CurrentLicense?.GetTimeLimit()?.EndDate;
             LicenseDetailsValue.Text = expiration.HasValue ? expiration.Value.ToShortDateString() : string.Empty;
@@ -227,6 +240,11 @@ namespace AESCConstruct25.FrameGenerator.UI
             var expiration = ConstructLicenseSpot.CurrentLicense?.GetTimeLimit()?.EndDate;
             LicenseDetailsValue.Text = expiration.HasValue ? expiration.Value.ToShortDateString() : string.Empty;
 
+            var lic = ConstructLicenseSpot.CurrentLicense;
+            LicenseTypeValue.Text = lic == null
+                ? string.Empty
+                : (lic.IsNetwork ? "Network" : "Local");
+
             if (SerialNumberTextBox.Text is string sn)
                 Settings.Default.SerialNumber = sn;
 
@@ -281,17 +299,16 @@ namespace AESCConstruct25.FrameGenerator.UI
                 string relPath = (string)Settings.Default[settingKey];
                 string fullPath = relPath;
 
-                // Create a 2x2 grid (Col0: *, Col1: 30) (Row0: Auto, Row1: Auto)
                 var grid = new Grid
                 {
                     Margin = new Thickness(0, 5, 0, 0)
                 };
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
                 grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-                // Label at (0,0)
                 var lbl = new Label
                 {
                     Content = labelText,
@@ -302,25 +319,24 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Grid.SetRow(lbl, 0);
                 grid.Children.Add(lbl);
 
-                // TextBox at (0,1)
                 var txt = new TextBox
                 {
                     Text = fullPath,
-                    Tag = settingKey,
+                    Tag = settingKey
                 };
                 Grid.SetColumn(txt, 0);
                 Grid.SetRow(txt, 1);
                 grid.Children.Add(txt);
 
-                // Browse button at (1,1)
                 var btn = new Button
                 {
                     Width = 16,
                     Height = 16,
                     Margin = new Thickness(2, 0, 2, 0),
-                    Tag = settingKey,
+                    Tag = settingKey + "btn",
                     Background = System.Windows.Media.Brushes.Transparent,
                     BorderBrush = System.Windows.Media.Brushes.Transparent,
+                    ToolTip = "Select new file",
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(0),
                     VerticalAlignment = System.Windows.VerticalAlignment.Center
@@ -337,11 +353,53 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Grid.SetRow(btn, 1);
                 grid.Children.Add(btn);
 
+                var folderBtn = new Button
+                {
+                    Width = 16,
+                    Height = 16,
+                    Margin = new Thickness(2, 0, 2, 0),
+                    Tag = settingKey+"folderbtn",
+                    Background = System.Windows.Media.Brushes.Transparent,
+                    BorderBrush = System.Windows.Media.Brushes.Transparent,
+                    ToolTip = "Open file location",
+                    BorderThickness = new Thickness(0),
+                    Padding = new Thickness(0),
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
+                };
+                var folderIcon = new System.Windows.Controls.Image
+                {
+                    Source = new System.Windows.Media.Imaging.BitmapImage(
+                        new Uri("pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/openFolder.png")
+                    )
+                };
+                folderBtn.Content = folderIcon;
+                //folderBtn.Click += OpenFolder(fullPath);
+                folderBtn.Click += (s, e) =>
+                {
+                    var path = txt.Text.Trim(); // e.g., the sibling TextBox
+                    var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "explorer.exe",
+                            Arguments = $"\"{dir}\"",
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        Application.ReportStatus("Folder not found.", StatusMessageType.Warning, null);
+                    }
+                };
+                Grid.SetColumn(folderBtn, 2);
+                Grid.SetRow(folderBtn, 1);
+                grid.Children.Add(folderBtn);
+
                 // Add the grid (containing label, textbox, button) to the panel
                 CsvPathsPanel.Children.Add(grid);
             }
         }
-
 
         private void BrowseCsvButton_Click(object sender, RoutedEventArgs e)
         {
@@ -364,9 +422,40 @@ namespace AESCConstruct25.FrameGenerator.UI
             textBox.Text = dlg.FileName;
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
-        // EXPORT (System.Text.Json)
-        // ─────────────────────────────────────────────────────────────────────────────
+        //public static void OpenFolder(string folderPath)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(folderPath))
+        //        {
+        //            Application.ReportStatus("No folder path provided.", StatusMessageType.Warning, null);
+        //            return;
+        //        }
+
+        //        // Expand %VAR% and normalize
+        //        var path = Environment.ExpandEnvironmentVariables(folderPath);
+        //        path = Path.GetFullPath(path);
+
+        //        if (!Directory.Exists(path))
+        //        {
+        //            Application.ReportStatus($"Folder not found:\n{path}", StatusMessageType.Warning, null);
+        //            return;
+        //        }
+
+        //        var psi = new ProcessStartInfo
+        //        {
+        //            FileName = "explorer.exe",
+        //            Arguments = $"\"{path}\"",
+        //            UseShellExecute = true
+        //        };
+        //        Process.Start(psi);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Application.ReportStatus("Could not open folder:\n" + ex.Message, StatusMessageType.Error, null);
+        //    }
+        //}
+
         private void ExportSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -487,7 +576,12 @@ namespace AESCConstruct25.FrameGenerator.UI
 
                 // Text fields
                 PartNameTextBox.Text = Settings.Default.NameString ?? string.Empty;
-                SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? string.Empty;
+                SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? "";
+
+                var lic = ConstructLicenseSpot.CurrentLicense;
+                LicenseTypeValue.Text = lic == null
+                    ? string.Empty
+                    : (lic.IsNetwork ? "Network" : "Local");
 
                 // Checkboxes
                 Checkbox_ExcelMaterial.IsChecked = Settings.Default.MatInExcel;

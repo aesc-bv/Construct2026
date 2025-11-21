@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="NameString" Type="System.String" Scope="User">
-      <Value Profile="(Default)">[Name]_[p1]x[p2]_[length]</Value>
+      <Value Profile="(Default)">[Name]_[w]x[h]_[length]</Value>
     </Setting>
     <Setting Name="TypeString" Type="System.String" Scope="User">
       <Value Profile="(Default)">Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U</Value>
@@ -27,7 +27,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="SerialNumber" Type="System.String" Scope="User">
-      <Value Profile="(Default)">null</Value>
+      <Value Profile="(Default)">Enter serial number</Value>
     </Setting>
     <Setting Name="LicenseValid" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

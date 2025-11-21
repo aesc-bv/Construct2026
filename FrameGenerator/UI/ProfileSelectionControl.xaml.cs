@@ -973,7 +973,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                         try
                         {
                             ExtrudeProfileCommand.ExecuteExtrusion(
-                                "CSV",      // e.g. “square”
+                                "CSV",              // e.g. “square”
                                 curves,            // List<ITrimmedCurve>
                                 false,             // always solid for user-saved
                                 offsetX,

@@ -19,7 +19,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\</OutputPath>
+    <OutputPath>..\..\..\..\..\..\ProgramData\SpaceClaim\AddIns\AESCConstruct25\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -358,5 +358,8 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Plates\UI\Images\Img_Measures_Plate_4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="FrameGenerator\UI\Images\openFolder.png" />
   </ItemGroup>
 </Project>

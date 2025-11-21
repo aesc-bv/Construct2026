@@ -379,8 +379,9 @@
                              Tag="lblFasteners_Distance"
                              Width="60"
                              Text="{Binding DistanceMm}" />
-                    <CheckBox Content="Overwrite distance"
+                    <CheckBox Content="Clamping distance"
                               Tag="lblFasteners_overwriteDist"
+                              x:Name="lblFasteners_overwriteDist"
                               IsChecked="{Binding OverwriteDistance}"
                               Margin="5,0,0,0"
                               VerticalAlignment="Center" />

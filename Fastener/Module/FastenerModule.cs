@@ -173,8 +173,6 @@ namespace AESCConstruct25.Fastener.Module
             return washerPart;
         }
 
-
-
         public static List<PlacementData> GetPlacementDataSelection(ICollection<IDocObject> selection, ICollection<IDocObject> secondSelection)
         {
             // 1) Make sure we actually have something selected
@@ -436,12 +434,12 @@ namespace AESCConstruct25.Fastener.Module
 
                         Matrix matrixMapping = Matrix.CreateMapping(SpaceClaim.Api.V242.Geometry.Frame.Create(PD.Origin, PD.Direction));
                         Matrix matrixBolt = matrixMapping;
-                        if (_overwriteDistance)
-                        {
-                            // parDistance is in mm; convert to m (×0.001)
-                            matrixBolt = matrixMapping
-                                * Matrix.CreateTranslation(Vector.Create(0, 0, parDistance * 0.001));
-                        }
+                        //if (_overwriteDistance)
+                        //{
+                        //    // parDistance is in mm; convert to m (×0.001)
+                        //    matrixBolt = matrixMapping
+                        //        * Matrix.CreateTranslation(Vector.Create(0, 0, parDistance * 0.001));
+                        //}
 
                         if (this.includeWasherTop)
                         {
@@ -449,12 +447,12 @@ namespace AESCConstruct25.Fastener.Module
                             Part washerPart = GetWasherPart(doc, washerTopName, _washerTop, out Component componentWasherTop);
                             // Logger.Log($"[CreateFasteners] Transforming TOP washer component...");
                             matrixBolt = matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, _washerTop.s * 0.001));
-                            if (_overwriteDistance)
-                            {
-                                // parDistance is in mm; convert to m (×0.001)
-                                matrixBolt = matrixMapping
-                                    * Matrix.CreateTranslation(Vector.Create(0, 0, (parDistance + _washerTop.s) * 0.001));
-                            }
+                            //if (_overwriteDistance)
+                            //{
+                            //    // parDistance is in mm; convert to m (×0.001)
+                            //    matrixBolt = matrixMapping
+                            //        * Matrix.CreateTranslation(Vector.Create(0, 0, (parDistance + _washerTop.s) * 0.001));
+                            //}
                             // Logger.Log($"[CreateFasteners] Transform COMPLETE for TOP washer");
                             componentWasherTop.Transform(matrixMapping);
                         }
@@ -515,23 +513,95 @@ namespace AESCConstruct25.Fastener.Module
                             componentBolt.Transform(matrixBolt);
                         }
 
-                        double displacementZ = -PD.Depth;
+                        //double displacementZ = -PD.Depth;
+                        //double overwriteDistM = _overwriteDistance ? (parDistance * 0.001) : 0.0;
 
+                        //if (this.includeWasherBottom)
+                        //{
+                        //    Part washerPart = GetWasherPart(doc, washerBottomName, _washerBottom, out Component componentWasherBottom);
+
+                        //    displacementZ += -0.001 * _washerBottom.s;
+
+                        //    // Apply overwrite distance shift (downwards) in addition to normal displacement
+                        //    componentWasherBottom.Transform(
+                        //        matrixMapping *
+                        //        Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ - overwriteDistM))
+                        //    );
+                        //}
+
+                        //if (this.includeNut)
+                        //{
+                        //    Part nutPart = GetNutPart(doc, nutName, nutType, _nut, out Component componentNut);
+
+                        //    displacementZ += -0.001 * _nut.h;
+
+                        //    // Apply overwrite distance shift (downwards) here as well
+                        //    componentNut.Transform(
+                        //        matrixMapping *
+                        //        Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ - overwriteDistM))
+                        //    );
+                        //}
+                        double displacementZ = -PD.Depth; // keep for normal (non-overwrite) behavior
+                        double overwriteDistM = _overwriteDistance ? (parDistance * 0.001) : 0.0;
+
+                        // Compute the "bottom of top washer" reference (if you have a top washer)
+                        // If you don’t have a top washer, this becomes the top face (0).
+                        double zBottomOfTopWasher =
+                            this.includeWasherTop ? -(0.001 * _washerTop.s) : 0.0;
+
+                        // -----------------------------
+                        // Bottom washer placement
+                        // -----------------------------
                         if (this.includeWasherBottom)
                         {
-                            // Logger.Log($"[CreateFasteners] Inserting BOTTOM washer 'name'");
                             Part washerPart = GetWasherPart(doc, washerBottomName, _washerBottom, out Component componentWasherBottom);
-                            // Logger.Log($"[CreateFasteners] Transforming BOTTOM washer component...");
-                            displacementZ += -0.001 * _washerBottom.s;
-                            componentWasherBottom.Transform(matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ)));
-                            // Logger.Log($"[CreateFasteners] Transform COMPLETE for BOTTOM washer");
+
+                            if (_overwriteDistance)
+                            {
+                                double zWasherBottom = (zBottomOfTopWasher - overwriteDistM);// - (0.001 * _washerBottom.s);
+
+                                componentWasherBottom.Transform(
+                                    matrixMapping *
+                                    Matrix.CreateTranslation(Vector.Create(0, 0, zWasherBottom))
+                                );
+                            }
+                            else
+                            {
+                                // original (non-overwrite) behavior: stack from PD.Depth
+                                displacementZ += -0.001 * _washerBottom.s;
+                                componentWasherBottom.Transform(
+                                    matrixMapping *
+                                    Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ))
+                                );
+                            }
                         }
 
+                        // -----------------------------
+                        // Nut placement
+                        // -----------------------------
                         if (this.includeNut)
                         {
                             Part nutPart = GetNutPart(doc, nutName, nutType, _nut, out Component componentNut);
-                            displacementZ += -0.001 * _nut.h;
-                            componentNut.Transform(matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ)));
+
+                            if (_overwriteDistance)
+                            {
+                                double zNut = (zBottomOfTopWasher - overwriteDistM)
+                                              //- (0.001 * _washerBottom.s) // sits directly under bottom washer
+                                              - (0.001 * _nut.h);         // drop the nut body below its top face
+
+                                componentNut.Transform(
+                                    matrixMapping *
+                                    Matrix.CreateTranslation(Vector.Create(0, 0, zNut))
+                                );
+                            }
+                            else
+                            {
+                                displacementZ += -0.001 * _nut.h;
+                                componentNut.Transform(
+                                    matrixMapping *
+                                    Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ))
+                                );
+                            }
                         }
                     }
                 });

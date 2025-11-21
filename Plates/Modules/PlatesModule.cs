@@ -64,69 +64,130 @@ namespace AESCConstruct25.Plates.Modules
 
             WriteBlock.ExecuteTask("Create part", () =>
             {
-                foreach (var obj in selection)
+                // 1) Expand the current selection into face jobs (face + its transform to master)
+                var jobs = ExpandSelectionToPlanarFaces(Window.ActiveWindow.ActiveContext.Selection);
+
+                if (jobs.Count == 0)
+                {
+                    Application.ReportStatus("No planar faces found in selection.", StatusMessageType.Warning, null);
+                    return;
+                }
+
+                foreach (var (df, toMaster, src) in jobs)
                 {
                     try
                     {
-                        DesignFace df = obj as DesignFace;
-                        var matrix = Matrix.Identity;
-
-                        if (obj is IDesignFace idf)
-                        {
-                            df = idf.Master;
-                            matrix = idf.TransformToMaster;
-                        }
-                        if (df == null)
-                        {
-                            Application.ReportStatus("Selected object is not a valid face.", StatusMessageType.Warning, null);
-                            continue;
-                        }
-
+                        // --- master geometry & plane
                         var plane = df.Shape.Geometry as Plane;
-                        if (plane == null)
+                        if (plane == null) continue; // filtered already, but double-safeguard
+
+                        // Try to get the user click for *this* source; fall back to face center
+                        var bbM = df.Shape.GetBoundingBox(Matrix.Identity, true);
+                        Point selPointWorld = bbM.Center;
+                        try
                         {
-                            Application.ReportStatus("Selected face is not planar.", StatusMessageType.Warning, null);
-                            continue;
+                            if (src is IDocObject srcObj)
+                            {
+                                var sp = Window.ActiveWindow.ActiveContext.GetSelectionPoint(srcObj);
+                                if (sp is Point pw) selPointWorld = pw;
+                            }
+                        }
+                        catch { /* box/whole-body case -> keep center */ }
+
+                        // Project to this face plane (MASTER)
+                        var selOnPlane = plane.ProjectPoint(selPointWorld).Point;
+
+                        // Choose placement point
+                        Point pMaster = insertPlateMid
+                            ? bbM.Center
+                            : Point.Create(selOnPlane.X, selOnPlane.Y, bbM.Center.Z);
+
+                        // Face normal (respect “reversed”)
+                        var nMaster = df.Shape.ProjectPoint(selOnPlane).Normal;
+                        if (df.Shape.IsReversed) nMaster = -nMaster;
+
+                        // If this face came from an occurrence, move plane/normal/point into that local space
+                        if (!toMaster.IsIdentity)
+                        {
+                            plane = plane.CreateTransformedCopy(toMaster.Inverse);
+                            nMaster = toMaster.Inverse * nMaster;
+                            pMaster = toMaster.Inverse * pMaster;
                         }
 
-                        var rawPt = (Point)win.ActiveContext.GetSelectionPoint(selection.First());
-                        var selPoint = plane.ProjectPoint(rawPt).Point;
-
-                        var dirZ = df.Shape.IsReversed
-                            ? -df.Shape.ProjectPoint(selPoint).Normal
-                            : df.Shape.ProjectPoint(selPoint).Normal;
-
-                        if (insertPlateMid)
-                        {
-                            var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
-                            selPoint = bb.Center;
-                        }
-                        else
-                        {
-                            var bb = df.Shape.GetBoundingBox(matrix.Inverse, true);
-                            selPoint = Point.Create(selPoint.X, selPoint.Y, bb.Center.Z);
-                        }
-
-                        if (!matrix.IsIdentity)
-                        {
-                            plane = plane.CreateTransformedCopy(matrix.Inverse);
-                            dirZ = matrix.Inverse * dirZ;
-                        }
-
-                        createPlate(selPoint, plane, dirZ,
+                        // Create the plate on this face
+                        createPlate(
+                            pMaster, plane, nMaster,
                             type, name, angleDeg,
                             L1, L2, Lnr,
                             B1, B2, Bnr,
                             T, Rad, Diam,
-                            insertPlateMid);
+                            insertPlateMid
+                        );
                     }
                     catch (Exception ex)
                     {
-                        Application.ReportStatus($"Error processing selection: {ex.Message}", StatusMessageType.Error, null);
+                        Application.ReportStatus($"Error on a selected face: {ex.Message}", StatusMessageType.Error, null);
                     }
                 }
             });
         }
+
+        private static List<(DesignFace df, Matrix toMaster, object src)>
+        ExpandSelectionToPlanarFaces(ICollection<IDocObject> sel)
+        {
+            var outList = new List<(DesignFace df, Matrix toMaster, object src)>();
+
+            bool AlreadyAdded(DesignFace f, Matrix m) =>
+                outList.Any(t => ReferenceEquals(t.df, f) && t.toMaster.Equals(m));
+
+            foreach (var obj in sel)
+            {
+                // Occurrence face
+                if (obj is IDesignFace idf)
+                {
+                    var df = idf.Master;
+                    if (df?.Shape?.Geometry is Plane && !AlreadyAdded(df, idf.TransformToMaster))
+                        outList.Add((df, idf.TransformToMaster, obj));
+                    continue;
+                }
+
+                // Master face (rare, but allow)
+                if (obj is DesignFace dfM)
+                {
+                    if (dfM?.Shape?.Geometry is Plane && !AlreadyAdded(dfM, Matrix.Identity))
+                        outList.Add((dfM, Matrix.Identity, obj));
+                    continue;
+                }
+
+                // Occurrence body → expand to its planar faces
+                if (obj is IDesignBody idb)
+                {
+                    var master = idb.Master;
+                    if (master?.Shape != null)
+                    {
+                        foreach (var f in master.Faces)
+                            if (f?.Shape?.Geometry is Plane && !AlreadyAdded(f, idb.TransformToMaster))
+                                outList.Add((f, idb.TransformToMaster, obj));
+                    }
+                    continue;
+                }
+
+                // Master body → expand to its planar faces
+                if (obj is DesignBody db)
+                {
+                    foreach (var f in db.Faces)
+                        if (f?.Shape?.Geometry is Plane && !AlreadyAdded(f, Matrix.Identity))
+                            outList.Add((f, Matrix.Identity, obj));
+                    continue;
+                }
+
+                // ignore edges, vertices, etc.
+            }
+
+            return outList;
+        }
+
+
 
         private static bool ValidateParams(
             string type,
@@ -300,8 +361,8 @@ namespace AESCConstruct25.Plates.Modules
         }
 
         private static List<ITrimmedCurve> getBaseCapContour(
-    Point p, Direction dX, Direction dY,
-    string type, double L1, double B1, double R)
+            Point p, Direction dX, Direction dY,
+            string type, double L1, double B1, double R)
         {
             var dZ = Direction.Cross(dX, dY);
             var list = new List<ITrimmedCurve>();

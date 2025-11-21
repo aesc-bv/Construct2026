@@ -223,6 +223,16 @@ namespace AESCConstruct25 {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] openFolder {
+            get {
+                object obj = ResourceManager.GetObject("openFolder", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] ribCutout {
             get {
                 object obj = ResourceManager.GetObject("ribCutout", resourceCulture);

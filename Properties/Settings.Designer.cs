@@ -25,7 +25,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("[Name]_[p1]x[p2]_[length]")]
+        [global::System.Configuration.DefaultSettingValueAttribute("[Name]_[w]x[h]_[length]")]
         public string NameString {
             get {
                 return ((string)(this["NameString"]));
@@ -121,7 +121,7 @@ namespace AESCConstruct25.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("null")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Enter serial number")]
         public string SerialNumber {
             get {
                 return ((string)(this["SerialNumber"]));

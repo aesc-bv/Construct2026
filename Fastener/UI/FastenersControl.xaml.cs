@@ -448,11 +448,11 @@ namespace AESCConstruct25.UI
 
         private void UpdateBoltImage()
         {
-            Logger.Log($"[FastenersControl] UpdateBoltImage for SelectedBoltType='{SelectedBoltType}'");
+            // Logger.Log($"[FastenersControl] UpdateBoltImage for SelectedBoltType='{SelectedBoltType}'");
             if (string.IsNullOrWhiteSpace(SelectedBoltType)) { BoltImage.Source = null; return; }
 
             var csvType = _module.GetBoltTypeByName(SelectedBoltType); // e.g. "DIN931 - ISO4014"
-            Logger.Log($"[FastenersControl] Mapped to csvType='{csvType}'");
+            // Logger.Log($"[FastenersControl] Mapped to csvType='{csvType}'");
             if (string.IsNullOrWhiteSpace(csvType)) { BoltImage.Source = null; return; }
 
             var primary = ExtractPrimaryStandard(csvType);             // "DIN931"
@@ -462,11 +462,11 @@ namespace AESCConstruct25.UI
 
         private void UpdateWasherTopImage()
         {
-            Logger.Log($"[FastenersControl] UpdateWasherTopImage for SelectedWasherTopType='{SelectedWasherTopType}'");
+            // Logger.Log($"[FastenersControl] UpdateWasherTopImage for SelectedWasherTopType='{SelectedWasherTopType}'");
             if (string.IsNullOrWhiteSpace(SelectedWasherTopType)) { WasherTopImage.Source = null; return; }
 
             var csvType = _module.GetWasherTopTypeByName(SelectedWasherTopType); // map UI name → CSV type
-            Logger.Log($"[FastenersControl] WasherTop csvType='{csvType}'");
+            // Logger.Log($"[FastenersControl] WasherTop csvType='{csvType}'");
             if (string.IsNullOrWhiteSpace(csvType)) { WasherTopImage.Source = null; return; }
 
             var primary = ExtractPrimaryStandard(csvType);
@@ -476,12 +476,12 @@ namespace AESCConstruct25.UI
 
         private void UpdateWasherBottomImage()
         {
-            Logger.Log($"[FastenersControl] UpdateWasherBottomImage for SelectedWasherBottomType='{SelectedWasherBottomType}'");
+            // Logger.Log($"[FastenersControl] UpdateWasherBottomImage for SelectedWasherBottomType='{SelectedWasherBottomType}'");
             if (string.IsNullOrWhiteSpace(SelectedWasherBottomType)) { WasherBottomImage.Source = null; return; }
 
             // Bottom washer uses the same lookup helper (your module exposes GetWasherTopTypeByName for both)
             var csvType = _module.GetWasherTopTypeByName(SelectedWasherBottomType);
-            Logger.Log($"[FastenersControl] WasherBottom csvType='{csvType}'");
+            // Logger.Log($"[FastenersControl] WasherBottom csvType='{csvType}'");
             if (string.IsNullOrWhiteSpace(csvType)) { WasherBottomImage.Source = null; return; }
 
             var primary = ExtractPrimaryStandard(csvType);
@@ -491,11 +491,11 @@ namespace AESCConstruct25.UI
 
         private void UpdateNutImage()
         {
-            Logger.Log($"[FastenersControl] UpdateNutImage for SelectedNutType='{SelectedNutType}'");
+            // Logger.Log($"[FastenersControl] UpdateNutImage for SelectedNutType='{SelectedNutType}'");
             if (string.IsNullOrWhiteSpace(SelectedNutType)) { NutImage.Source = null; return; }
 
             var csvType = _module.GetNutTypeByName(SelectedNutType);  // map UI name → CSV type
-            Logger.Log($"[FastenersControl] Nut csvType='{csvType}'");
+            // Logger.Log($"[FastenersControl] Nut csvType='{csvType}'");
             if (string.IsNullOrWhiteSpace(csvType)) { NutImage.Source = null; return; }
 
             var primary = ExtractPrimaryStandard(csvType);

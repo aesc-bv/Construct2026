@@ -196,7 +196,7 @@ namespace AESCConstruct25.FrameGenerator.Modules
                 case "Rectangular": return new[] { g("h"), g("w"), g("t"), g("r1"), g("r2") };
                 case "H": return new[] { g("h"), g("w"), g("s"), g("t"), g("r1"), g("r2") };
                 case "T": return new[] { g("h"), g("w"), g("s"), g("t"), g("r1"), g("r2"), g("r3") };
-                case "U": return new[] { g("h"), g("w"), g("s"), g("t"), g("r1"), g("r2") };
+                case "U": return new[] { g("h"), g("w"), g("s"), g("t"), g("r1"), g("r2"), g("Name") };
                 case "DXF": return new[] { g("w") };
                 default: return pd?.Values.ToArray() ?? Array.Empty<string>();
             }

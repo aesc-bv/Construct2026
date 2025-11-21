@@ -54,8 +54,26 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
                 if (profileType == "T" && sizeValues.Length == 7)
                     return new TProfile(convertedSizes[0], convertedSizes[1], convertedSizes[2], convertedSizes[3], convertedSizes[4], convertedSizes[5], convertedSizes[6], offsetX, offsetY);
 
-                if (profileType == "U" && sizeValues.Length == 6)
-                    return new UProfile(convertedSizes[0], convertedSizes[1], convertedSizes[2], convertedSizes[3], convertedSizes[4], convertedSizes[5], offsetX, offsetY);
+                if (profileType == "U")
+                {
+                    var hasName = sizeValues.Length >= 7;
+                    var nameArg = hasName ? sizeValues[6] ?? "" : "";
+                    bool isUPN = nameArg.StartsWith("UPN", StringComparison.OrdinalIgnoreCase);
+
+                    // Assume convertedSizes: [h, w, s, t, r1, r2] in meters
+                    return new UProfile(
+                        convertedSizes[0],
+                        convertedSizes[1],
+                        convertedSizes[2],
+                        convertedSizes[3],
+                        convertedSizes[4],
+                        convertedSizes[5],
+                        offsetX,
+                        offsetY,
+                        isUPN   // ⬅️ forward the flag
+                    );
+                }
+                    //return new UProfile(convertedSizes[0], convertedSizes[1], convertedSizes[2], convertedSizes[3], convertedSizes[4], convertedSizes[5], offsetX, offsetY);
             }
             catch (Exception ex)
             {

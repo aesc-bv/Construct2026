@@ -23,6 +23,7 @@ namespace AESCConstruct25
     {
         private static bool isCommandRegistered = false;
 
+        // Main entry point for the addin; attaches to the first active session, sets up licensing, registers commands and wires up the ribbon.
         public bool Connect()
         {
             try
@@ -38,7 +39,8 @@ namespace AESCConstruct25
 
                 Api.AttachToSession(session);
 
-                bool LicenseValid = ConstructLicenseSpot.CheckLicense(); 
+
+                bool LicenseValid = ConstructLicenseSpot.CheckLicense();
 
                 ConstructLicenseSpot.EnsureNetworkDeactivatedOnStartup();
 
@@ -133,7 +135,7 @@ namespace AESCConstruct25
                     CompareCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
                     CompareCmd.KeepAlive(true);
                     CompareCmd.Executing += (s, e) =>
-                        CompareCommand.CompareSimple();
+                        CompareCommand.compareLegacy();
 
                     //
                     // ─── LEGACY / OTHER COMMANDS ─────────────────────────────────────────────────
@@ -200,6 +202,7 @@ namespace AESCConstruct25
 
                     isCommandRegistered = true;
                 }
+                Logger.Log("API 1.1 Initialized");
 
                 return true;
             }
@@ -208,6 +211,8 @@ namespace AESCConstruct25
                 return false;
             }
         }
+
+        // Switches the active window to solid interaction mode while preserving curve visibility by temporarily hiding and restoring curves.
         public static void setMode3D()
         {
 
@@ -239,6 +244,7 @@ namespace AESCConstruct25
             }
         }
 
+        // Updates license dependent command states and notifies the UI manager after a license state change.
         public static void RefreshLicenseUI()
         {
             bool valid = ConstructLicenseSpot.IsValid;
@@ -253,6 +259,7 @@ namespace AESCConstruct25
             UpdateCommandTexts();
         }
 
+        // Reapplies localized button texts so ribbon labels stay in sync with language or license changes.
         public static void UpdateCommandTexts()
         {
             var cmd = Command.GetCommand("AESCConstruct25.ExportExcel");
@@ -271,6 +278,7 @@ namespace AESCConstruct25
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetworkBtn");
         }
 
+        // Wraps raw image bytes into a GDI+ Image and returns null if loading fails.
         private Image loadImg(byte[] bytes)
         {
             try
@@ -283,16 +291,20 @@ namespace AESCConstruct25
             }
         }
 
+        // Called when the addin is unloaded; currently performs no additional cleanup.
         public void Disconnect()
         {
         }
 
+        // Convenience wrapper that enables or disables a command by id with a built in null check.
         private static void SetEnabled(string commandId, bool enabled)
         {
             var cmd = Command.GetCommand(commandId);
             if (cmd != null) cmd.IsEnabled = enabled;
         }
 
+        // Returns the custom ribbon XML by reading the embedded Ribbon.xml resource; falls back to an empty string on failure.
+        // Get Ribbon
         public string GetCustomUI()
         {
             try
@@ -316,6 +328,7 @@ namespace AESCConstruct25
             }
         }
 
+        // Handles the "Import DXF Contours" command by loading a user selected DXF file and reporting imported contour count.
         private void ImportDXFContours_Execute(object sender, EventArgs e)
         {
             // Prompt user to pick a .dxf file
@@ -342,6 +355,7 @@ namespace AESCConstruct25
             }
         }
 
+        // Handles the "DXF → Profile" command by converting the active DXF to a profile, copying its string and optionally showing a preview.
         private void DXFtoProfile_Execute(object sender, EventArgs e)
         {
             // Assumes a DXF window is currently active
@@ -381,6 +395,7 @@ namespace AESCConstruct25
             }
         }
 
+        // Exports all in session DXF profiles to a CSV file after validating availability and requesting a target path.
         private void SaveDXFProfiles_Execute(object sender, EventArgs e)
         {
             var profiles = DXFImportHelper.SessionProfiles;
@@ -415,6 +430,7 @@ namespace AESCConstruct25
             }
         }
 
+        // Resolves ribbon control labels for known button ids via localization and falls back to the control id for unknown ones.
         public string GetRibbonLabel(string controlId)
         {
             // Map only button IDs (you said groups don’t need translation)
@@ -460,10 +476,16 @@ namespace AESCConstruct25
             }
         }
 
+        // Resolves the engraving control label directly from the localization entry.
         public string GetEngravingLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.Engraving");
+
+        // Resolves the network button label using the localization layer.
         public string GetNetworkLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
+
+        // Resolves the custom properties button label through localization to keep language consistent.
         public string GetCustomPropertiesLabel(string controlId) => Localization.Language.Translate("Ribbon.Button.CustomProperties");
 
+        // Loads DXF profiles from a CSV export into the session collection and optionally reconstructs bodies into the main part.
         private void LoadDXFProfiles_Execute(object sender, EventArgs e)
         {
             string csvPath;

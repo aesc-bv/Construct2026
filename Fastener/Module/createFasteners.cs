@@ -210,10 +210,10 @@ namespace AESCConstruct25.Fastener.Module
 
 
             List<ITrimmedCurve> boundaryRemoveBody = new List<ITrimmedCurve>{
-            CurveSegment.Create(p0, p1),
-CurveSegment.Create(p1, p2),
-CurveSegment.Create(p2, p3),
-CurveSegment.Create(p3, p0)
+                CurveSegment.Create(p0, p1),
+                CurveSegment.Create(p1, p2),
+                CurveSegment.Create(p2, p3),
+                CurveSegment.Create(p3, p0)
             };
 
             Profile profile_remove = new Profile(planeRoundZX, boundaryRemoveBody);

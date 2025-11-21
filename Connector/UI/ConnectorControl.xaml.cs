@@ -1,5 +1,8 @@
 ﻿// SpaceClaim APIs
 using AESCConstruct25.FrameGenerator.Utilities;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -10,12 +13,16 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Application = SpaceClaim.Api.V242.Application;
+using Body = SpaceClaim.Api.V242.Modeler.Body;
 using CheckBox = System.Windows.Controls.CheckBox;
+using Color = System.Drawing.Color;
 using Component = SpaceClaim.Api.V242.Component;
 using ConnectorModel = global::Connector;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
@@ -30,6 +37,7 @@ using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using WF = System.Windows.Forms;
 using Window = SpaceClaim.Api.V242.Window;
 
+
 namespace AESCConstruct25.UI
 {
     public partial class ConnectorControl : UserControl
@@ -37,6 +45,9 @@ namespace AESCConstruct25.UI
         private WF.PictureBox picDrawing;
         private readonly TimeSpan UiDebounceInterval = TimeSpan.FromMilliseconds(150);
         private DispatcherTimer _uiDebounce;
+
+        private static readonly Dictionary<DesignBody, NeighbourIndepChoice> s_neighbourDecisionCache
+            = new Dictionary<DesignBody, NeighbourIndepChoice>();
         private class ConnectorPresetRecord
         {
             public string Name { get; set; } = "";
@@ -44,6 +55,7 @@ namespace AESCConstruct25.UI
             public double? Width1 { get; set; }
             public double? Width2 { get; set; }
             public double? Tolerance { get; set; }
+            public double EndRelief { get; set; }
             public double? RadiusChamfer { get; set; }
             public string Location { get; set; } = "";
 
@@ -55,12 +67,15 @@ namespace AESCConstruct25.UI
             public double? CornerCutoutRadius { get; set; }
             public bool? ClickLocation { get; set; }
             public bool? ShowTolerance { get; set; }
-            public bool? Straight { get; set; }
+            public bool? connectorStraight { get; set; }
 
             // "Radius" or "Chamfer"
             public string CornerStyle { get; set; } = "";
         }
 
+        public static int nameIndex = 1;
+
+        private enum NeighbourIndepChoice { MakeIndependent, EditShared, Skip }
 
         private readonly List<ConnectorPresetRecord> _presets = new List<ConnectorPresetRecord>();
         public ConnectorControl()
@@ -129,7 +144,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                Logger.Log($"PicDrawing_Paint error: {ex}");
+                ////Logger.Log($"PicDrawing_Paint error: {ex}");
             }
         }
 
@@ -150,11 +165,15 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                Logger.Log($"drawConnector failed: {ex}");
+                ////Logger.Log($"drawConnector failed: {ex}");
             }
         }
 
         private void btnCreate_connector(object sender, RoutedEventArgs e) => createConnector();
+
+        private void btnCreate_Test(object sender, RoutedEventArgs e){
+            Command.Execute("MakeIndependent");
+        }
 
         // === Legacy Enter/validate handlers adapted to WPF control names ===
         // Map txtTubeLockHeight -> connectorHeight (the TextBox in your XAML)
@@ -189,8 +208,9 @@ namespace AESCConstruct25.UI
                 WireUiChangeHandlers();
                 LoadConnectorPresets();
                 drawConnector();
+                UpdateGenerateEnabled(); // ← add
             }
-            catch (Exception ex) { Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
+            catch (Exception ex) { } ////Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
         }
 
         private void LoadConnectorPresets()
@@ -305,7 +325,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                Logger.Log($"ConnectorPresetCombo_SelectionChanged failed: {ex}");
+                ////Logger.Log($"ConnectorPresetCombo_SelectionChanged failed: {ex}");
             }
         }
 
@@ -334,7 +354,8 @@ namespace AESCConstruct25.UI
                 connectorChamfer.IsChecked = true;
             }
 
-            // Do NOT touch Location or any other controls here
+            EnforceCornerCoupling();
+            UpdateGenerateEnabled();
         }
 
         // Helpers for CSV parsing
@@ -385,45 +406,6 @@ namespace AESCConstruct25.UI
             return null;
         }
 
-        private static IDesignBody createIndependentDesignBody(IDesignBody iDesignBody)
-        {
-            DesignBody designBody = iDesignBody.Master;
-
-            Part part = designBody.Parent;
-            IPart iPart = iDesignBody.Parent;
-            Matrix transformToMaster = iDesignBody.TransformToMaster;
-            string newName = part.DisplayName + "_";
-
-            Part partPart = part.Document.MainPart;
-            try { partPart = (Part)iPart.Parent.Parent.Master; }
-            catch { }
-
-            if (iDesignBody.Parent.Parent != null) // body is in component
-            {
-                Component compPart = Component.Create(partPart, Part.Create(part.Document, newName));
-                DesignBody db = DesignBody.Create(compPart.Template, designBody.Name, designBody.Shape.Copy());
-                compPart.Transform(transformToMaster.Inverse);
-                db.SetColor(null, designBody.GetColor(null));
-                db.Layer = designBody.Layer;
-
-                if (iDesignBody.Parent.Parent != null)
-                    iDesignBody.Parent.Parent.Delete();
-
-                foreach (IDesignBody idb in compPart.Document.MainPart.GetDescendants<IDesignBody>())
-                {
-                    if (idb.Parent.Master.DisplayName == newName)
-                    {
-                        return idb;
-                    }
-                }
-            }
-            else
-            {
-                return iDesignBody;
-            }
-            return null;
-        }
-
         private static void getFacesFromSelection(IDesignEdge selectedEdge, out DesignFace bigFace, out DesignFace smallFace)
         {
             bigFace = null;
@@ -450,13 +432,166 @@ namespace AESCConstruct25.UI
                 return;
         }
 
+        private static double FindExitDistance_NoCopy(
+            Body masterBody,             // body in its own MASTER space
+            Point pStartMaster,          // start in same MASTER space
+            Direction dirMaster,         // ray direction in MASTER space
+            double maxT,
+            double tol = 5e-6,
+            int maxIters = 40)
+        {
+            Vector dV = dirMaster.ToVector();
+            bool inside0 = false;
+            try { inside0 = masterBody.ContainsPoint(pStartMaster); } catch { return double.PositiveInfinity; }
+
+            double t = 0.0;
+            double step = Math.Max(0.0005, maxT / 50.0);
+            const double GROW = 1.75;
+
+            bool lastInside = inside0;
+            while (t <= maxT)
+            {
+                t += step;
+                Point p = pStartMaster + t * dV;
+                bool nowInside = lastInside;
+                try { nowInside = masterBody.ContainsPoint(p); } catch { step *= GROW; continue; }
+
+                if (nowInside != lastInside)
+                {
+                    double a = Math.Max(0.0, t - step);
+                    double b = t;
+                    for (int i = 0; i < maxIters && (b - a) > tol; i++)
+                    {
+                        double m = 0.5 * (a + b);
+                        Point pm = pStartMaster + m * dV;
+                        bool inM = nowInside;
+                        try { inM = masterBody.ContainsPoint(pm); } catch { }
+                        if (inM == nowInside) b = m; else a = m;
+                    }
+                    return 0.5 * (a + b);
+                }
+                lastInside = nowInside;
+                step *= GROW;
+            }
+            return double.PositiveInfinity;
+        }
+        private static double FindExitDistance_MasterSpace(
+            Body otherMaster,
+            Matrix worldToOtherMaster,
+            Point pStartWorld,
+            Direction dirWorld,
+            double maxT,
+            double tol = 5e-6,
+            int maxIters = 40)
+        {
+            var pStartM = worldToOtherMaster * pStartWorld;
+            var dirM = (worldToOtherMaster * dirWorld.ToVector()).Direction;
+            return FindExitDistance_NoCopy(otherMaster, pStartM, dirM, maxT, tol, maxIters);
+        }
+
+        internal static double ComputeAvailableHeightAlongRay(
+            Part searchRoot,
+            DesignBody ownerBody,
+            IDesignBody ownerOcc,
+            Point p1,
+            Direction dir,
+            double userHeight,
+            double thickness,
+            Direction shiftThickness,
+            double projectTol = 1e-5)
+        {
+            double req = Math.Max(0.0, userHeight);
+            if (req <= 0) return 0.0;
+
+            double CheckOneDirection(Direction testDir)
+            {
+                const double nudge = 2e-6;
+                double probeLen = Math.Max(1.0, req * 2);
+                double probeR = 0.0005;
+
+                Point pStartWorld = p1 + nudge * testDir;
+
+                // Build the tiny probe ONCE in WORLD
+                Direction t1 = Direction.Cross(testDir, Vector.Create(1, 0, 0).Direction);
+                if (t1.IsZero) t1 = Direction.Cross(testDir, Vector.Create(0, 1, 0).Direction);
+                if (t1.IsZero) t1 = Direction.Cross(testDir, Vector.Create(0, 0, 1).Direction);
+                var probePlaneWorld = Plane.Create(Frame.Create(pStartWorld, t1, testDir));
+                using var probeWorld = Body.ExtrudeProfile(new CircleProfile(probePlaneWorld, probeR), probeLen);
+
+                double best = double.PositiveInfinity;
+
+                // Iterate occurrences WITHOUT copying their masters
+                foreach (IDesignBody idb in searchRoot.GetDescendants<IDesignBody>())
+                {
+                    var master = idb.Master?.Shape;
+                    if (master == null) continue;
+
+                    // Map the light probe into the other body's MASTER space
+                    using var probeInOther = probeWorld.Copy();
+                    probeInOther.Transform(idb.TransformToMaster);
+
+                    Collision cstat;
+                    try { cstat = master.GetCollision(probeInOther); }
+                    catch { continue; }
+
+                    if (cstat == Collision.Intersect)
+                    {
+                        double tExit = FindExitDistance_MasterSpace(
+                            master, idb.TransformToMaster, pStartWorld, testDir, Math.Max(req, 1.0));
+                        if (tExit > 0 && !double.IsInfinity(tExit) && !double.IsNaN(tExit))
+                            best = Math.Min(best, tExit);
+                    }
+                }
+
+                return best;
+            }
+
+            double bestFwd = CheckOneDirection(dir);
+            double bestRev = CheckOneDirection(-dir);
+
+            double best = double.PositiveInfinity;
+            if (bestFwd > 0 && !double.IsInfinity(bestFwd)) best = bestFwd;
+            if (bestRev > 0 && !double.IsInfinity(bestRev)) best = Math.Min(best, bestRev);
+
+            if (double.IsInfinity(best)) return req;
+
+            double available = Math.Max(0.0, best);
+            return Math.Max(0.0, Math.Min(req, available));
+        }
         private void createConnector()
         {
+            // local helper so this is fully drop-in
+            static bool IsAttachedLocal(DesignBody ownerMaster, Body tool)
+            {
+                if (ownerMaster?.Shape == null || tool == null) return false;
+                try
+                {
+                    var c = ownerMaster.Shape.GetCollision(tool);
+                    return c == Collision.Intersect;// || c == Collision.Touch; // if touch, connnector might still fail
+                }
+                catch { return false; }
+            }
+
+            s_neighbourDecisionCache.Clear();
+
+            string rid = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var swAll = System.Diagnostics.Stopwatch.StartNew();
+            bool rectangularCut = connectorRectangularCut?.IsChecked == true;
+
             try
             {
-                Window activeWindow = Window.ActiveWindow;
-                if (activeWindow == null)
+                if (!IsReliefAllowed(out var why))
+                {
+                    Application.ReportStatus(why, StatusMessageType.Warning, null);
                     return;
+                }
+
+                var win = Window.ActiveWindow;
+                if (win == null) return;
+
+                var ctx = win.ActiveContext;
+                var doc = win.Document;
+                var mainPart = doc.MainPart;
 
                 if (!CheckSelectedEdgeWidth())
                 {
@@ -464,399 +599,1200 @@ namespace AESCConstruct25.UI
                     return;
                 }
 
-                InteractionContext context = activeWindow.ActiveContext;
-                Document doc = activeWindow.Document;
-                Part mainPart = doc.MainPart;
-
-                DesignEdge desEdge = null;
-
-                if (context.Selection.Count == 0)
+                var c = ConnectorModel.CreateConnector(this);
+                if (c == null)
                 {
-                    //SC.reportStatus("Please select an edge");
+                    Application.ReportStatus("Please fill valid numeric values first.", StatusMessageType.Warning, null);
                     return;
                 }
 
-                if (context.Selection.Count > 1)
+                bool patternEnabled = (connectorPattern?.IsChecked == true);
+                //Logger.Log("Pattern enabled: " + patternEnabled.ToString());
+                int patternQty = 0;
+                if (patternEnabled)
+                    int.TryParse(connectorPatternValue?.Text ?? "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out patternQty);
+                //Logger.Log("Pattern patternQty: " + patternQty.ToString());
+                patternEnabled = patternEnabled && patternQty > 0;
+                if (patternEnabled && patternQty <= 0)
                 {
-                    //SC.reportStatus("Select a single edge");
+                    Application.ReportStatus("Pattern quantity must be at least 1.", StatusMessageType.Error, null);
                     return;
                 }
 
-                List<DesignBody> selDBodyList = new List<DesignBody> { };
-                List<Point> selPointList = new List<Point> { };
-                List<Part> selParts = new List<Part> { };
-                List<DesignEdge> selEdges = new List<DesignEdge>();
-                List<Part> suspendSheetMetalParts = new List<Part> { };
-                List<IDesignBody> selIDBodyList = new List<IDesignBody> { };
-                List<IDesignEdge> selIDesignEdges = new List<IDesignEdge> { };
-
-                #region Checking the selection
-                foreach (IDocObject sel in context.Selection)
+                // --- collect edges (same logic, but only one scene scan when needed) ---
+                var iEdges = ctx.Selection.OfType<IDesignEdge>().ToList();
+                if (iEdges.Count == 0)
                 {
-                    var de = sel as DesignEdge;
-                    if (de != null)
-                        desEdge = de;
-
-                    var ide = sel as IDesignEdge;
-                    if (ide != null)
+                    // gather any DesignEdge masters
+                    var masters = ctx.Selection.OfType<DesignEdge>().ToList();
+                    if (masters.Count > 0)
                     {
-                        desEdge = ide.Master;
-                    }
-
-                    if (desEdge == null)
-                    {
-                        //SC.reportStatus("Please select an edge");
-                        return;
-                    }
-
-                    bool correctCurve = checkDesignEdge(ide, connector.ClickPosition, out Point selPoint);
-
-                    if (!correctCurve)
-                    {
-                        //SC.reportStatus("Selection geometry is not supported. Please select edges only.");
-                        return;
-                    }
-
-                    // Check if it fits on the line (now also accounts for Location offset)
-                    if (!checkFitsLine(ide, connector))
-                    {
-                        //SC.reportStatus("The connector does not fully fit on the selected line");
-                        return;
-                    }
-
-                    // Check if selected body in component or single body
-                    Part part = null;
-                    if (mainPart.GetDescendants<IDesignBody>().Count > 1)
-                    {
-                        part = desEdge.Parent.Parent;
-                        if (mainPart == part)
+                        // single pass over all IDesignEdge occurrences
+                        var occEdges = mainPart.GetDescendants<IDesignEdge>().ToList();
+                        foreach (var de in masters)
                         {
-                            //SC.reportStatus("Selected body is not within a component.");
-                            continue;
+                            var occ = occEdges.FirstOrDefault(e => e.Master == de);
+                            if (occ != null) iEdges.Add(occ);
                         }
                     }
                     else
-                        part = mainPart;
-
-                    selPointList.Add(selPoint);
-
-                    selParts.Add(part);
-                    selEdges.Add(desEdge);
-                    selDBodyList.Add(desEdge.Parent);
-                    selIDesignEdges.Add(ide);
-                    if (ide != null)
-                        selIDBodyList.Add(ide.Parent);
-
-                    // CHeck sheet metal
-                    bool suspendSheetMetal = false;
-                    if (part.SheetMetal != null || part.IsSheetMetalSuspended)
-                        suspendSheetMetal = true;
-
-                    if (suspendSheetMetal)
-                        suspendSheetMetalParts.Add(part);
+                    {
+                        foreach (var sel in ctx.Selection)
+                            if (sel is IDesignEdge ide) iEdges.Add(ide);
+                    }
                 }
-
-                #endregion
-
-                if (selEdges.Count == 0)
+                if (iEdges.Count == 0)
                 {
-                    //SC.reportStatus("No connectors to be created");
+                    Application.ReportStatus("Select one or more edges.", StatusMessageType.Information, null);
                     return;
                 }
 
-                // Get parameters
-                double width1 = 0.001 * connector.Width1;
-                double width2 = 0.001 * connector.Width2;
-                double tolerance = 0.001 * connector.Tolerance;
-                double height = 0.001 * connector.Height;
-                double radius = 0.001 * connector.Radius;
-                bool hasRounding = connector.HasRounding;
-                bool hasCornerCutout = connector.HasCornerCutout;
-                double cornerCutoutRadius = 0.001 * connector.CornerCutoutRadius;
-                bool dynamicHeight = connector.DynamicHeight;
-                bool ClickPosition = connector.ClickPosition;
-
-                bool CylinderStraightCut = false; // To add in interface if needed
-
-                // Iterate through all selected edges
-                for (int i = 0; i < selEdges.Count; i++)
+                // --- precompute placements (unchanged logic) ---
+                var allPlacements = new List<(IDesignEdge edge, IDesignBody iDesignBody, DesignBody designBody, List<(Point pOcc, Direction tanOcc)> centers)>();
+                foreach (var iEdge in iEdges)
                 {
-                    Point pCenter = selPointList[i];
-                    DesignBody designBody = selDBodyList[i];
-                    IDesignBody iDesignBody = selIDBodyList[i];
-                    IDesignEdge ide = selIDesignEdges[i];
-                    var edge = selEdges[i];                          // use the specific edge for this iteration
-
-                    // >>> APPLY LEFT/RIGHT SHIFT ALONG THE SELECTED EDGE <<<
-                    // Location is in millimetres; convert to metres and shift along the edge tangent.
-                    double offsetM = 0.001 * connector.Location;
-                    Direction tangent = edge.Shape.ProjectPoint(pCenter).Derivative.Direction;
-                    pCenter = pCenter + offsetM * tangent;
-
-                    getFacesFromSelection(ide, out DesignFace bigFace, out DesignFace smallFace);
-                    if (bigFace == null || smallFace == null)
-                        continue;
-
-                    var bigFacePlane = bigFace.Shape.Geometry as Plane;
-                    var bigFaceCylinder = bigFace.Shape.Geometry as Cylinder;
-
-                    bool isPlane = bigFacePlane != null;
-                    bool isCylinder = bigFaceCylinder != null;
-
-                    if (!isPlane && !isCylinder)
+                    try
                     {
-                        //SC.reportStatus("Select a planar or cylindrical surface");
-                        continue;
-                    }
+                        if (iEdge == null || iEdge.Parent == null) continue;
+                        var iDesignBody = iEdge.Parent as IDesignBody;
+                        var designBody = iDesignBody?.Master;
+                        var partMaster = designBody?.Parent;
+                        if (iDesignBody == null || designBody == null || partMaster == null) continue;
 
-                    DesignFace oppositeFace = getOppositeFace(smallFace, bigFace, isPlane, out double thickness, out Direction dirY2);
-
-                    if (oppositeFace == null)
-                    {
-                        //SC.reportStatus("Could not find opposite face. Ensure the connector is made between planar or cylindrical faces");
-                        continue;
-                    }
-
-                    List<IDesignBody> nrBodies = getIDesignBodiesFromBody(mainPart, designBody.Shape);
-                    bool allBodies = true; // Default to modifying only the selected body
-
-                    Body connectorBody = null;
-                    Body cutBody = null;
-                    Body collisionBody = null;
-                    List<Body> cutBodiesSource = new List<Body>();
-
-                    WriteBlock.ExecuteTask("connector", () =>
-                    {
-                        if (isPlane)
+                        var centers = new List<(Point pOcc, Direction tanOcc)>();
+                        if (!patternEnabled)
                         {
-                            // if only the selected body needs modification, make it distinct
-                            if (!allBodies)
-                            {
-                                iDesignBody = createIndependentDesignBody(iDesignBody);
-                                designBody = iDesignBody.Master;
-                                getFacesFromSelection(ide, out bigFace, out smallFace);
-                            }
+                            if (!checkDesignEdge(iEdge, c.ClickPosition, out var pOcc))
+                                continue;
 
-                            // get Directions
-                            Direction dirX = edge.Shape.ProjectPoint(pCenter).Derivative.Direction;   // use this edge’s tangent
-                            Direction dirY = getNormalDirectionPlanarFace(bigFace.Shape);
-                            Direction dirZ = getNormalDirectionPlanarFace(smallFace.Shape);
-
-                            // Check the max height
-                            if (dynamicHeight)
-                            {
-                                double dynheigth = connector.GetDynamicHeigth(designBody.Parent, dirX, dirY, dirZ, pCenter, height, thickness);
-                                if (dynheigth > 0)
-                                    height = Math.Min(height, dynheigth);
-
-                                return;
-                            }
-
-                            connector.CreateGeometry(designBody.Parent, dirX, dirY, dirZ, pCenter, height, thickness, out connectorBody, out cutBodiesSource, out cutBody, out collisionBody, false);
-                            //Collision body is used to check for collisions, if there is a collision, the cutBody is subtracted. cutBodiesSource is used for the Corner Cutouts
-
+                            var tan = iEdge.Shape.ProjectPoint(pOcc).Derivative.Direction;
+                            pOcc = pOcc + (0.001 * c.Location) * tan;
+                            centers.Add((pOcc, tan));
                         }
                         else
                         {
-                            // Check if there is an inner/outer cylindrical face with same axis
-                            var (innerFace, outerFace, thickness1, outerRadius, axis) = CylInfo.GetCoaxialCylPair(iDesignBody, bigFace);
+                            //Logger.Log("Pattern centers: " + centers.ToString());
+                            centers.AddRange(ComputePatternCentersOcc(iEdge, c, patternQty));
 
-                            if (innerFace == null || outerFace == null)
+                        }
+
+                        if (centers.Count > 0)
+                            allPlacements.Add((iEdge, iDesignBody, designBody, centers));
+
+                    }
+                    catch { /* robust per-edge */ }
+                }
+
+                if (allPlacements.Count == 0)
+                {
+                    Application.ReportStatus("No valid edges found to place connectors.", StatusMessageType.Information, null);
+                    return;
+                }
+
+                // --- Single undo step (unchanged) ---
+                WriteBlock.ExecuteTask("Connectors (per-edge commit)", () =>
+                {
+                    int edgeCounter = 0;
+                    foreach (var entry in allPlacements)
+                    {
+                        edgeCounter++;
+                        var iEdge = entry.edge;
+                        var iDesignBody = entry.iDesignBody;
+                        var ownerMaster = iDesignBody.Master;
+                        var parentPart = ownerMaster.Parent;
+                        var winMainPart = Window.ActiveWindow.Document.MainPart;
+
+                        var occToMaster = iDesignBody.TransformToMaster;
+                        var masterToOcc = occToMaster.Inverse;
+
+                        // per-edge accumulators with capacity (reduce reallocations)
+                        var uniteList = new List<Body>(entry.centers.Count);
+                        var cutPropList = new List<Body>(entry.centers.Count);
+                        var collList = new List<Body>(entry.centers.Count);
+                        var ownerCuts = new List<Body>(entry.centers.Count);
+
+                        // --- compute faces once per edge (no functional change) ---
+                        getFacesFromSelection(iEdge, out DesignFace bigFaceEdge, out DesignFace smallFaceEdge);
+                        if (bigFaceEdge == null || smallFaceEdge == null) continue;
+
+                        bool isPlaneEdge = bigFaceEdge.Shape.Geometry is Plane;
+
+                        // Cylindrical data per edge (used only in cylindrical branch)
+                        DesignFace innerFaceEdge = null, outerFaceEdge = null;
+                        double thicknessEdge = 0, outerRadiusEdge = 0;
+                        Line axisEdge = null;
+                        if (!isPlaneEdge)
+                        {
+                            var cyl = CylInfo.GetCoaxialCylPair(iDesignBody, bigFaceEdge);
+                            // NOTE: tuple fields are capitalized in your signature
+                            innerFaceEdge = cyl.InnerFace;
+                            outerFaceEdge = cyl.OuterFace;
+                            thicknessEdge = cyl.Thickness;
+                            outerRadiusEdge = cyl.OuterRadius;
+                            axisEdge = cyl.Axis;
+
+                            if (innerFaceEdge == null || outerFaceEdge == null)
                             {
                                 Application.ReportStatus($"No inner/outer Face found", StatusMessageType.Information, null);
-                                return;
-                            }
-                            if (outerRadius * 2 < width1)
-                            {
-                                Application.ReportStatus($"Too wide, width should be less than: {outerRadius * 2000} mm", StatusMessageType.Information, null);
-                                return;
-                            }
-
-                            double distSelectionPoint2Axis = (axis.ProjectPoint(pCenter).Point - pCenter).Magnitude;
-                            bool selectedInnerFace = outerRadius - distSelectionPoint2Axis > 1e-5;
-                            DesignFace selectedFace = selectedInnerFace ? innerFace : outerFace;
-
-                            // Derive all points for drawing the inner and outer profile
-                            Point pAxis = axis.ProjectPoint(pCenter).Point;
-                            Direction dirPoint2Axis = (pAxis - pCenter).Direction;
-                            Direction dirZ = axis.Direction;
-                            // Check Correct Direction;
-                            Point pTest = pCenter + 0.00001 * dirZ;
-                            if (selectedFace.Shape.ContainsPoint(pTest))
-                                dirZ = -dirZ;
-
-                            Direction dirX = Direction.Cross(dirPoint2Axis, dirZ);
-                            double maxWidth = Math.Max(width1, width2);
-                            double distWidth = Math.Sqrt(outerRadius * outerRadius - (0.5 * maxWidth) * (0.5 * maxWidth));
-                            Point pWidth = pAxis - distWidth * dirPoint2Axis;
-                            Point pWidth_A = pAxis - distWidth * dirPoint2Axis + 0.5 * maxWidth * dirX;
-                            Point pWidth_B = pAxis - distWidth * dirPoint2Axis - 0.5 * maxWidth * dirX;
-
-                            Direction dir_A = CylinderStraightCut ? dirPoint2Axis : (pAxis - pWidth_A).Direction;
-                            Direction dir_B = CylinderStraightCut ? dirPoint2Axis : (pAxis - pWidth_B).Direction;
-                            Point pInner_A = pWidth_A + thickness1 * dir_A;
-                            Point pInner_B = pWidth_B + thickness1 * dir_B;
-
-                            Point pInnerMid = pInner_A - 0.5 * (pInner_A - pInner_B).Magnitude * dirX;
-                            Point p_InnerFace = pAxis - (outerRadius - thickness1) * dirPoint2Axis;
-                            Point p_OuterFace = pAxis - (outerRadius) * dirPoint2Axis;
-
-                            double alpha = Math.Acos(distWidth / outerRadius);
-                            double distOuter = outerRadius / Math.Cos(alpha);
-
-                            Point pOuter_A = pAxis - distOuter * dir_A;
-                            Point pOuter_B = pAxis - distOuter * dir_B;
-
-                            var (success, innerEdge, outerEdge) = CylInfo.GetEdges(innerFace, p_InnerFace, outerFace, p_OuterFace);
-                            var (successInnerA, p_InnerEdge_A) = CylInfo.GetClosestPoint(innerEdge, pInner_A, dirZ);
-                            var (successInnerB, p_InnerEdge_B) = CylInfo.GetClosestPoint(innerEdge, pInner_B, dirZ);
-                            var (successOuterA, p_OuterEdge_A) = CylInfo.GetClosestPoint(outerEdge, pWidth_A, dirZ);
-                            var (successOuterB, p_OuterEdge_B) = CylInfo.GetClosestPoint(outerEdge, pWidth_B, dirZ);
-
-                            double maxDistanceBottom = 0;
-                            if (successInnerA && (pInner_A - p_InnerEdge_A).Direction == dirZ)
-                                maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_A - p_InnerEdge_A).Magnitude);
-                            if (successInnerB && (pInner_B - p_InnerEdge_B).Direction == dirZ)
-                                maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_B - p_InnerEdge_B).Magnitude);
-                            if (successOuterA && (pWidth_A - p_OuterEdge_A).Direction == dirZ)
-                                maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_A - p_OuterEdge_A).Magnitude);
-                            if (successOuterB && (pWidth_B - p_OuterEdge_B).Direction == dirZ)
-                                maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_B - p_OuterEdge_B).Magnitude);
-
-                            // Create planes
-                            Plane planeInner = Plane.Create(Frame.Create(pInnerMid, dirX, dirZ));
-                            Plane planeOuter = Plane.Create(Frame.Create(p_OuterFace, dirX, dirZ));
-
-                            // Check difference in width
-                            double WidthDifferenceInner = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pInner_A - pInner_B).Magnitude;
-                            double WidthDifferenceOuter = CylinderStraightCut ? 0 : (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
-
-                            var boundary_Outer = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, p_OuterFace, WidthDifferenceOuter, maxDistanceBottom);
-                            var boundary_Inner = connector.CreateBoundary(dirX, dirPoint2Axis, dirZ, pInnerMid, WidthDifferenceInner, maxDistanceBottom);
-
-                            connectorBody = connector.CreateLoft(boundary_Outer, planeOuter, boundary_Inner, planeInner);
-
-                            // Remove boundaries;
-                            Plane circlePlane = Plane.Create(Frame.Create(axis.Origin - 10 * axis.Direction, axis.Direction));
-                            Body cylinder = Body.ExtrudeProfile(new CircleProfile(circlePlane, outerRadius - thickness1), 20);
-                            Body cylinder1 = Body.ExtrudeProfile(new CircleProfile(circlePlane, outerRadius), 20);
-                            Body cylinder2 = Body.ExtrudeProfile(new CircleProfile(circlePlane, outerRadius + 1), 20);
-                            cylinder2.Subtract(cylinder1);
-                            connectorBody.Subtract(cylinder);
-                            connectorBody.Subtract(cylinder2);
-
-                            collisionBody = connectorBody.Copy();
-                            cutBody = connectorBody.Copy();
-                            cutBody.OffsetFaces(cutBody.Faces, connector.Tolerance * 0.001);
-                        }
-
-                        // Add connector to selected Master designbody
-                        DesignBody desBodyMaster = iDesignBody.Master;
-                        DesignBody.Create(desBodyMaster.Parent, "connectorBody", connectorBody);
-                        desBodyMaster.Shape.Unite(connectorBody);
-
-                        if (cutBodiesSource.Count > 0)
-                        {
-                            foreach (Body cb in cutBodiesSource)
-                            {
-                                DesignBody.Create(desBodyMaster.Parent, "cut", cb);
-                                desBodyMaster.Shape.Subtract(cb);
-                            }
-                        }
-
-                        DesignBody.Create(desBodyMaster.Parent, "collisionBody", collisionBody);
-                        DesignBody.Create(desBodyMaster.Parent, "cutBody", cutBody);
-
-                        List<IDesignBody> _listIDB = mainPart.GetDescendants<IDesignBody>().ToList();
-                        List<IDesignBody> listIDBCollisionBody = new List<IDesignBody> { };
-                        List<IDesignBody> listIDBCutBody = new List<IDesignBody> { };
-                        foreach (IDesignBody idb in _listIDB)
-                        {
-                            if (idb.Master.Shape == collisionBody)
-                            {
-                                listIDBCollisionBody.Add(idb);
-                            }
-                            if (idb.Master.Shape == cutBody)
-                            {
-                                listIDBCutBody.Add(idb);
-                            }
-                        }
-
-                        // Subtract listIDBCutBody from _listIDB
-                        _listIDB = _listIDB.Except(listIDBCollisionBody).ToList();
-                        _listIDB = _listIDB.Except(listIDBCutBody).ToList();
-
-                        foreach (IDesignBody idb in _listIDB)
-                        {
-                            if (idb.Master == desBodyMaster)
                                 continue;
+                            }
+                        }
 
-                            int j = 0;
-                            foreach (IDesignBody idbCollision in listIDBCollisionBody)
+                        // Cylindrical shell prototypes (build once per edge; copy per placement)
+                        Body protoCylInner = null, protoCylOuter = null, protoCylAnnulus = null;
+                        if (!isPlaneEdge)
+                        {
+                            Plane shellPlane = Plane.Create(Frame.Create(axisEdge.Origin - 10 * axisEdge.Direction, axisEdge.Direction));
+                            protoCylInner = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge - thicknessEdge), 20);
+                            protoCylOuter = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge), 20);
+                            protoCylAnnulus = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge + 1), 20);
+                            // annulus := [R+1] minus [R]
+                            try { protoCylAnnulus.Subtract(protoCylOuter.Copy()); } catch { }
+                        }
+
+                        int placementIdx = 0;
+
+                        foreach (var (pCenterOcc, tanOcc) in entry.centers)
+                        {
+                            placementIdx++;
+                            //Logger.Log("placementId " + placementIdx.ToString());
+
+                            Body connectorBody = null, cutBody = null, collisionBody = null;
+                            var cutBodiesSource = new List<Body>();
+
+                            if (isPlaneEdge)
                             {
+                                //Logger.Log("planar");
+                                // === PLANAR ===
+                                var pCenterM = occToMaster * pCenterOcc;
+
+                                Direction nBigM = ((Plane)bigFaceEdge.Shape.Geometry).Frame.DirZ;
+                                if (bigFaceEdge.Shape.IsReversed) nBigM = -nBigM;
+
+                                Direction tanM_raw = (occToMaster * tanOcc.ToVector()).Direction;
+
+                                Vector tanM_vec = tanM_raw.ToVector();
+                                Vector nM_vec = nBigM.ToVector();
+                                double tanDotN = Vector.Dot(tanM_vec, nM_vec);
+                                Vector tanProj = (tanM_vec - tanDotN * nM_vec);
+
+                                Direction dirX_m;
+                                if (tanProj.Magnitude < 1e-12)
+                                {
+                                    var tryX = Vector.Create(1, 0, 0);
+                                    if (Math.Abs(Vector.Dot(tryX, nM_vec)) > 0.95) tryX = Vector.Create(0, 1, 0);
+                                    var xProj = (tryX - Vector.Dot(tryX, nM_vec) * nM_vec).Direction;
+                                    dirX_m = xProj;
+                                }
+                                else
+                                {
+                                    dirX_m = tanProj.Direction;
+                                }
+
+                                Direction dirY_m = nBigM;                  // sheet/extrude normal
+                                Direction dirZ_m = Direction.Cross(dirX_m, dirY_m);
+                                dirX_m = Direction.Cross(dirY_m, dirZ_m);
+
+                                Direction dirZ_w = (masterToOcc * dirZ_m.ToVector()).Direction;
                                 try
                                 {
-                                    if (idb.Shape.GetCollision(idbCollision.Shape) == Collision.Intersect)
+                                    var bodyM = ownerMaster?.Shape;
+                                    if (bodyM != null && bodyM.ContainsPoint(pCenterM + 1e-5 * dirZ_m))
                                     {
-                                        Body _cutBody = listIDBCutBody[j].Master.Shape.Copy();
-                                        _cutBody.Transform(idbCollision.TransformToMaster.Inverse);
-                                        _cutBody.Transform(idb.TransformToMaster);
-
-                                        DesignBody.Create(idb.Master.Parent, "_cutBody", _cutBody);
-                                        try
-                                        {
-                                            idb.Master.Shape.Subtract(_cutBody);
-                                        }
-                                        catch { }
+                                        dirY_m = Direction.Cross(dirZ_m, dirX_m);
+                                        dirZ_m = -dirZ_m;
+                                        dirX_m = Direction.Cross(dirY_m, dirZ_m);
                                     }
                                 }
                                 catch { }
 
-                                j++;
+                                // compute thickness once per edge via opposite face (small<->big pairing unchanged)
+                                var opp = getOppositeFace(smallFaceEdge, bigFaceEdge, isPlaneEdge, out double thickness, out Direction _);
+                                if (opp == null) continue;
+
+                                double usedHeight = 0.001 * c.Height; // UI height (m)
+                                if (c.DynamicHeight)
+                                {
+                                    usedHeight = ComputeAvailableHeightAlongRay(
+                                        winMainPart, ownerMaster, iDesignBody, pCenterOcc,
+                                        -dirZ_w, usedHeight, thickness, dirY_m
+                                    );
+                                }
+
+                                double tolM = Math.Max(0.0, c.Tolerance) * 0.001;
+                                double gapM = Math.Max(0.0, c.EndRelief) * 0.001;
+
+                                double connectorHeightM = Math.Max(0.0, usedHeight - gapM);
+
+                                double baseRectHeightM = rectangularCut
+                                    ? (c.DynamicHeight ? (connectorHeightM + gapM) : (0.001 * c.Height))
+                                    : usedHeight;
+
+                                double cutterHeightM = Math.Max(0.0, baseRectHeightM);
+
+                                // reuse existing instance 'c' (no new Connector allocations)
+                                c.CreateGeometry(
+                                    parentPart, dirX_m, dirY_m, dirZ_m, pCenterM,
+                                    cutterHeightM, connectorHeightM, thickness,
+                                    out connectorBody, out cutBodiesSource, out cutBody, out collisionBody, false,
+                                    null, rectangularCut
+                                );
+
+                                // Always build both base and extended geometries, then merge results (unchanged policy)
+                                var extCenter = pCenterM;                 // no downward shift
+                                var extConnHeight = connectorHeightM;     // same height
+
+                                Body extConnector = null, extCut = null, extCollision = null;
+                                var extOwnerCuts = new List<Body>();
+
+                                //Logger.Log("CreateGeometry (flipped extension) at " + extCenter.ToString());
+
+                                c.CreateGeometry(
+                                    parentPart,
+                                    dirX_m,
+                                    dirY_m,
+                                    -dirZ_m,            // ← flipped direction only
+                                    extCenter,
+                                    cutterHeightM,
+                                    extConnHeight,
+                                    thickness,
+                                    out extConnector,
+                                    out extOwnerCuts,
+                                    out extCut,
+                                    out extCollision,
+                                    false,
+                                    null,
+                                    rectangularCut,
+                                    false // disable corner features for extended pass
+                                );
+
+                                //Logger.Log("CreateGeometry done");
+
+                                try
+                                {
+                                    //Logger.Log($"[UnitePhase] connectorBody={(connectorBody != null)}, extConnector={(extConnector != null)}, cutBody={(cutBody != null)}, extCut={(extCut != null)}, collisionBody={(collisionBody != null)}, extCollision={(extCollision != null)}");
+
+                                    if (extConnector != null && connectorBody != null)
+                                    {
+                                        //Logger.Log("[UnitePhase] Trying connectorBody.Unite(extConnector)");
+                                        connectorBody.Unite(extConnector.Copy());
+                                        //Logger.Log("[UnitePhase] connectorBody.Unite(extConnector) OK");
+                                    }
+                                    else if (connectorBody == null && extConnector != null)
+                                    {
+                                        connectorBody = extConnector.Copy();
+                                        //Logger.Log("[UnitePhase] connectorBody created from extConnector.Copy()");
+                                    }
+
+                                    if (extCut != null && cutBody != null)
+                                    {
+                                        //Logger.Log("[UnitePhase] Trying cutBody.Unite(extCut)");
+                                        cutBody.Unite(extCut.Copy());
+                                        //Logger.Log("[UnitePhase] cutBody.Unite(extCut) OK");
+                                    }
+                                    else if (cutBody == null && extCut != null)
+                                    {
+                                        cutBody = extCut.Copy();
+                                        //Logger.Log("[UnitePhase] cutBody created from extCut.Copy()");
+                                    }
+
+                                    if (extCollision != null && collisionBody != null)
+                                    {
+                                        //Logger.Log("[UnitePhase] Trying collisionBody.Unite(extCollision)");
+                                        collisionBody.Unite(extCollision.Copy());
+                                        //Logger.Log("[UnitePhase] collisionBody.Unite(extCollision) OK");
+                                    }
+                                    else if (collisionBody == null && extCollision != null)
+                                    {
+                                        collisionBody = extCollision.Copy();
+                                        //Logger.Log("[UnitePhase] collisionBody created from extCollision.Copy()");
+                                    }
+
+                                    foreach (var b in extOwnerCuts)
+                                    {
+                                        cutBodiesSource.Add(b.Copy());
+                                        //Logger.Log("[UnitePhase] Added extOwnerCut.Copy()");
+                                    }
+
+                                    //Logger.Log("[UnitePhase] Done merging ext bodies for this placement");
+                                }
+                                catch (Exception exUnite)
+                                {
+                                    //Logger.Log($"[UnitePhase] EXCEPTION: {exUnite.Message}");
+                                }
+                                finally
+                                {
+                                    try { extConnector?.Dispose(); } catch { }
+                                    try { extCut?.Dispose(); } catch { }
+                                    try { extCollision?.Dispose(); } catch { }
+                                    foreach (var b in extOwnerCuts) { try { b?.Dispose(); } catch { } }
+                                }
+
+                                if (!rectangularCut && connectorBody != null && !c.RadiusInCutOut)
+                                {
+                                    var inflated = connectorBody.Copy();
+                                    try
+                                    {
+                                        double grow = Math.Max(1e-6, tolM);
+                                        inflated.OffsetFaces(inflated.Faces, grow);
+                                        cutBody?.Dispose();
+                                        cutBody = inflated;
+                                        collisionBody?.Dispose();
+                                        collisionBody = inflated.Copy();
+                                    }
+                                    catch { inflated?.Dispose(); }
+                                }
+                                //Logger.Log("line logic done");
+                            }
+                            else
+                            {
+                                // === CYLINDRICAL === (face pair computed once per edge)
+                                try
+                                {
+                                    double w1m = c.Width1 / 1000.0;
+                                    double w2m = c.Width2 / 1000.0;
+                                    if (outerRadiusEdge * 2 < w1m)
+                                    {
+                                        Application.ReportStatus($"Too wide, width should be less than: {outerRadiusEdge * 2000} mm", StatusMessageType.Information, null);
+                                        continue;
+                                    }
+
+                                    var pCenter = occToMaster * pCenterOcc;
+
+                                    double distSelectionPoint2Axis = (axisEdge.ProjectPoint(pCenter).Point - pCenter).Magnitude;
+                                    bool selectedInnerFace = outerRadiusEdge - distSelectionPoint2Axis > 1e-5;
+                                    DesignFace selectedFace = selectedInnerFace ? innerFaceEdge : outerFaceEdge;
+
+                                    Point pAxis = axisEdge.ProjectPoint(pCenter).Point;
+                                    Direction dirPoint2Axis = (pAxis - pCenter).Direction;
+                                    Direction dirZ = axisEdge.Direction;
+
+                                    Point pTest = pCenter + 0.00001 * dirZ;
+                                    if (selectedFace.Shape.ContainsPoint(pTest)) dirZ = -dirZ;
+
+                                    Direction dirX = Direction.Cross(dirPoint2Axis, dirZ);
+                                    double maxWidth = Math.Max(w1m, w2m);
+                                    double distWidth = Math.Sqrt(outerRadiusEdge * outerRadiusEdge - (0.5 * maxWidth) * (0.5 * maxWidth));
+                                    Point pWidth = pAxis - distWidth * dirPoint2Axis;
+                                    Point pWidth_A = pAxis - distWidth * dirPoint2Axis + 0.5 * maxWidth * dirX;
+                                    Point pWidth_B = pAxis - distWidth * dirPoint2Axis - 0.5 * maxWidth * dirX;
+
+                                    Direction dir_A = c.ConnectorStraight ? dirPoint2Axis : (pAxis - pWidth_A).Direction;
+                                    Direction dir_B = c.ConnectorStraight ? dirPoint2Axis : (pAxis - pWidth_B).Direction;
+                                    Point pInner_A = pWidth_A + thicknessEdge * dir_A;
+                                    Point pInner_B = pWidth_B + thicknessEdge * dir_B;
+
+                                    Point pInnerMid = pInner_A - 0.5 * (pInner_A - pInner_B).Magnitude * dirX;
+                                    Point p_InnerFace = pAxis - (outerRadiusEdge - thicknessEdge) * dirPoint2Axis;
+                                    Point p_OuterFace = pAxis - (outerRadiusEdge) * dirPoint2Axis;
+
+                                    double alpha = Math.Acos(distWidth / outerRadiusEdge);
+                                    double distOuter = outerRadiusEdge / Math.Cos(alpha);
+
+                                    Point pOuter_A = pAxis - distOuter * dir_A;
+                                    Point pOuter_B = pAxis - distOuter * dir_B;
+
+                                    var (success, innerEdge, outerEdge) = CylInfo.GetEdges(innerFaceEdge, p_InnerFace, outerFaceEdge, p_OuterFace);
+                                    var (successInnerA, p_InnerEdge_A) = CylInfo.GetClosestPoint(innerEdge, pInner_A, dirZ);
+                                    var (successInnerB, p_InnerEdge_B) = CylInfo.GetClosestPoint(innerEdge, pInner_B, dirZ);
+                                    var (successOuterA, p_OuterEdge_A) = CylInfo.GetClosestPoint(outerEdge, pWidth_A, dirZ);
+                                    var (successOuterB, p_OuterEdge_B) = CylInfo.GetClosestPoint(outerEdge, pWidth_B, dirZ);
+
+                                    double maxDistanceBottom = 0;
+                                    if (successInnerA && (pInner_A - p_InnerEdge_A).Direction == dirZ)
+                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_A - p_InnerEdge_A).Magnitude);
+                                    if (successInnerB && (pInner_B - p_InnerEdge_B).Direction == dirZ)
+                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_B - p_InnerEdge_B).Magnitude);
+                                    if (successOuterA && (pWidth_A - p_OuterEdge_A).Direction == dirZ)
+                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_A - p_OuterEdge_A).Magnitude);
+                                    if (successOuterB && (pWidth_B - p_OuterEdge_B).Direction == dirZ)
+                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_B - p_OuterEdge_B).Magnitude);
+
+                                    Plane planeInner = Plane.Create(Frame.Create(pInnerMid, dirX, dirZ));
+                                    Plane planeOuter = Plane.Create(Frame.Create(p_OuterFace, dirX, dirZ));
+
+                                    double widthDiffInner = c.ConnectorStraight ? 0 : (pWidth_A - pWidth_B).Magnitude - (pInner_A - pInner_B).Magnitude;
+                                    double widthDiffOuter = c.ConnectorStraight ? 0 : (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
+
+                                    Direction dirZ_world = (masterToOcc * dirZ.ToVector()).Direction;
+                                    Direction shiftThicknessWorld = (masterToOcc * dirPoint2Axis.ToVector()).Direction;
+
+                                    double userHeightM = 0.001 * c.Height;
+                                    double usedHeightM = c.DynamicHeight
+                                        ? ComputeAvailableHeightAlongRay(Window.ActiveWindow.Document.MainPart, ownerMaster, iDesignBody, pCenterOcc, dirZ_world, userHeightM, thicknessEdge, shiftThicknessWorld)
+                                        : userHeightM;
+
+                                    double tolM = Math.Max(0.0, c.Tolerance) * 0.001;
+                                    double gapM = Math.Max(0.0, c.EndRelief) * 0.001;
+
+                                    double connectorHeightM = Math.Max(0.0, usedHeightM - gapM);
+                                    double cutterHeightM = usedHeightM; // + tol
+
+                                    var savedDyn = c.DynamicHeight;
+                                    try
+                                    {
+                                        c.DynamicHeight = true;
+
+                                        var boundary_Outer = c.CreateBoundary(
+                                            dirX, dirPoint2Axis, dirZ, p_OuterFace,
+                                            widthDiffOuter, maxDistanceBottom, connectorHeightM);
+
+                                        var boundary_Inner = c.CreateBoundary(
+                                            dirX, dirPoint2Axis, dirZ, pInnerMid,
+                                            widthDiffInner, maxDistanceBottom, connectorHeightM);
+
+                                        var connectorBodyLocal = c.CreateLoft(boundary_Outer, planeOuter, boundary_Inner, planeInner);
+
+                                        // use per-edge prototypes; copy for each subtraction (behavior unchanged)
+                                        var cylInnerCopy = protoCylInner?.Copy();
+                                        var cylAnnulCopy = protoCylAnnulus?.Copy();
+
+                                        if (cylInnerCopy != null) connectorBodyLocal.Subtract(cylInnerCopy);
+                                        if (cylAnnulCopy != null) connectorBodyLocal.Subtract(cylAnnulCopy);
+
+                                        connectorBody = connectorBodyLocal.Copy();
+
+                                        var savedRadius = c.Radius;
+                                        var savedHasRounding = c.HasRounding;
+                                        Body rectLoft = null;
+
+                                        try
+                                        {
+                                            c.Radius = 0.0;
+                                            c.HasRounding = false;
+
+                                            var rectOuter = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, p_OuterFace,
+                                                widthDiffOuter, maxDistanceBottom, cutterHeightM);
+
+                                            var rectInner = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, pInnerMid,
+                                                widthDiffInner, maxDistanceBottom, cutterHeightM);
+
+                                            rectLoft = c.CreateLoft(rectOuter, planeOuter, rectInner, planeInner);
+                                        }
+                                        finally
+                                        {
+                                            c.Radius = savedRadius;
+                                            c.HasRounding = savedHasRounding;
+                                        }
+
+                                        // shell subtraction for cutter/collision using prototypes
+                                        var cylInnerCopy2 = protoCylInner?.Copy();
+                                        var cylAnnulCopy2 = protoCylAnnulus?.Copy();
+                                        if (cylInnerCopy2 != null) rectLoft.Subtract(cylInnerCopy2);
+                                        if (cylAnnulCopy2 != null) rectLoft.Subtract(cylAnnulCopy2);
+
+                                        collisionBody = rectLoft;
+                                        cutBody = rectLoft.Copy();
+                                        try { cutBody.OffsetFaces(cutBody.Faces, Math.Max(1e-6, tolM)); } catch { }
+                                    }
+                                    finally
+                                    {
+                                        c.DynamicHeight = savedDyn;
+                                    }
+
+                                    // ---- Ensure attachment; else extend once (cylindrical) ----
+                                    if (connectorBody != null && !IsAttachedLocal(ownerMaster, connectorBody))
+                                    {
+                                        var extConnHeight = 2.0 * connectorHeightM;
+
+                                        var p_OuterFace_ext = p_OuterFace - connectorHeightM * dirZ;
+                                        var pInnerMid_ext = pInnerMid - connectorHeightM * dirZ;
+
+                                        Plane planeInner_ext = Plane.Create(Frame.Create(pInnerMid_ext, dirX, dirZ));
+                                        Plane planeOuter_ext = Plane.Create(Frame.Create(p_OuterFace_ext, dirX, dirZ));
+
+                                        var boundary_Outer_ext = c.CreateBoundary(
+                                            dirX, dirPoint2Axis, dirZ, p_OuterFace_ext,
+                                            widthDiffOuter, maxDistanceBottom, extConnHeight);
+
+                                        var boundary_Inner_ext = c.CreateBoundary(
+                                            dirX, dirPoint2Axis, dirZ, pInnerMid_ext,
+                                            widthDiffInner, maxDistanceBottom, extConnHeight);
+
+                                        var connectorBodyLocal_ext = c.CreateLoft(boundary_Outer_ext, planeOuter_ext, boundary_Inner_ext, planeInner_ext);
+
+                                        var cylInnerCopy3 = protoCylInner?.Copy();
+                                        var cylAnnulCopy3 = protoCylAnnulus?.Copy();
+                                        if (cylInnerCopy3 != null) connectorBodyLocal_ext.Subtract(cylInnerCopy3);
+                                        if (cylAnnulCopy3 != null) connectorBodyLocal_ext.Subtract(cylAnnulCopy3);
+
+                                        var extConnector = connectorBodyLocal_ext.Copy();
+
+                                        if (extConnector != null && IsAttachedLocal(ownerMaster, extConnector))
+                                        {
+                                            connectorBody?.Dispose();
+                                            connectorBody = extConnector;
+                                        }
+                                        else
+                                        {
+                                            try { extConnector?.Dispose(); } catch { }
+                                            throw new InvalidOperationException("Connector could not attach to the owner body (after one extension).");
+                                        }
+                                    }
+
+                                    if (!rectangularCut && connectorBody != null)
+                                    {
+                                        var inflated = connectorBody.Copy();
+                                        try
+                                        {
+                                            double grow = Math.Max(1e-6, tolM);
+                                            inflated.OffsetFaces(inflated.Faces, grow);
+                                            cutBody?.Dispose(); cutBody = inflated;
+                                            collisionBody?.Dispose(); collisionBody = inflated.Copy();
+                                        }
+                                        catch { inflated?.Dispose(); }
+                                    }
+                                }
+                                catch (Exception exCyl)
+                                {
+                                    Application.ReportStatus($"Connector cylindrical geometry failed: {exCyl}", StatusMessageType.Error, null);
+                                    continue;
+                                }
+                            } // end branch
+
+                            // --- Accumulate this placement (kept identical) ---
+                            if (connectorBody != null) uniteList.Add(connectorBody.Copy());
+                            if (cutBody != null) cutPropList.Add(cutBody.Copy());
+                            if (collisionBody != null) collList.Add(collisionBody.Copy());
+                            foreach (var cb in cutBodiesSource) ownerCuts.Add(cb.Copy());
+                        } // placements
+
+                        // cleanup per-edge prototypes
+                        try { protoCylInner?.Dispose(); } catch { }
+                        try { protoCylOuter?.Dispose(); } catch { }
+                        try { protoCylAnnulus?.Dispose(); } catch { }
+
+                        try
+                        {
+                            //Logger.Log($"[BooleanPhase] uniteList={uniteList.Count}, cutPropList={cutPropList.Count}, collList={collList.Count}, ownerCuts={ownerCuts.Count}");
+                            var ownerOccSourceForTools = iDesignBody;
+
+                            if (!ApplyOwnerEditsWithChoice(
+                                mainPart,
+                                iDesignBody,
+                                ownerMaster,
+                                parentPart,
+                                uniteList,
+                                ownerCuts,
+                                out var choiceForNeighbors,
+                                out var ownerOccForMapping))
+                            {
+                                continue;
+                            }
+                            //Logger.Log($"[BooleanPhase] collList.Count={collList.Count}");
+                            //Logger.Log($"[BooleanPhase] cutPropList.Count={cutPropList.Count}");
+                            if (collList.Count > 0 && cutPropList.Count > 0)
+                            {
+                                // neighbours are found around ownerOccForMapping,
+                                // tool mapping uses the ORIGINAL owner occurrence
+                                PropagateCutsForChoice(
+                                    mainPart,
+                                    ownerOccForMapping,
+                                    ownerOccSourceForTools,
+                                    parentPart,
+                                    collList,
+                                    cutPropList,
+                                    choiceForNeighbors);
                             }
                         }
-
-                        foreach (IDesignBody idb in listIDBCollisionBody)
+                        catch
                         {
-                            if (!idb.IsDeleted)
-                                idb.Delete();
+                            // keep processing other edges
                         }
-                        foreach (IDesignBody idb in listIDBCutBody)
-                        {
-                            if (!idb.IsDeleted)
-                                idb.Delete();
-                        }
-                    });
-                }
+                    } // foreach edge
+                }); // WriteBlock
             }
             catch (Exception ex)
             {
                 Application.ReportStatus(ex.ToString(), StatusMessageType.Error, null);
             }
-        }
-
-
-        private static List<IDesignBody> getIDesignBodiesFromBody(Part part, Body body)
-        {
-            List<IDesignBody> list = new List<IDesignBody> { };
-            foreach (IDesignBody idb in part.GetDescendants<IDesignBody>())
+            finally
             {
-                if (idb.Master.Shape == body)
-                    list.Add(idb);
+                swAll.Stop();
             }
-            return list;
+        }
+        private static IDesignBody MakeIndependentOcc(IDesignBody occ)
+        {
+            if (occ == null) return null;
+
+            var win = Window.ActiveWindow;
+            var ctx = win?.ActiveContext;
+            var mainPart = win?.Document?.MainPart;
+            if (ctx == null || mainPart == null)
+                return occ;
+
+            var originalMaster = occ.Master;
+            var originalPart = originalMaster?.Parent as Part;
+            var originalComponent = originalPart?.Parent as Component;
+
+            // Prefer the component name as stem source, fall back to body name
+            var stemSourceName = originalComponent?.Name ?? originalMaster?.Name ?? string.Empty;
+
+            // snapshot
+            var originalHashCodes = new HashSet<int>();
+            foreach (var idb in mainPart.GetDescendants<IDesignBody>())
+                originalHashCodes.Add(idb.GetHashCode());
+
+            var occInCtx = ctx.MapToContext<IDesignBody>(occ) ?? occ;
+            ctx.SingleSelection = occInCtx;
+
+            Command.Execute("MakeIndependent");
+
+            IDesignBody newOcc = null;
+            foreach (var idb in mainPart.GetDescendants<IDesignBody>())
+            {
+                if (!originalHashCodes.Contains(idb.GetHashCode()))
+                {
+                    newOcc = idb;
+                    break;
+                }
+            }
+
+            if (newOcc != null)
+            {
+                // Normalise all components that share the same stem
+                NormalizeStemSuffixes(newOcc);
+                return newOcc;
+            }
+
+            return occ;
+        }
+        private static void NormalizeStemSuffixes(IDesignBody iBod)
+        {
+            if (iBod == null) return;
+            var win = Window.ActiveWindow;
+            var mainPart = win?.Document?.MainPart;
+            string currName = iBod.Parent.Master.Name;
+            var allComps = mainPart.GetDescendants<IDesignBody>().ToList();
+            foreach (var comp in allComps)
+            {
+                Logger.Log(comp.Parent.Master.Name);
+            }
+
+            string newName = $"{currName.Remove(currName.Length - 1)}_{nameIndex}";
+            Logger.Log($"Newname = {newName}");
+            bool exists = allComps.Any(c => c.Parent.Master.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+
+            if (exists)
+            {
+                nameIndex++;
+                NormalizeStemSuffixes(iBod);
+            }
+            else
+            {
+                iBod.Parent.Master.Name = newName;
+            }
         }
 
-        static Direction getNormalDirectionPlanarFace(Face face)
+        private static bool ApplyOwnerEditsWithChoice(
+            Part mainPart,
+            IDesignBody iDesignBody,
+            DesignBody ownerMaster,
+            Part parentPart,
+            IEnumerable<Body> uniteList,
+            IEnumerable<Body> ownerCuts,
+            out LinkedChoice choice,
+            out IDesignBody ownerOccForMapping)
         {
-            var plane = face.GetGeometry<Plane>();
-            return plane != null ? GetPlaneNormal(plane, face.IsReversed) : Direction.Zero;
+            choice = LinkedChoice.ThisOnly;
+            ownerOccForMapping = iDesignBody;
+
+            try
+            {
+                // Log bounding boxes of each unite body
+                int uidx = 0;
+
+                bool isLinked = IsLinked(iDesignBody, mainPart);
+
+                if (!isLinked)
+                {
+                    UniteEachIntoOwner(ownerMaster, parentPart, uniteList);
+                    SubtractEachFromOwner(ownerMaster, parentPart, ownerCuts);
+                    return true;
+                }
+
+                choice = AskLinkedChoice(iDesignBody);
+
+                if (choice == LinkedChoice.Cancel)
+                {
+                    return false;
+                }
+
+                if (choice == LinkedChoice.AllLinked)
+                {
+                    UniteEachIntoOwner(ownerMaster, parentPart, uniteList);
+                    SubtractEachFromOwner(ownerMaster, parentPart, ownerCuts);
+                    ownerOccForMapping = iDesignBody;
+                    return true;
+                }
+
+                nameIndex = 1;
+                var indepOcc = MakeIndependentOcc(iDesignBody);
+
+                //NormalizeStemSuffixes(iDesignBody);
+                if (indepOcc == null)
+                {
+                    Application.ReportStatus("Could not make this body independent.", StatusMessageType.Warning, null);
+                    ownerOccForMapping = iDesignBody;
+                    return false;
+                }
+
+                var targetMaster = indepOcc.Master;
+                var targetPart = targetMaster.Parent;
+
+                UniteEachIntoOwner(targetMaster, targetPart, uniteList);
+                SubtractEachFromOwner(targetMaster, targetPart, ownerCuts);
+
+                ownerOccForMapping = indepOcc;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                choice = LinkedChoice.Cancel;
+                ownerOccForMapping = iDesignBody;
+                return false;
+            }
         }
 
-        static Direction GetPlaneNormal(Plane plane, bool reversed)
+        private enum LinkedChoice { ThisOnly, AllLinked, Cancel }
+
+        private static bool IsLinked(IDesignBody occ, Part mainPart)
         {
-            Direction planeNormal = plane.Frame.DirZ;
-            return reversed ? -planeNormal : planeNormal;
+            if (occ?.Master == null || mainPart == null) return false;
+            return mainPart.GetDescendants<IDesignBody>().Count(x => x.Master == occ.Master) > 1;
+        }
+
+        private static LinkedChoice AskLinkedChoice(IDesignBody occ)
+        {
+            const string caption = "Linked bodies detected";
+            const string text =
+                "This body is linked to others. Do you want to adjust all linked bodies?\n\n" +
+                "Choose an option:\n" +
+                "  • Yes  — Adjust ALL linked bodies\n" +
+                "  • No   — Adjust ONLY this body\n" +
+                "  • Cancel — Abort";
+
+            var buttons = System.Windows.Forms.MessageBoxButtons.YesNoCancel;
+            var icon = System.Windows.Forms.MessageBoxIcon.Question;
+
+            // Default to "No" (Single body) to be conservative.
+            var res = System.Windows.Forms.MessageBox.Show(
+                text, caption, buttons, icon, System.Windows.Forms.MessageBoxDefaultButton.Button2);
+
+            if (res == System.Windows.Forms.DialogResult.Yes) return LinkedChoice.AllLinked; // Yes = All linked
+            if (res == System.Windows.Forms.DialogResult.No) return LinkedChoice.ThisOnly;  // No = This only
+            return LinkedChoice.Cancel;                                                     // Cancel or closed
+        }
+
+        // Get all occurrences that reference the same DesignBody master as 'ownerOcc'
+        private static List<IDesignBody> GetAllLinkedOccurrences(Part mainPart, IDesignBody ownerOcc)
+        {
+            if (mainPart == null || ownerOcc?.Master == null) return new List<IDesignBody>();
+            return mainPart.GetDescendants<IDesignBody>().Where(x => x.Master == ownerOcc.Master).ToList();
+        }
+
+        private enum NeighbourBatchChoice { MakeIndependentAll, EditSharedAll, SkipAll }
+
+        private static NeighbourBatchChoice AskBatchForOwner(IDesignBody ownerOcc, int hitCount)
+        {
+            var title = "Linked neighbours detected";
+            var msg =
+                $"Owner “{ownerOcc?.Master?.Name}” will cut {hitCount} neighbour(s).\n\n" +
+                "How do you want to apply the cuts?\n\n" +
+                "No  — Make each linked neighbour independent, then cut ONLY here (recommended)\n" +
+                "Yes — Cut the SHARED neighbour master (affects all its linked instances)\n" +
+                "Cancel — Skip cutting all these neighbours for this owner";
+            var res = System.Windows.Forms.MessageBox.Show(
+                msg, title,
+                System.Windows.Forms.MessageBoxButtons.YesNoCancel,
+                System.Windows.Forms.MessageBoxIcon.Question,
+                System.Windows.Forms.MessageBoxDefaultButton.Button2);
+
+            if (res == System.Windows.Forms.DialogResult.No) return NeighbourBatchChoice.MakeIndependentAll;
+            if (res == System.Windows.Forms.DialogResult.Yes) return NeighbourBatchChoice.EditSharedAll;
+            return NeighbourBatchChoice.SkipAll;
+        }
+
+        private static bool BoxesIntersect(Box a, Box b)
+        {
+            var A0 = a.MinCorner; var A1 = a.MaxCorner;
+            var B0 = b.MinCorner; var B1 = b.MaxCorner;
+            return !(A1.X < B0.X || A0.X > B1.X
+                  || A1.Y < B0.Y || A0.Y > B1.Y
+                  || A1.Z < B0.Z || A0.Z > B1.Z);
+        }
+
+        private static bool IntersectsNeighbour(IDesignBody ownerOcc, IDesignBody neighbourOcc, Body toolInOwnerMaster)
+        {
+            if (neighbourOcc?.Master?.Shape == null || toolInOwnerMaster == null) return false;
+            try
+            {
+                using var mapped = MapTool(toolInOwnerMaster, ownerOcc, neighbourOcc);
+                var c = neighbourOcc.Master.Shape.GetCollision(mapped);
+                return c == Collision.Intersect; // strict: no Touch
+            }
+            catch { return false; }
+        }
+
+        private static void PropagateCutsForChoice(
+            Part mainPart,
+            IDesignBody ownerOccForNeighbours,   // enumerate neighbours / pick ring
+            IDesignBody ownerOccSourceForTools,  // ORIGINAL owner; tool geometry lives here
+            Part parentPart,
+            IEnumerable<Body> collBodies,
+            IEnumerable<Body> cutBodies,
+            LinkedChoice choice)
+        {
+            if (mainPart == null || ownerOccForNeighbours == null || ownerOccSourceForTools == null) return;
+
+            var collList = (collBodies ?? Enumerable.Empty<Body>()).Where(b => b != null).ToList();
+            var cutList = (cutBodies ?? Enumerable.Empty<Body>()).Where(b => b != null).ToList();
+            if (collList.Count == 0 && cutList.Count == 0) return;
+
+            //Logger.Log($"[PropagateCutsForChoice] cutList={cutList.Count}, collList={collList.Count}");
+
+            var ownersToProcess = (choice == LinkedChoice.AllLinked)
+                ? GetAllLinkedOccurrences(mainPart, ownerOccForNeighbours)
+                : new List<IDesignBody> { ownerOccForNeighbours };
+
+            foreach (var ownerOcc in ownersToProcess)
+            {
+                if (ownerOcc?.Master?.Shape == null) continue;
+
+                // Prefer real cutters
+                var allTools = cutList.Count > 0 ? cutList : collList;
+                if (!allTools.Any()) continue;
+
+                // WORLD AABBs of tools placed at THIS owner occurrence
+                var toolWorldBoxes = new List<Box>();
+                foreach (var t in allTools)
+                {
+                    try { toolWorldBoxes.Add(t.GetBoundingBox(ownerOcc.TransformToMaster.Inverse)); } catch { }
+                }
+                if (toolWorldBoxes.Count == 0) continue;
+
+                var neighbours = mainPart.GetDescendants<IDesignBody>()
+                                         .Where(idb => idb != null && idb.Master != ownerOcc.Master)
+                                         .ToList();
+
+                // Collect colliding neighbours
+                var colliding = new List<(IDesignBody nOcc, bool isLinked)>();
+                foreach (var nOcc in neighbours)
+                {
+                    var nMaster = nOcc.Master;
+                    var nShape = nMaster?.Shape;
+                    if (nShape == null) continue;
+
+                    // coarse AABB
+                    Box nWorldBox;
+                    try { nWorldBox = nShape.GetBoundingBox(nOcc.TransformToMaster.Inverse); }
+                    catch { continue; }
+
+                    if (!toolWorldBoxes.Any(tb => BoxesIntersect(nWorldBox, tb)))
+                        continue;
+
+                    // strict intersection with at least one tool
+                    if (!allTools.Any(t => IntersectsNeighbour(ownerOcc, nOcc, t)))
+                        continue;
+
+                    colliding.Add((nOcc, IsLinked(nOcc, mainPart)));
+                }
+
+                if (colliding.Count == 0) continue;
+
+                // Split colliding neighbours into: already-decided (cached) vs undecided & linked
+                var undecidedLinked = new List<IDesignBody>();
+                foreach (var (nOcc, isLinked) in colliding)
+                {
+                    if (!isLinked) continue; // unlinked never prompt
+                    var nMaster = nOcc.Master;
+                    if (!s_neighbourDecisionCache.ContainsKey(nMaster))
+                        undecidedLinked.Add(nOcc);
+                }
+
+                // If there are undecided linked neighbours, prompt ONCE for this owner
+                if (undecidedLinked.Count > 0)
+                {
+                    var batch = AskBatchForOwner(ownerOcc, colliding.Count);
+                    if (batch == NeighbourBatchChoice.SkipAll)
+                    {
+                        //Logger.Log($"[PropagateCutsForChoice] Owner[{ownerOcc.Master?.Name}] SkipAll ({colliding.Count} neighbours).");
+                        continue;
+                    }
+
+                    // Map batch choice → per-neighbour decision and cache it
+                    var perNeighbour = (batch == NeighbourBatchChoice.MakeIndependentAll)
+                        ? NeighbourIndepChoice.MakeIndependent
+                        : NeighbourIndepChoice.EditShared;
+
+                    foreach (var nOcc in undecidedLinked)
+                    {
+                        var nMaster = nOcc.Master;
+                        s_neighbourDecisionCache[nMaster] = perNeighbour;
+                    }
+                }
+
+                // Apply decisions and cut
+                foreach (var (nOcc0, isLinked) in colliding)
+                {
+                    IDesignBody targetOcc = nOcc0;
+
+                    NeighbourIndepChoice decide =
+                        !isLinked ? NeighbourIndepChoice.EditShared
+                                  : s_neighbourDecisionCache.TryGetValue(nOcc0.Master, out var d) ? d
+                                    : NeighbourIndepChoice.EditShared; // fallback safety
+
+                    if (isLinked && decide == NeighbourIndepChoice.MakeIndependent)
+                    {
+                        nameIndex = 1;
+                        var newOcc = MakeIndependentOcc(nOcc0);
+                        //NormalizeStemSuffixes(newOcc);
+                        if (newOcc == null) continue;
+
+                        targetOcc = newOcc;
+                    }
+
+                    var targetMaster = targetOcc.Master;
+                    var targetPart = targetMaster.Parent;
+
+                    int toolIdx = 0;
+                    foreach (var toolSrc in allTools)
+                    {
+                        if (toolSrc == null) continue;
+                        try
+                        {
+                            if (!IntersectsNeighbour(ownerOcc, targetOcc, toolSrc)) continue;
+
+                            using var mapped = MapTool(toolSrc, ownerOcc, targetOcc);
+                            var tmp = DesignBody.Create(targetPart, $"_cut_tmp_{toolIdx++}", mapped.Copy());
+                            try { targetMaster.Shape.Subtract(new[] { tmp.Shape }); }
+                            finally { try { if (!tmp.IsDeleted) tmp.Delete(); } catch { } }
+
+                            //Logger.Log($"[PropagateCutsForChoice] Owner[{ownerOcc.Master?.Name}] → Neighbour[{targetMaster?.Name}]: subtracted tool {toolIdx}");
+                        }
+                        catch (Exception ex)
+                        {
+                            //Logger.Log($"[PropagateCutsForChoice] Subtract failed: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // Wrap a single tool body and unite it into the owner.
+        private static void UniteIntoOwner(DesignBody owner, Part part, Body tool)
+        {
+            if (owner == null || part == null || tool == null) return;
+
+            DesignBody tmp = null;
+            try
+            {
+                tmp = DesignBody.Create(part, "_tmp_unite", tool.Copy());
+                owner.Shape.Unite(new[] { tmp.Shape });
+            }
+            catch (Exception ex)
+            {
+                ////Logger.Log($"UniteIntoOwner failed: {ex}");
+            }
+            //finally
+            //{
+            //    try { if (tmp != null && !tmp.IsDeleted) tmp.Delete(); } catch { }
+            //}
+        }
+
+        // Wrap a single tool body and subtract it from the owner.
+        private static void SubtractFromOwner(DesignBody owner, Part part, Body tool)
+        {
+            if (owner == null || part == null || tool == null) return;
+
+            DesignBody tmp = null;
+            try
+            {
+                tmp = DesignBody.Create(part, "_tmp_unite", tool.Copy());
+                owner.Shape.Subtract(new[] { tmp.Shape });
+            }
+            catch (Exception ex)
+            {
+                ////Logger.Log($"UniteIntoOwner failed: {ex}");
+            }
+        }
+
+        // NEW: foreach uniter — this is the “only change” you wanted.
+        private static void UniteEachIntoOwner(DesignBody owner, Part part, IEnumerable<Body> connectors)
+        {
+            if (owner == null || part == null || connectors == null) return;
+
+            int idx = 0;
+            foreach (var b in connectors)
+            {
+                if (b == null) continue;
+                try
+                {
+                    var cp = b.Copy();
+                    //Logger.Log($"[UniteEachIntoOwner] Calling UniteIntoOwner for connector {idx++}");
+                    UniteIntoOwner(owner, part, cp);
+                }
+                catch (Exception ex)
+                {
+                    //Logger.Log($"[UniteEachIntoOwner] connector {idx} failed: {ex.Message}");
+                }
+            }
+        }
+
+
+        private static void SubtractEachFromOwner(DesignBody owner, Part part, IEnumerable<Body> cutters)
+        {
+            //Logger.Log($"[SubtractEachFromOwner] owner = null {owner == null}");
+            //Logger.Log($"[SubtractEachFromOwner] part = null {part == null}");
+            //Logger.Log($"[SubtractEachFromOwner] cutters = null {cutters == null}");
+            //Logger.Log($"[SubtractEachFromOwner] cutters count {cutters.Count()}");
+            if (owner == null || part == null || cutters == null) return;
+
+            int idx = 0;
+            foreach (var b in cutters)
+            {
+                //Logger.Log($"[SubtractEachFromOwner] var b in cutters = null {b == null}");
+                if (b == null) continue;
+                try
+                {
+                    var cp = b.Copy();
+                    //Logger.Log($"[SubtractEachFromOwner] Calling SubtractFromOwner for cutter {idx++}");
+                    SubtractFromOwner(owner, part, cp);
+                }
+                catch (Exception ex)
+                {
+                    //Logger.Log($"[SubtractEachFromOwner] cutter {idx} failed: {ex.Message}");
+                }
+            }
+        }
+
+        // === PATTERN LOGIC (helper) ===
+        // Returns OCCurrence-space placement centers + tangents for the requested pattern.
+        // Throws with a clear message if 'n' won't fit given the occupied width (max W + 2*Tol).
+        private static List<(Point pOcc, Direction tanOcc)> ComputePatternCentersOcc(
+            IDesignEdge iEdge,
+            ConnectorModel c,
+            int n)
+        {
+            //Logger.Log($"ComputePatternCentersOcc called. Looking for {n} connectors");
+            if (iEdge == null || iEdge.Shape == null) return new List<(Point, Direction)>();
+            if (n <= 0) throw new ArgumentException("Pattern amount must be greater than 0.");
+
+            //Logger.Log($"ComputePatternCentersOcc cont");
+            // Occupied width along the edge in metres
+            double occWidthM = (Math.Max(c.Width1, c.Width2) + 2.0 * c.Tolerance) / 1000.0;
+            double dLoc = 0.001 * c.Location; // user location shift (m), applied along local tangent
+
+            var shape = iEdge.Shape;
+            var geom = shape.Geometry;
+            var p0 = shape.StartPoint;
+            var p1 = shape.EndPoint;
+
+            var centers = new List<(Point, Direction)>();
+
+            // --- Straight segment -----------------------------------------------------
+            if (geom is Line)
+            {
+                //Logger.Log($"geom is Line");
+                double L = (p1 - p0).Magnitude; // metres
+
+                // capacity check
+                if (L < n * occWidthM - 1e-12)
+                    throw new InvalidOperationException(
+                        $"Requested pattern ({n}) does not fit on this edge. Length={L * 1000:0.###} mm, needed={(n * occWidthM) * 1000:0.###} mm.");
+
+                // even spacing with “gaps” at ends
+                double gap = (L - n * occWidthM) / (n + 1);
+                var dir = (p1 - p0).Direction;
+
+                for (int k = 0; k < n; k++)
+                {
+                    //Logger.Log($"for loop 'n'");
+                    double s = gap + 0.5 * occWidthM + k * (occWidthM + gap);
+                    // clamp softly inside the edge
+                    s = Math.Max(1e-9, Math.Min(L - 1e-9, s));
+                    var p = p0 + s * dir.ToVector();
+
+                    // apply Location along tangent
+                    var tan = dir;
+                    p = p + dLoc * tan;
+
+                    centers.Add((p, tan));
+
+                    //Logger.Log($"cemters added {centers.Count}");
+                }
+                return centers;
+            }
+
+            // --- Circular arc / full circle (equal-angle / equal-arc spacing) ------------
+            if (geom is Circle circle)
+            {
+                var sShape = iEdge.Shape;
+
+                // Edge parameter range (in radians for circles)
+                double ps = sShape.ProjectPoint(sShape.StartPoint).Param;
+                double pe = sShape.ProjectPoint(sShape.EndPoint).Param;
+
+                // Signed span; detect full circle if start≈end
+                const double EPS = 1e-9;
+                double dpar = pe - ps;
+                bool isFullCircle = Math.Abs(dpar) < EPS;    // closed edge → use full 2π
+                double sign = (dpar >= 0) ? 1.0 : -1.0;      // preserve traversal direction
+
+                double R = circle.Radius; // metres
+
+                // Helper to evaluate at parameter t and add Location shift
+                (Point p, Direction tan) EvalAt(double t)
+                {
+                    var ev = circle.Evaluate(t);
+                    var p = ev.Point;
+                    var tan = ev.Derivative.Direction;
+                    // Respect traversal sign so pattern follows edge orientation
+                    if (sign < 0) tan = -tan;
+                    // Apply user Location (mm) along tangent
+                    p = p + dLoc * tan;
+                    return (p, tan);
+                }
+
+                if (isFullCircle)
+                {
+                    // Equal-angle spacing around the loop: t_k = ps + sign * k * (2π/n)
+                    double step = (2.0 * Math.PI) / n;
+                    for (int k = 0; k < n; k++)
+                    {
+                        double t = ps + sign * k * step;
+                        var (p, tan) = EvalAt(t);
+                        centers.Add((p, tan));
+                    }
+                }
+                else
+                {
+                    // Open arc: even distribution across the actual span.
+                    // Include endpoints for n>1; center for n==1.
+                    if (n == 1)
+                    {
+                        double tMid = ps + 0.5 * (pe - ps);
+                        var (p, tan) = EvalAt(tMid);
+                        centers.Add((p, tan));
+                    }
+                    else
+                    {
+                        for (int k = 0; k < n; k++)
+                        {
+                            double frac = (double)k / (n - 1);     // 0 → 1 inclusive
+                            double t = ps + frac * (pe - ps);      // follows edge direction
+                            var (p, tan) = EvalAt(t);
+                            centers.Add((p, tan));
+                        }
+                    }
+                }
+
+                return centers;
+            }
+            return centers;
         }
 
         private DesignFace getOppositeFace(DesignFace smallFace, DesignFace bigFace, bool isPlanar, out double thickness, out Direction direction)
@@ -919,135 +1855,70 @@ namespace AESCConstruct25.UI
 
         }
 
-        //private bool checkFitsLine(IDesignEdge iDesEdge, ConnectorModel connector)
-        //{
-        //    DesignEdge desEdge = iDesEdge.Master;
-        //    Point midPoint = Point.Origin;
-
-        //    var line = desEdge.Shape.Geometry as Line;
-        //    if (line == null)
-        //        return true;
-
-        //    if (connector.ClickPosition)
-        //    {
-        //        Point selPoint = (Point)Window.ActiveWindow.ActiveContext.GetSelectionPoint(iDesEdge);
-        //        midPoint = iDesEdge.Shape.ProjectPoint(selPoint).Point;
-        //    }
-        //    else
-        //    {
-        //        Point selPoint = Point.Origin;
-        //        double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
-        //        double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
-        //        midPoint = line.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
-        //    }
-        //    double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
-        //    //Application.ReportStatus($"minDist: {minDist}", StatusMessageType.Information, null);
-        //    return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
-
-        //}
-        private bool checkFitsLine(IDesignEdge iDesEdge, ConnectorModel connector)
+        private bool checkDesignEdge(IDesignEdge iDesEdge, bool clickPosition, out Point midPointOcc)
         {
-            DesignEdge desEdge = iDesEdge.Master;
-            Point midPoint = Point.Origin;
+            midPointOcc = Point.Origin;
+            if (iDesEdge == null || iDesEdge.Shape == null) return false;
 
-            var line = desEdge.Shape.Geometry as Line;
-            if (line == null)
-                return true; // only enforce fit on straight lines
-
-            if (connector.ClickPosition)
-            {
-                Point selPoint = (Point)Window.ActiveWindow.ActiveContext.GetSelectionPoint(iDesEdge);
-                midPoint = iDesEdge.Shape.ProjectPoint(selPoint).Point;
-            }
-            else
-            {
-                double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
-                double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
-                midPoint = line.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
-            }
-
-            // Apply left/right shift along the edge tangent (Location is mm)
-            double offsetM = 0.001 * connector.Location;
-            Direction tangent = desEdge.Shape.ProjectPoint(midPoint).Derivative.Direction;
-            midPoint = midPoint + offsetM * tangent;
-
-            double minDist = Math.Min((desEdge.Shape.StartPoint - midPoint).Magnitude, (desEdge.Shape.EndPoint - midPoint).Magnitude);
-            return (minDist - 0.001 * connector.Width1 * 0.5) > 0;
-        }
-
-
-        private bool checkDesignEdge(IDesignEdge iDesEdge, bool clickPosition, out Point midPoint)
-        {
-            DesignEdge desEdge = iDesEdge.Master;
-
-            midPoint = Point.Origin;
-            // Check if line or circle or ellipse or nurbscurve
-
-            var test = desEdge.Shape.Geometry as Line;
-            var test1 = desEdge.Shape.Geometry as Circle;
-            var test2 = desEdge.Shape.Geometry as NurbsCurve;
-            var test3 = desEdge.Shape.Geometry as Ellipse;
-            var test4 = desEdge.Shape.Geometry as ProceduralCurve;
+            // We will work in occurrence space via iDesEdge.Shape
+            var geom = iDesEdge.Shape.Geometry;
 
             if (clickPosition)
             {
-                midPoint = (Point)Window.ActiveWindow.ActiveContext.GetSelectionPoint(iDesEdge);
-                Point af = iDesEdge.Shape.ProjectPoint(midPoint).Point;
-                midPoint = iDesEdge.Shape.ProjectPoint(midPoint).Point;
-
-                //WriteBlock.ExecuteTask("connector", () =>
-                //{
-                //    DatumPoint.Create(iDesEdge.Parent.Parent, "selPoint", af);
-                //});
-
-                //midPoint = midPoint + 1 * (iDesEdge.TransformToMaster).Translation;
+                // Selection point is world/master; project into OCCurrence space
+                var selWorld = (Point)Window.ActiveWindow.ActiveContext.GetSelectionPoint(iDesEdge);
+                midPointOcc = iDesEdge.Shape.ProjectPoint(selWorld).Point;
+                return true;
             }
-            else
+
+            // Compute midpoint parameter robustly for common curve types
+            var line = geom as Line;
+            var circ = geom as Circle;
+            var nurb = geom as NurbsCurve;
+            var ell = geom as Ellipse;
+            var proc = geom as ProceduralCurve;
+
+            if (line != null)
             {
-                Point selPoint = Point.Origin;
-                double paramStart = desEdge.Shape.ProjectPoint(desEdge.Shape.StartPoint).Param;
-                double paramEnd = desEdge.Shape.ProjectPoint(desEdge.Shape.EndPoint).Param;
-
-                if (false)
-                {
-                    WriteBlock.ExecuteTask("connector", () =>
-                    {
-                        DatumPoint.Create(desEdge.Parent.Parent, "StartPoint", desEdge.Shape.StartPoint);
-                        DatumPoint.Create(desEdge.Parent.Parent, "EndPoint", desEdge.Shape.EndPoint);
-                    });
-
-                }
-
-                if (test != null)
-                {
-                    midPoint = test.Evaluate(paramStart + 0.5 * (paramEnd - paramStart)).Point;
-
-                }
-                else if (test1 != null)
-                {
-                    double paramMid = paramStart + 0.5 * (paramEnd - paramStart);
-                    midPoint = test1.Evaluate(paramMid).Point;
-                }
-                else if (test2 != null)
-                {
-                    double paramMid = paramStart + 0.5 * (paramEnd - paramStart);
-                    midPoint = test2.Evaluate(paramMid).Point;
-                }
-                else if (test3 != null)
-                {
-                    double paramMid = paramStart == paramEnd ? 0.5 * paramEnd : paramStart + 0.5 * (paramEnd - paramStart);
-                    midPoint = test3.Evaluate(paramMid).Point;
-                }
-                else if (test4 != null)
-                    midPoint = test4.Evaluate(0.5).Point;
-                /* TODO add location paramater support */
+                // Use the shape's own parameter range
+                var ps = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.StartPoint).Param;
+                var pe = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.EndPoint).Param;
+                midPointOcc = line.Evaluate(ps + 0.5 * (pe - ps)).Point;
+                return true;
+            }
+            if (circ != null)
+            {
+                var ps = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.StartPoint).Param;
+                var pe = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.EndPoint).Param;
+                var pm = ps + 0.5 * (pe - ps);
+                midPointOcc = circ.Evaluate(pm).Point;
+                return true;
+            }
+            if (nurb != null)
+            {
+                var ps = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.StartPoint).Param;
+                var pe = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.EndPoint).Param;
+                var pm = ps + 0.5 * (pe - ps);
+                midPointOcc = nurb.Evaluate(pm).Point;
+                return true;
+            }
+            if (ell != null)
+            {
+                var ps = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.StartPoint).Param;
+                var pe = iDesEdge.Shape.ProjectPoint(iDesEdge.Shape.EndPoint).Param;
+                var pm = (Math.Abs(pe) < 1e-12) ? 0.5 * pe : ps + 0.5 * (pe - ps);
+                midPointOcc = ell.Evaluate(pm).Point;
+                return true;
+            }
+            if (proc != null)
+            {
+                midPointOcc = proc.Evaluate(0.5).Point;
+                return true;
             }
 
-
-
-            return !(test == null && test1 == null && test2 == null && test3 == null && test4 == null);
-
+            return false;
         }
+
 
         private void WireUiChangeHandlers()
         {
@@ -1062,6 +1933,7 @@ namespace AESCConstruct25.UI
                 connectorWidth1,
                 connectorWidth2,
                 connectorTolerance,
+                connectorSpacing,
                 connectorRadiusChamfer,
                 connectorLocation,
                 connectorCornerCutoutValue,
@@ -1083,7 +1955,8 @@ namespace AESCConstruct25.UI
                 connectorCornerCutoutRadius,
                 connectorClickLocation,
                 connectorShowTolerance,
-                connectorStraight
+                connectorRectangularCut
+                //connectorStraight
             };
             foreach (var cb in checkBoxes)
             {
@@ -1116,9 +1989,118 @@ namespace AESCConstruct25.UI
             }
         }
 
-        private void OnTextChanged(object sender, TextChangedEventArgs e) => DebouncedRedraw();
-        private void OnRoutedChanged(object sender, RoutedEventArgs e) => DebouncedRedraw();
-        private void OnSelectionChanged(object sender, SelectionChangedEventArgs e) => DebouncedRedraw();
+        //private void OnTextChanged(object sender, TextChangedEventArgs e) => DebouncedRedraw();
+        //private void OnRoutedChanged(object sender, RoutedEventArgs e) => DebouncedRedraw();
+        private void OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            DebouncedRedraw();
+            EnforceCornerCoupling();
+            EnforceRectCutExclusivity();
+            UpdateGenerateEnabled();
+        }
+
+        private void OnRoutedChanged(object sender, RoutedEventArgs e)
+        {
+            DebouncedRedraw();
+            EnforceCornerCoupling();
+            EnforceRectCutExclusivity();
+            UpdateGenerateEnabled();
+        }
+        private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            DebouncedRedraw();
+            UpdateGenerateEnabled();
+        }
+
+        private const double EPS = 1e-6;
+
+        private bool TryReadDouble(TextBox tb, out double v)
+        {
+            v = 0;
+            if (tb == null) return false;
+            var s = (tb.Text ?? "").Trim();
+            // current culture OR invariant
+            if (double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out v)) return true;
+            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v)) return true;
+            // last-chance normalize
+            s = s.Replace(',', '.');
+            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+        }
+
+        private bool IsReliefAllowed(out string reason)
+        {
+            reason = null;
+
+            if (!TryReadDouble(connectorWidth1, out var w1)) { reason = "Enter a valid Width1."; return false; }
+            if (!TryReadDouble(connectorWidth2, out var w2)) { reason = "Enter a valid Width2."; return false; }
+            if (!TryReadDouble(connectorSpacing, out var relief)) { reason = "Enter a valid End Relief."; return false; }
+
+            if ((connectorRectangularCut?.IsChecked == false) && relief > 0)
+            {
+                reason = "Rectangular cut can’t be used while End Relief > 0.";
+                return false;
+            }
+
+            // Only block when relief > 0 AND widths differ
+            if (relief > 0 && Math.Abs(w1 - w2) > EPS)
+            {
+                reason = "End Relief can only be used if top and bottom width are equal.";
+                return false;
+            }
+
+            return true;
+        }
+        private void EnforceRectCutExclusivity()
+        {
+            // If Rectangular cut is ON, force End Relief to 0 and disable it.
+            if (connectorRectangularCut?.IsChecked == false)
+            {
+                if (connectorSpacing != null)
+                {
+                    connectorSpacing.Text = "0";
+                    connectorSpacing.IsEnabled = false;
+                    connectorSpacing.ToolTip = "End Relief is disabled while Rectangular cut is on.";
+                }
+            }
+            else
+            {
+                if (connectorSpacing != null)
+                {
+                    connectorSpacing.IsEnabled = true;
+                    connectorSpacing.ToolTip = null;
+                }
+            }
+
+            // If user types End Relief > 0, auto-turn Off Rectangular cut (vice-versa)
+            if (connectorSpacing != null && double.TryParse(connectorSpacing.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rel) && rel > 0)
+            {
+                if (connectorRectangularCut != null)
+                    connectorRectangularCut.IsChecked = true;
+            }
+        }
+        private void UpdateGenerateEnabled()
+        {
+            var btn = this.FindName("btnCreateConnector") as System.Windows.Controls.Button
+                      ?? this.FindName("btnCreate") as System.Windows.Controls.Button
+                      ?? this.FindName("generateButton") as System.Windows.Controls.Button;
+
+            if (btn == null) return; // if your XAML uses a different name, adjust the FindName above
+
+            if (IsReliefAllowed(out var reason))
+            {
+                btn.IsEnabled = true;
+                btn.ToolTip = null;
+                // optional: clear visual warning
+                if (connectorSpacing != null) connectorSpacing.Background = System.Windows.Media.Brushes.White;
+            }
+            else
+            {
+                btn.IsEnabled = false;
+                btn.ToolTip = reason;
+                // optional: subtle visual cue on the End Relief box
+                if (connectorSpacing != null) connectorSpacing.Background = System.Windows.Media.Brushes.MistyRose;
+            }
+        }
 
         private void OnTextBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
@@ -1139,70 +2121,127 @@ namespace AESCConstruct25.UI
                     _uiDebounce.Stop();
                     // drawConnector() rebuilds the ConnectorModel from UI and invalidates the picture
                     drawConnector();
+                    EnforceRectCutExclusivity();
+                    UpdateGenerateEnabled();
                 };
             }
             _uiDebounce.Stop();
             _uiDebounce.Start();
         }
 
+        private static (double minX, double maxX, double minY, double maxY) ComputeBoundsMm(ConnectorModel c, bool showTolerance)
+        {
+            // Inputs in mm
+            double w1 = Math.Max(0, c.Width1);
+            double w2 = Math.Max(0, c.Width2);
+            double h = Math.Max(0, c.Height);
+
+            double rCorner = (c.HasCornerCutout ? Math.Max(0, c.CornerCutoutRadius) : 0.0); // mm
+            double tol = (showTolerance ? Math.Max(0, c.Tolerance) : 0.0);              // mm
+
+            // Extra top pair (connectorCornerCutoutRadius)
+            bool hasTopPair = c.RadiusInCutOut && c.RadiusInCutOut_Radius > 0;
+            double rTop = hasTopPair ? Math.Max(0, c.RadiusInCutOut_Radius) : 0.0;    // mm
+
+            // --- Horizontal extents ---
+            // Bottom: bottom width + optional corner cutout that adds outward at the corners
+            double halfBottomX = w1 * 0.5 + rCorner + tol;
+
+            // Top: top width + tolerance; top pair adds outward by its radius
+            double halfTopX = w2 * 0.5 + tol + rTop;
+
+            double halfX = Math.Max(halfBottomX, halfTopX);
+
+            // --- Vertical extents ---
+            // Bottom stays at 0 (corner arcs are inside the profile, not below baseline)
+            double minY = 0.0 - 0.0;            // keep as 0, you can add tiny margin if desired
+                                                // Top is height; tolerance outline climbs by ~tol; the extra top pair centers shift up by tol, plus their radius
+            double topWithTol = h + tol;
+            double topWithPair = hasTopPair ? (h + tol + rTop) : topWithTol;
+            double maxY = Math.Max(topWithTol, topWithPair);
+
+            // Final bounds
+            double minX = -halfX;
+            double maxX = halfX;
+
+            // Avoid zero-size bounds
+            const double EPS = 1e-6;
+            if (maxX - minX < EPS) { minX -= 1; maxX += 1; }
+            if (maxY - minY < EPS) { minY -= 1; maxY += 1; }
+
+            return (minX, maxX, minY, maxY);
+        }
+
+        private void EnforceCornerCoupling()
+        {
+            // If there’s a main corner radius/chamfer value, disable the top-pair “cutout radius” feature.
+            if (double.TryParse(connectorRadiusChamfer?.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rc) && rc > 0)
+            {
+                if (connectorCornerCutoutRadius != null) connectorCornerCutoutRadius.IsChecked = false; // the checkbox
+                if (connectorCornerCutoutRadiusValue != null) connectorCornerCutoutRadiusValue.Text = "0";
+                if (connectorCornerCutoutRadius != null) connectorCornerCutoutRadius.IsEnabled = false;
+                if (connectorCornerCutoutRadiusValue != null) connectorCornerCutoutRadiusValue.IsEnabled = false;
+            }
+            else
+            {
+                if (connectorCornerCutoutRadius != null) connectorCornerCutoutRadius.IsEnabled = true;
+                if (connectorCornerCutoutRadiusValue != null) connectorCornerCutoutRadiusValue.IsEnabled = true;
+            }
+        }
         private void DrawConnector(Graphics g, ConnectorModel connector)
         {
             try
             {
                 bool showTolerance = connectorShowTolerance.IsChecked == true;
 
-                // NOTE: PictureBox client size (avoid Width/Height properties because of borders) > TODO implement tolerance height/width based on height calculated from chamfer etc.
                 int canvasWidth = picDrawing.ClientSize.Width;
                 int canvasHeight = picDrawing.ClientSize.Height;
 
-                double heightTotal = connector.Height
-                    + (connector.HasCornerCutout ? 2 * connector.CornerCutoutRadius : 0)
-                    + (showTolerance ? connector.Tolerance : 0);
+                // Compute robust bounds (mm)
+                var (minXmm, maxXmm, minYmm, maxYmm) = ComputeBoundsMm(connector, showTolerance);
 
-                float scale = (float)(0.9 * Math.Min(
-                    canvasWidth / (float)((connector.HasCornerCutout ? connector.CornerCutoutRadius * 4 : 0) + Math.Max(connector.Width1, connector.Width2)) + (showTolerance ? connector.Tolerance : 0),
-                    canvasHeight / (float)heightTotal));
+                // Derive scale (px/mm) with a 10% margin
+                double modelW = maxXmm - minXmm;
+                double modelH = maxYmm - minYmm;
+                float scale = (float)(0.9 * Math.Min(canvasWidth / Math.Max(1.0, modelW),
+                                                     canvasHeight / Math.Max(1.0, modelH)));
 
+                // Convert model (mm) → pixels
+                Func<double, float> Xpx = xmm => (float)((xmm - (minXmm + maxXmm) * 0.5) * scale + canvasWidth * 0.5);
+                Func<double, float> Ypx = ymm => (float)(((maxYmm + minYmm) * 0.5 - ymm) * scale + canvasHeight * 0.5);
+
+                // Convenience locals in pixels for main profile (your existing code uses these)
                 float width1 = (float)connector.Width1 * scale;
                 float width2 = (float)connector.Width2 * scale;
                 float height = (float)connector.Height * scale;
                 float radius = (float)connector.Radius * scale;
-                float cornerCutoutRadius = connector.HasCornerCutout ? (float)connector.CornerCutoutRadius * scale : 0;
+                float cornerCutoutRadius = connector.HasCornerCutout ? (float)connector.CornerCutoutRadius * scale : 0f;
 
-                float leftX = (canvasWidth - width1) / 2f;
-                float rightX = leftX + width1;
-                float topX = (canvasWidth - width2) / 2f;
-                float bottomY = canvasHeight / 2f + height / 2f;
-                float topY = bottomY - height;
+                // Rebuild base anchor positions from model values using Xpx/Ypx
+                // Bottom line: y = 0; Top line: y = connector.Height
+                float leftX = Xpx(-connector.Width1 * 0.5);
+                float rightX = Xpx(connector.Width1 * 0.5);
+                float topX = Xpx(-connector.Width2 * 0.5);
+                float bottomY = Ypx(0.0);
+                //float topY = Ypx(connector.Height);
+                // solid top (H - endRelief)
+                float topY = Ypx(Math.Max(0.0, connector.Height - Math.Max(0.0, connector.EndRelief)));
 
-                float p0X = leftX;
-                float p0Y = bottomY;
-                float p1X = topX;
-                float p1Y = topY;
-                float p2X = topX + width2;
-                float p2Y = topY;
-                float p3X = leftX + width1;
-                float p3Y = bottomY;
 
-                float p01X = leftX;
-                float p01Y = bottomY;
-                float p02X = leftX;
-                float p02Y = bottomY;
+                // Corner points in pixel space (same names as your code)
+                float p0X = leftX; float p0Y = bottomY;
+                float p1X = topX; float p1Y = topY;
+                float p2X = Xpx(connector.Width2 * 0.5); float p2Y = topY;
+                float p3X = rightX; float p3Y = bottomY;
 
-                float p11X = topX;
-                float p11Y = topY;
-                float p12X = topX;
-                float p12Y = topY;
-
-                float p21X = topX + width2;
-                float p21Y = topY;
-                float p22X = topX + width2;
-                float p22Y = topY;
-
-                float p31X = leftX + width1;
-                float p31Y = bottomY;
-                float p32X = leftX + width1;
-                float p32Y = bottomY;
+                float p01X = leftX; float p01Y = bottomY;
+                float p02X = leftX; float p02Y = bottomY;
+                float p11X = topX; float p11Y = topY;
+                float p12X = topX; float p12Y = topY;
+                float p21X = Xpx(connector.Width2 * 0.5); float p21Y = topY;
+                float p22X = Xpx(connector.Width2 * 0.5); float p22Y = topY;
+                float p31X = rightX; float p31Y = bottomY;
+                float p32X = rightX; float p32Y = bottomY;
 
                 using var pen = new System.Drawing.Pen(System.Drawing.Color.Black, 2);
                 using var pen1 = new System.Drawing.Pen(System.Drawing.Color.Gray, 2);
@@ -1210,8 +2249,10 @@ namespace AESCConstruct25.UI
 
                 float dX = 0;
                 float dY = 0;
-                double alpha = Math.Atan(height / (0.5 * width2 - 0.5 * width1));
-                double alphaDegree = alpha / Math.PI * 180;
+                const double EPS = 1e-9;
+                double denom = 0.5 * width2 - 0.5 * width1;
+                double alpha = Math.Abs(denom) < EPS ? (Math.PI * 0.5) : Math.Atan(height / denom);
+                double alphaDegree = alpha * 180.0 / Math.PI;
 
                 if (connector.HasCornerCutout && cornerCutoutRadius > 0)
                 {
@@ -1316,42 +2357,108 @@ namespace AESCConstruct25.UI
 
                 if (showTolerance)
                 {
-                    float tol = (float)connector.Tolerance * scale;
-                    double a = Math.Atan(height / (0.5 * width2 - 0.5 * width1)) / 2;
-                    double hypotenuse = tol / Math.Sin(a);
-                    float delta = Math.Abs((float)(hypotenuse * Math.Cos(a)));
+                    // pens
+                    using var pen2 = new Pen(Color.Gray, 2) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash };
 
-                    using var pen2 = new Pen(Color.Gray, 2)
-                    {
-                        DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
-                    };
+                    // px values
+                    float tolPx = (float)Math.Max(0.0, connector.Tolerance) * scale;
+                    float endReliefPx = (float)Math.Max(0.0, connector.EndRelief) * scale;
 
-                    float _topX1 = topX - delta;
-                    float _topY1 = topY - delta;
-                    float _topX2 = topX + width2 + delta;
-                    float _topY2 = topY - delta;
+                    // keep your alpha/alphaDegree computed above
+                    // alpha: slope angle; alphaDegree: alpha in degrees
 
-                    float _bottomX1 = leftX - delta;
-                    float _bottomY1 = bottomY - delta;
-                    float _bottomX2 = leftX + width1 + delta;
-                    float _bottomY2 = _bottomY1;
+                    // Guard the side/top offset math
+                    denom = Math.Max(1e-9, (0.5 * width2 - 0.5 * width1));
+                    double a = Math.Atan(height / denom) / 2.0;
+                    double sinA = Math.Max(1e-9, Math.Sin(a));
+                    double hyp = tolPx / sinA;
+                    float delta = Math.Abs((float)(hyp * Math.Cos(a)));
 
+                    // --- End-relief awareness ---
+                    // Solid connector is drawn up to (Height - EndRelief).
+                    // Dashed (tolerance) frame is drawn up to (Height + Tolerance).
+                    // We only change the dashed Y reference here; the solid top is drawn elsewhere.
+                    float solidTopY = Ypx(Math.Max(0.0, connector.Height - Math.Max(0.0, connector.EndRelief)));
+                    float dashedTopY = Ypx(connector.Height + Math.Max(0.0, connector.Tolerance));
+
+                    // Dashed-frame anchor corners (offset by tolerance). Use dashedTopY for top.
+                    //float _topX1 = topX - delta, _topY1 = dashedTopY - delta;
+                    //float _topX2 = topX + width2 + delta, _topY2 = dashedTopY - delta;
+                    float _topX1 = topX - delta, _topY1 = dashedTopY;
+                    float _topX2 = topX + width2 + delta, _topY2 = dashedTopY;
+
+                    //float _bottomX1 = leftX - delta, _bottomY1 = bottomY - delta;
+                    //float _bottomX2 = leftX + width1 + delta, _bottomY2 = _bottomY1;
+                    float _bottomX1 = leftX - delta, _bottomY1 = bottomY;
+                    float _bottomX2 = leftX + width1 + delta, _bottomY2 = bottomY;
+
+                    // Always draw the bottom dashed segments
                     g.DrawLine(pen2, 0, _bottomY1, _bottomX1, _bottomY1);
                     g.DrawLine(pen2, _bottomX2, _bottomY2, canvasWidth, _bottomY2);
-                    g.DrawLine(pen2, _bottomX1, _bottomY1, _topX1, _topY1);
-                    g.DrawLine(pen2, _bottomX2, _bottomY2, _topX2, _topY2);
-                    g.DrawLine(pen2, _topX1, _topY1, _topX2, _topY2);
+
+                    // Helpers
+                    float Len(float x, float y) => (float)Math.Sqrt(x * x + y * y);
+                    void Normalize(ref float x, ref float y) { float L = Len(x, y); if (L > 1e-6f) { x /= L; y /= L; } }
+                    float Deg(float vx, float vy) => (float)(Math.Atan2(-vy, vx) * 180.0 / Math.PI); // GDI+: +X=0°, CW+
+                    float SweepCW(float start, float end) { float s = end - start; while (s <= 0) s += 360f; return s; }
+
+                    // Slanted side directions in the dashed frame
+                    float rDirX = _bottomX2 - _topX2, rDirY = _bottomY2 - _topY2; Normalize(ref rDirX, ref rDirY);
+                    float lDirX = _bottomX1 - _topX1, lDirY = _bottomY1 - _topY1; Normalize(ref lDirX, ref lDirY);
+
+                    // Keep ONLY the optional top-pair circles in dashed view
+                    bool showTopPair = connector.RadiusInCutOut && connector.RadiusInCutOut_Radius > 0;
+
+                    if (showTopPair)
+                    {
+                        // Draw sides up to tangency and the two top arcs at the dashed top
+                        float rTopPx = (float)(connector.RadiusInCutOut_Radius * scale);
+
+                        // side tangency points (distance rTopPx from top corners along the sides)
+                        float rSideTanX = _topX2 + rDirX * rTopPx, rSideTanY = _topY2 + rDirY * rTopPx;
+                        float lSideTanX = _topX1 + lDirX * rTopPx, lSideTanY = _topY1 + lDirY * rTopPx;
+
+                        // top tangency points (along the top dashed edge)
+                        float rTopTanX = _topX2 - rTopPx, rTopTanY = _topY2;
+                        float lTopTanX = _topX1 + rTopPx, lTopTanY = _topY1;
+
+                        // slanted dashed up to tangency
+                        g.DrawLine(pen2, _bottomX2, _bottomY2, rSideTanX, rSideTanY);
+                        g.DrawLine(pen2, _bottomX1, _bottomY1, lSideTanX, lSideTanY);
+
+                        // top dashed between tangencies
+                        g.DrawLine(pen2, lTopTanX, lTopTanY, rTopTanX, rTopTanY);
+
+                        // arcs at top corners (centered on the dashed top corners)
+                        float lStart = Deg(lDirX, lDirY) + 180f; // start on the side tangent
+                        float lEnd = 0f;                       // end on the top
+                        float lSweep = SweepCW(lStart, lEnd);
+
+                        float rStart = 180f;
+                        float rEnd = Deg(rDirX, rDirY) + 180f;
+                        float rSweep = SweepCW(rStart, rEnd);
+
+                        g.DrawArc(pen2, _topX1 - rTopPx, _topY1 - rTopPx, 2 * rTopPx, 2 * rTopPx, lStart, lSweep);
+                        g.DrawArc(pen2, _topX2 - rTopPx, _topY2 - rTopPx, 2 * rTopPx, 2 * rTopPx, rStart, rSweep);
+                        return; // done with dashed overlay for this case
+                    }
+
+                    // Default dashed outline: simple trapezoid (no dashed chamfer/radius)
+                    g.DrawLine(pen2, _bottomX1, _bottomY1, _topX1, _topY1); // left side
+                    g.DrawLine(pen2, _topX1, _topY1, _topX2, _topY2);       // top
+                    g.DrawLine(pen2, _topX2, _topY2, _bottomX2, _bottomY2); // right side
+                    //g.DrawLine(pen2, _bottomX2, _bottomY2, _bottomX1, _bottomY1); // bottom
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log($"DrawConnector error: {ex}");
+                ////Logger.Log($"DrawConnector error: {ex}");
             }
         }
         private void InvalidateDrawing()
         {
             try { picDrawing?.Invalidate(); }
-            catch (Exception ex) { Logger.Log($"InvalidateDrawing error: {ex}"); }
+            catch (Exception ex) { }////Logger.Log($"InvalidateDrawing error: {ex}"); }
         }
         private bool CheckSelectedEdgeWidth()
         {
@@ -1429,17 +2536,18 @@ namespace AESCConstruct25.UI
                     availableWidthMm = chordM * 1000.0;
                 }
             }
-
-            // Criterion: availableWidth - entered width >= 0
-            Logger.Log($"[CheckSelectedEdgeWidth] availableWidthMm={availableWidthMm:0.###}, enteredWidth1={c.Width1:0.###}");
-            Logger.Log($"[CheckSelectedEdgeWidth] availableWidthMm - enteredWidth1 = {availableWidthMm - c.Width1:0.###}");
-            Logger.Log($"[CheckSelectedEdgeWidth] fits? = {(availableWidthMm - c.Width1) >= 0.0}");
             return (availableWidthMm - c.Width1) >= 0.0;
         }
 
-        private void connectorLocation_TextChanged(object sender, TextChangedEventArgs e)
+        // Map a tool body defined in the OWNER's master space into a TARGET occurrence's master space.
+        private static Body MapTool(Body toolInOwnerMaster, IDesignBody ownerOcc, IDesignBody targetOcc)
         {
-
+            var mapped = toolInOwnerMaster.Copy();
+            // OwnerMaster → WORLD
+            mapped.Transform(ownerOcc.TransformToMaster.Inverse);
+            // WORLD → TargetMaster
+            mapped.Transform(targetOcc.TransformToMaster);
+            return mapped;
         }
     }
 }

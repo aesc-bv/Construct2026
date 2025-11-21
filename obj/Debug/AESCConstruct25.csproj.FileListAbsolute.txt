@@ -27,7 +27,6 @@ C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AES
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCCons.9867665C.Up2Date
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.dll
 C:\Users\wilri\OneDrive - AESC\Documents\AESC-Construct-25\AESC-Construct-25\AESC-Construct-25\obj\Debug\AESCConstruct25.pdb
-C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\Resources\Images\squareGrid.jpg
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll
 C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.pdb
 C:\Users\dirkv\Source\Repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.csproj.AssemblyReference.cache
@@ -88,3 +87,5 @@ C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\AESCConstruct25.pdb
 C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct25\AESCConstruct25.xml
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Connector\UI\ConnectorControl.baml
 C:\Users\wilri\source\repos\aesc-bv\Construct25\obj\Debug\Connector\UI\ConnectorControl.g.cs
+C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.xml
+C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll.config

@@ -352,47 +352,157 @@ namespace AESCConstruct25.FrameGenerator.Utilities
                         return pA;
             return a.StartPoint;
         }
-
         public static double GetProfileWidth(Component comp)
         {
-            if (comp.Template.CustomProperties
-                    .TryGetValue("Construct_w", out var wp)
-                && double.TryParse(wp.Value.ToString(),
-                                   NumberStyles.Any,
-                                   CultureInfo.InvariantCulture,
-                                   out var w_mm))
+            // Helper to read a numeric custom property (mm → m)
+            static bool TryGetMmAsMeters(Component c, string key, out double meters)
             {
-                // convert from millimetres to metres for joint logic
-                return w_mm * 0.001;
-            }
-
-            var fullDb = comp.Template.Bodies
-                           .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-                       ?? comp.Template.Bodies.FirstOrDefault(b => b.Shape != null);
-
-            if (fullDb != null)
-            {
-                var bb = fullDb.Shape.GetBoundingBox(Matrix.Identity, tight: true);
-                var seg = comp.Template.Curves
-                                .OfType<DesignCurve>()
-                                .FirstOrDefault()?.Shape as CurveSegment;
-                if (seg != null)
+                meters = 0.0;
+                if (c.Template.CustomProperties.TryGetValue(key, out var prop)
+                    && double.TryParse(prop.Value.ToString().Replace(',', '.'),
+                                       NumberStyles.Any, CultureInfo.InvariantCulture, out var mm)
+                    && mm > 0)
                 {
-                    var d = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
-                    var flat = Vector.Create(d.X, 0, d.Z).Direction.ToVector();
-                    var perp = Vector.Cross(Vector.Create(0, 1, 0), flat).Direction.ToVector();
-
-                    var corners = Box.Create(new[] { bb.MinCorner, bb.MaxCorner }).Corners;
-                    var center = bb.Center;
-                    double maxDist = corners
-                        .Select(c => Math.Abs(Vector.Dot(perp, c - center)))
-                        .Max();
-                    return maxDist * 2.0;
+                    meters = mm * 0.001;
+                    return true;
                 }
+                return false;
             }
 
-            return 0.0;
+            // Read rotation (default 0)
+            double angleDeg = 0.0;
+            if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out var rotProp))
+                double.TryParse(rotProp.Value.ToString().Replace(',', '.'),
+                                NumberStyles.Float, CultureInfo.InvariantCulture, out angleDeg);
+
+            // Normalize to [0,360)
+            angleDeg = (angleDeg % 360 + 360) % 360;
+
+            // Treat “exactly 90 or 270” with a tiny epsilon to handle float text like 89.9999999
+            const double eps = 1e-6;
+            bool useH = Math.Abs(angleDeg - 90.0) < eps || Math.Abs(angleDeg - 270.0) < eps;
+
+            // Prefer Construct_h when rotated 90/270, else Construct_w
+            if (useH)
+            {
+                if (TryGetMmAsMeters(comp, "Construct_h", out var h_m))
+                    return h_m;
+
+                if (TryGetMmAsMeters(comp, "Construct_a", out var a_m))
+                    return a_m;
+
+                // fallback if h missing: use w
+                if (TryGetMmAsMeters(comp, "Construct_w", out var w_m))
+                    return w_m;
+
+                return 0.0;
+            }
+            else
+            {
+                if (TryGetMmAsMeters(comp, "Construct_w", out var w_m))
+                    return w_m;
+
+                return 0.0;
+            }
         }
+
+        //public static double GetProfileWidth(Component comp)
+        //{
+
+
+        //    if (comp.Template.CustomProperties
+        //            .TryGetValue("Construct_w", out var wp)
+        //        && double.TryParse(wp.Value.ToString(),
+        //                           NumberStyles.Any,
+        //                           CultureInfo.InvariantCulture,
+        //                           out var w_mm))
+        //    {
+        //        // convert from millimetres to metres for joint logic
+        //        return w_mm * 0.001;
+        //    }
+
+        //    var fullDb = comp.Template.Bodies
+        //                   .FirstOrDefault(b => b.Name == "ExtrudedProfile")
+        //               ?? comp.Template.Bodies.FirstOrDefault(b => b.Shape != null);
+
+        //    if (fullDb != null)
+        //    {
+        //        var bb = fullDb.Shape.GetBoundingBox(Matrix.Identity, tight: true);
+        //        var seg = comp.Template.Curves
+        //                        .OfType<DesignCurve>()
+        //                        .FirstOrDefault()?.Shape as CurveSegment;
+        //        if (seg != null)
+        //        {
+        //            var d = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
+        //            var flat = Vector.Create(d.X, 0, d.Z).Direction.ToVector();
+        //            var perp = Vector.Cross(Vector.Create(0, 1, 0), flat).Direction.ToVector();
+
+        //            var corners = Box.Create(new[] { bb.MinCorner, bb.MaxCorner }).Corners;
+        //            var center = bb.Center;
+        //            double maxDist = corners
+        //                .Select(c => Math.Abs(Vector.Dot(perp, c - center)))
+        //                .Max();
+        //            return maxDist * 2.0;
+        //        }
+        //    }
+
+        //    return 0.0;
+        //}
+        //public static double GetProfileWidth(Component comp)
+        //{
+        //    const double tol = 1e-9;
+
+        //    // 1) Find a solid body to measure (prefer the fresh ExtrudedProfile)
+        //    var db = comp.Template.Bodies
+        //                 .FirstOrDefault(b => b.Name == "ExtrudedProfile" && b.Shape != null)
+        //          ?? comp.Template.Bodies.FirstOrDefault(b => b.Shape != null);
+        //    if (db?.Shape == null)
+        //        return 0.0;
+
+        //    // 2) Get the construction segment in PART-local space
+        //    var seg = comp.Template.Curves.OfType<DesignCurve>()
+        //                 .FirstOrDefault()?.Shape as CurveSegment;
+        //    if (seg == null)
+        //        return 0.0;
+
+        //    // 3) Build the oriented frame in WORLD:
+        //    //    ẑ = along the member (construction line)
+        //    //    ŷ = world-up projected to ⟂ ẑ (fallback to world-X if needed)
+        //    //    x̂ = ẑ × ŷ
+        //    Vector z = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
+        //    if (z.Magnitude < tol) return 0.0;
+
+        //    Vector up = Vector.Create(0, 1, 0);
+        //    up = up - Vector.Dot(up, z) * z;                  // reject z component
+        //    if (up.Magnitude < tol)
+        //    {
+        //        up = Vector.Create(1, 0, 0);
+        //        up = up - Vector.Dot(up, z) * z;
+        //        if (up.Magnitude < tol) return 0.0;           // degenerate edge case
+        //    }
+        //    up = up.Direction.ToVector();
+
+        //    Vector x = Vector.Cross(z, up);
+        //    if (x.Magnitude < tol) return 0.0;
+        //    x = x.Direction.ToVector();
+
+        //    Vector y = Vector.Cross(z, x).Direction.ToVector();
+
+        //    // Origin of the frame doesn’t affect extents; use world origin.
+        //    var frameWorld = Frame.Create(Point.Origin, x.Direction, y.Direction);
+
+        //    // 4) Compose transform for the OBB query:
+        //    //    Part-local → World (comp.Placement) → Frame-local (inverse of frame mapping)
+        //    Matrix worldFromFrame = Matrix.CreateMapping(frameWorld);      // frame-local → world
+        //    Matrix toFrameLocal = worldFromFrame.Inverse * comp.Placement; // part-local → frame-local
+
+        //    // 5) Tight AABB in our oriented frame; X-extent is the width
+        //    var bb = db.Shape.GetBoundingBox(toFrameLocal, tight: true);
+        //    var size = bb.MaxCorner - bb.MinCorner;
+
+        //    // Result is in model units (meters in your codebase).
+        //    return Math.Abs(size.X / 10000.0);
+        //}
 
         public static double GetOffset(Component comp, string key)
         {

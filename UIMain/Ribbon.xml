@@ -19,12 +19,12 @@
 				<group id="AESCConstruct25.ToolsGroup" getLabel="GetRibbonLabel">
 					<container id="AESC.Construct.SketchToolGroupContainer"
 					   layoutOrientation="horizontal"
-					   isGroup="false"
-					>
+					   isGroup="false">
+						
 						<container id="AESC.Construct.sketchToolsContainer1"
 							layoutOrientation="vertical"
-							isGroup="false"
-							itemSpacing="1">
+							isGroup="true"
+							itemSpacing="0">
 							<button id="AESC.Construct.Line"
 									command="Line"/>
 							<button id="AESC.Construct.Rect"
@@ -35,8 +35,8 @@
 
 						<container id="AESC.Construct.sketchToolsContainer2"
 						   layoutOrientation="vertical"
-						   isGroup="false"
-						   itemSpacing="1">
+						   isGroup="true"
+						   itemSpacing="0">
 							<button id="AESC.Construct.SetModeSketch"
 									command="SetModeSketch"
 									size="small"
@@ -71,12 +71,18 @@
 							getLabel="GetRibbonLabel"
 							size="large"
 							style="imageandtext"/>
+					<button id="AESCConstruct25.CompareBodiesBtn"
+							  command="AESCConstruct25.CompareBodies"
+							  getLabel="GetRibbonLabel"
+							  size="large"
+							  style="imageandtext"/>
 					<button id="AESCConstruct25.ExportBOMBtn"
 							command="AESCConstruct25.ExportBOM"
 							getLabel="GetRibbonLabel"
 							size="large"
 							style="imageandtext"/>
-					<button>
+					<button style=""
+							id="AESCConstruct25.BOMMenu">
 						<button id="AESCConstruct25.UpdateBOM"
 								command="AESCConstruct25.UpdateBOM"
 								getLabel="GetRibbonLabel"
@@ -100,6 +106,13 @@
 				<group id="AESCConstruct25.FastenerGroup" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct25.Fastener"
 							command="AESCConstruct25.Fastener"
+							getLabel="GetRibbonLabel"
+							size="large"/>
+				</group>
+
+				<group id="AESCConstruct25.ConnectorGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct25.ConnectorSidebarBtn"
+							command="AESCConstruct25.ConnectorSidebar"
 							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
@@ -129,13 +142,6 @@
 					<button id="AESCConstruct25.SettingsSidebarBtn"
 							command="AESCConstruct25.SettingsSidebar"
 							 getLabel="GetRibbonLabel"
-							size="large"/>
-				</group>
-
-				<group id="AESCConstruct25.ConnectorGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.ConnectorSidebarBtn"
-							command="AESCConstruct25.ConnectorSidebar"
-							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 

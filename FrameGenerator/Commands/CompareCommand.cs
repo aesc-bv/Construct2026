@@ -2,6 +2,7 @@
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
+using SpaceClaim.Api.V242.Unsupported;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -202,6 +203,338 @@ namespace AESCConstruct25.FrameGenerator.Commands
             catch (Exception ex)
             {
                 Application.ReportStatus($"Compare failed:\n{ex.Message}", StatusMessageType.Error, null);
+            }
+        }
+
+        public static void compareLegacy()
+        {
+            try
+            {
+
+                string script = @"
+from System import DateTime
+import random
+from SpaceClaim.Api.V242 import PartType
+from SpaceClaim.Api.V242 import ProgressTracker
+import sys
+
+## CheckLicense
+from datetime import datetime
+parColorDuplicates = True;
+now = datetime.now()
+
+timeStart = DateTime.Now
+part = GetRootPart()
+#####################################
+#####################################
+def getBodyList():
+	bodyList = []
+	volumeList = []
+	nrComponentsList = []
+	componentMonikerList = []
+
+	for b in GetRootPart().GetDescendants[IDesignBody]():            
+		_component = b.Parent.Parent
+		
+		if _component == None:
+			continue
+		if _component.Content.Type == PartType.FlatPattern:
+			continue
+		try:
+			compMoniker = _component.Template.Moniker
+		except:
+			compMoniker = _component.Master.Template.Moniker
+			
+		if componentMonikerList.count(compMoniker) == 0:
+			bodyList.append(b)
+			volumeList.append(b.Shape.Volume)
+			#uniqueComponentsList.append(_component)
+			nrComponentsList.append(1)
+			componentMonikerList.append(compMoniker)
+		else:            
+			nrComponentsList[componentMonikerList.index(compMoniker)]+=1
+	return bodyList, volumeList
+
+
+def maxFace(body, centerOfMassPoint):
+	maxF = None
+	maxArea = 0
+	for f in body.Faces:
+		if f.Area > maxArea:
+			maxF = f
+			maxArea = f.Area
+	
+	## if sphere, return
+	if isinstance(f.Geometry, Sphere):
+		return centerOfMassPoint, Direction.DirZ, Direction.DirY,0, 0,0,maxArea
+		
+	
+	maxLength = 0
+	for e in maxF.Edges:
+		if e.Length > maxLength:
+			maxLength = e.Length
+			edge1 = e
+
+	point1 = edge1.StartPoint
+	if isinstance(edge1.Geometry, Circle):
+		edge1Mid = edge1.Geometry.Axis.ProjectPoint(point1).Point
+		b1DirY = (edge1Mid - point1).Direction       
+	else:
+		edge1Mid = point1  + 0.5*(edge1.EndPoint - point1)        
+		
+		b1DirY = (edge1.EndPoint - point1).Direction
+	
+	if isinstance(maxF.Geometry, Cylinder):
+		b1DirZ = maxF.Geometry.Axis.Direction 
+		if not b1DirZ.IsPerpendicular(b1DirY):
+			b1DirZ = maxF.ProjectPoint(point1).Normal
+	else:
+		#b1DirZ = maxF.ProjectPoint(point1).Normal
+		b1DirZ =  -maxF.ProjectPoint(point1).Normal if maxF.IsReversed else  maxF.ProjectPoint(point1).Normal
+	
+  
+	if not  b1DirY.IsPerpendicular(b1DirZ):
+		b1DirY = e.Geometry.Evaluate(0).Tangent
+	
+	test = Frame.Create(point1,b1DirZ,b1DirY)
+	distanceMid2CM =(edge1Mid - centerOfMassPoint).Magnitude
+	distance2CM =(point1 - centerOfMassPoint).Magnitude
+	
+	return point1, b1DirZ, b1DirY,distance2CM, distanceMid2CM, maxLength,maxArea
+
+def checkBody1(body,distance2CM, distanceMid2CM, maxLength,maxArea,centerOfMassPoint):
+	checkList = []
+	for f in body.Faces:
+		# check same area
+		if abs(f.Area -  maxArea) < 1e-6:
+			
+			## if sphere, return
+			if isinstance(f.Geometry, Sphere):
+				checkList.append( [centerOfMassPoint, Direction.DirZ, Direction.DirY])     
+				break
+			
+			# check same length
+			for e in f.Edges:
+				if abs(e.Length - maxLength) <1e-6:                    
+					point1 = e.StartPoint
+					if isinstance(e.Geometry, Circle):
+						edge1Mid = e.Geometry.Axis.ProjectPoint(point1).Point
+						b1DirY = (edge1Mid - point1).Direction        
+					else:                        
+						edge1Mid = point1  + 0.5*(e.EndPoint - point1)
+						b1DirY = (e.EndPoint - point1).Direction
+					
+					distanceMid2CM_1=(edge1Mid - centerOfMassPoint).Magnitude                   
+					
+					if abs(distanceMid2CM_1 - distanceMid2CM) <1e-6:
+						## check if startpoint is the correct point, otherwise endpoint
+						if abs((point1- centerOfMassPoint).Magnitude  - distance2CM) <1e-6:
+							a = 1
+						elif abs((e.EndPoint- centerOfMassPoint).Magnitude  - distance2CM) <1e-6:
+							point1 = e.EndPoint
+							b1DirY = - b1DirY
+						else:
+							continue
+							
+						if isinstance(f.Geometry, Cylinder):
+							b1DirZ = f.Geometry.Axis.Direction
+							if not b1DirZ.IsPerpendicular(b1DirY):
+								b1DirZ = f.ProjectPoint(point1).Normal
+						else:                        
+							#b1DirZ =  f.ProjectPoint(point1).Normal
+							b1DirZ =  -f.ProjectPoint(point1).Normal if f.IsReversed else  f.ProjectPoint(point1).Normal
+							
+						if not  b1DirY.IsPerpendicular(b1DirZ):
+							b1DirY = e.Geometry.Evaluate(0).Tangent
+						
+						checkList.append( [point1, b1DirZ, b1DirY])                  
+	return checkList
+
+def getRandomColor():
+	return Color.FromArgb(random.randint(1,255), random.randint(1,255), random.randint(1,255),random.randint(1,255))
+
+def compareBodies(b0,b1):
+	if abs(b0.Shape.SurfaceArea - b1.Shape.SurfaceArea ) < 1e-6:
+		mat0 = b0.GetTransformToMaster()
+		mat1 = b1.GetTransformToMaster()
+
+		mp0 = b0.MassProperties
+		mp1 = b1.MassProperties
+
+		body0 = b0.Shape.Copy()
+		body1 = b1.Shape.Copy()
+		
+		## Get data from part
+		CM0 = mat0 * mp0.PrincipleAxes.Origin
+		CM1 = mat1* mp1.PrincipleAxes.Origin
+		
+		#DesignBody.Create(part,""body0"",body0)
+		#DesignBody.Create(part,""body1"",body1)
+		#DatumPoint.Create(part,""CM0"", CM0)
+		#DatumPoint.Create(part,""CM1"", CM1)
+		
+		point0, b0DirZ, b0DirY,distance2CM, distanceMid2CM, maxLength,maxArea = maxFace(body0,CM0)
+		#print point0, b0DirZ,b0DirY,distanceMid2CM, maxLength,maxArea
+		checkList = checkBody1(body1,distance2CM, distanceMid2CM, maxLength,maxArea,CM1)
+		
+		#print  checkList
+		
+		_mat0 = Matrix.CreateMapping(Frame.Create(point0,b0DirZ,b0DirY))
+		#DesignBody.Create(part,""body0_A"",body0.Copy())
+		body0.Transform(_mat0.Inverse)
+		_bbox0 = body0.GetBoundingBox(Matrix.Identity)
+		#DesignBody.Create(part,""body0_B"",body0.Copy())
+		for l in checkList:
+			point1 =l[0]
+			b1DirZ =l[1]
+			b1DirY =l[2]
+			_frame = Frame.Create(point1,b1DirZ,b1DirY)
+			_mat1 = Matrix.CreateMapping(_frame)
+			#DesignBody.Create(part,""body1_a"",body1.Copy())
+			body1.Transform(_mat1.Inverse)
+			
+			_bbox1 = body1.GetBoundingBox(Matrix.Identity)
+			
+			#print (_bbox1.MaxCorner - _bbox0.MaxCorner).Magnitude
+			#print (_bbox1.MinCorner - _bbox0.MinCorner).Magnitude
+			
+			#DesignBody.Create(part,""body0_a"",body0.Copy())
+			#DesignBody.Create(part,""body1_a"",body1.Copy())
+			body0a = body0.Copy()
+			try:
+				body0a.Unite(body1.Copy())
+			except:
+				body1.Transform(_mat1)
+				continue
+			#DesignBody.Create(part,""body0a"",body0a.Copy())
+			
+			if abs( body0.Volume -  body0a.Volume ) < 1e-8:
+				return True , _mat0, _mat1
+			else:
+				body1.Transform(_mat1)
+			
+
+	return False , None, None
+
+#######################
+
+
+duplicateBodies = []
+deleteList = []
+bodyList, volumeList = getBodyList()
+nrBodies =  len(bodyList)
+nrDuplicates = 0;
+if nrBodies > 0:
+		
+	PT = ProgressTracker.Create(nrBodies)
+	_progress = 0
+	PT.Progress = _progress
+
+	nr_duplicates = 0
+
+	while len(bodyList)>0:
+		
+		removeBodyList = []      
+		duplicateList = []
+		idb0 = bodyList.pop(0)
+		volume0 = volumeList.pop(0)
+		_progress+=1
+		PT.Progress = _progress
+		PT.Message = ""Check duplicates: %s/%s.\t # found: %s""%(_progress,nrBodies, nr_duplicates)
+		db0 = idb0.Master
+		try:
+			comp0 = idb0.Parent.Parent.Master
+		except: 
+			comp0 = idb0.Parent.Parent
+		duplicateList.append(db0)
+		
+		i = 0
+		for i in range(0,len(bodyList)):
+			volume1 = volumeList[i]        
+			if abs(volume0 - volume1) > 1e-6:
+				continue
+			
+			idb1 = bodyList[i]
+		
+			db1 = idb1.Master
+			
+			#try:
+			#    comp1 = idb1.Parent.Parent.Master
+			#except: 
+			#    comp1 = idb1.Parent.Parent
+			
+			#print comp0.Template.DisplayName, comp1.Template.DisplayName
+			
+			
+			isDuplicate , _mat0, _mat1 = compareBodies(db0,db1)
+			if isDuplicate:
+				try:
+					comp1 = idb1.Parent.Parent.Master
+				except: 
+					comp1 = idb1.Parent.Parent
+				
+				comp1Parent= comp1.Parent
+				
+				mat_0 = idb0.TransformToMaster
+				mat_1 = idb1.TransformToMaster
+				
+				#mat_compPlacement_0 = comp0.Placement
+				#mat_compPlacement_1 = comp1.Placement
+
+				newComp = Component.Create(comp1Parent,comp0.Template)
+				
+				#newComp.Transform(mat_compPlacement_0)
+				## Check the transformation matrices
+				#newComp.Transform(mat_0.Inverse)
+				newComp.Transform(_mat0.Inverse)
+				newComp.Transform(_mat1)
+				newComp.Transform(mat_1.Inverse)
+				duplicateList.append(db1)
+				removeBodyList.append(i)
+				deleteList.append(comp1)
+			i+= 1
+		if len(duplicateList) > 1:
+			duplicateBodies.append(duplicateList)
+			for j in reversed(removeBodyList):
+				nr_duplicates+=1
+				bodyList.pop(j)
+				volumeList.pop(j)
+				_progress+=1
+				PT.Progress = _progress
+				PT.Message = ""Check duplicates: %s/%s.\t # found: %s""%(_progress,nrBodies, nr_duplicates)
+		
+
+	for l in duplicateBodies:
+		nrDuplicates += len(l)-1
+		if parColorDuplicates:
+			color = getRandomColor()
+			for b in l:
+				b.SetColor(None,color)
+
+
+	for j in reversed(deleteList):
+		j.Delete()
+	
+	PT.Message = ""Check duplicate Finished: Found %s duplicates out of  %s parts in %s seconds.""%(nr_duplicates,nrBodies,round((DateTime.Now - timeStart).TotalSeconds,2))
+
+
+
+	ApplicationHelper.ReportInformation(""Finished: ""+ str(nrDuplicates) + "" duplicates found\nTime: "" + str(round((DateTime.Now - timeStart).TotalSeconds,2)) + "" seconds."" )
+
+
+";
+
+                var env = ScriptEnvironment.GetOrCreate(false);
+                ScriptEnvironment.ActiveEnvironment = env;
+                // Logger.Log($"API = {env.ApiVersion}");
+                env.ApiVersion = 242;
+                // Logger.Log($"API = {env.ApiVersion}");
+                var success = env.RunCommand(script);
+
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show(ex.ToString());
             }
         }
 

@@ -15,7 +15,8 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
-                  Margin="0">
+                  Margin="0"
+                  MaxWidth="300">
         <Grid Margin="10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -132,7 +133,7 @@
                         </RadioButton>
                     </Grid>
 
-                    <Grid>
+                    <Grid Width="230">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
@@ -169,7 +170,6 @@
                                 Width="230">
                         <Grid HorizontalAlignment="Center"
                               Margin="0,0,0,0"
-                              Width="230"
                               Height="50">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="25" />
@@ -235,7 +235,7 @@
                     </StackPanel>
 
                     <Grid x:Name="UserProfilesGridScrollView"
-                          Margin="0,10,0,0"
+                          Margin="0,5,0,0"
                           Width="230"
                           Height="160"
                           Visibility="Collapsed">
@@ -475,14 +475,15 @@
 
             <!-- 3) GENERATE BUTTON -->
             <Grid Grid.Row="2"
-                  Margin="0,10,0,0">
+                  Margin="0,10,0,0"
+                  Width="230">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="100" />
                 </Grid.ColumnDefinitions>
                 <Button x:Name="GenerateButton"
                         Style="{StaticResource GenerateButtonStyle}"
@@ -546,7 +547,7 @@
                             Grid.Column="1">
                     <CheckBox x:Name="UpdateBOM"
                                 Tag="UpdateBOMCheckbox"
-                                Margin="10,0,0,0"
+                                Margin="5,0,0,0"
                                 VerticalAlignment="Center" />
                     <TextBlock Tag="UpdateBOMText"
                                 Text="Update BOM"
@@ -680,6 +681,7 @@
             <UniformGrid Columns="2"
                          Rows="2"
                          Grid.Row="6"
+                         Width="230"
                          Margin="0,10,0,0">
                 <StackPanel />
 
@@ -743,13 +745,14 @@
 
             <!-- 6) FOOTER -->
             <Grid Grid.Row="7"
-                  Margin="0,10,0,0">
+                  Margin="0,10,0,0"
+                  Width="230">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="100" />
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="GenerateJoint"
@@ -782,7 +785,7 @@
                             Grid.Column="1">
                     <CheckBox x:Name="UpdateBOMJoint"
                               Tag="UpdateBOMJointCheckbox"
-                              Margin="10,0,0,0"
+                              Margin="5,0,0,0"
                               VerticalAlignment="Center" />
                     <TextBlock Tag="UpdateBOMJointText"
                                Text="Update BOM"

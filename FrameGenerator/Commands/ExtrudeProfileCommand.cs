@@ -96,31 +96,37 @@ namespace AESCConstruct25.FrameGenerator.Commands
 
                             var neighbour = FindConnectedSegment(seg, rawCurves);
 
+                            //var dA = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
+                            //Vector localUp;
+                            //if (neighbour != null)
+                            //{
+                            //    var dB = (neighbour.EndPoint - neighbour.StartPoint).Direction.ToVector();
+                            //    localUp = Vector.Cross(dA, dB).Magnitude > tol
+                            //            ? Vector.Cross(dA, dB).Direction.ToVector()
+                            //            : Vector.Create(0, 1, 0);
+                            //}
+                            //else
+                            //{
+                            //    localUp = Vector.Create(0, 1, 0);
+                            //}
+
+                            //Vector WY = Vector.Create(0, 1, 0),
+                            //       WX = Vector.Create(1, 0, 0),
+                            //       WZ = Vector.Create(0, 0, 1);
+
+                            //if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0)
+                            //    localUp = -localUp;
+                            //else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0)
+                            //    localUp = -localUp;
+                            //else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0)
+                            //    localUp = -localUp;
+
                             var dA = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
-                            Vector localUp;
-                            if (neighbour != null)
-                            {
-                                var dB = (neighbour.EndPoint - neighbour.StartPoint).Direction.ToVector();
-                                localUp = Vector.Cross(dA, dB).Magnitude > tol
-                                        ? Vector.Cross(dA, dB).Direction.ToVector()
-                                        : Vector.Create(0, 1, 0);
-                            }
-                            else
-                            {
-                                localUp = Vector.Create(0, 1, 0);
-                            }
 
-                            Vector WY = Vector.Create(0, 1, 0),
-                                   WX = Vector.Create(1, 0, 0),
-                                   WZ = Vector.Create(0, 0, 1);
+                            // Always compute a canonical, deterministic up
+                            var localUp = CanonicalUpForLine(dA);
 
-                            if (Math.Abs(Vector.Dot(localUp, WY)) > tol && Vector.Dot(localUp, WY) < 0)
-                                localUp = -localUp;
-                            else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0)
-                                localUp = -localUp;
-                            else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0)
-                                localUp = -localUp;
-
+                            // Proceed as before
                             ProfileModule.ExtrudeProfile(
                                 win,
                                 profileType,
@@ -181,8 +187,8 @@ namespace AESCConstruct25.FrameGenerator.Commands
                 {
                     if (updateBOM == true)
                         ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
-                    else
-                        CompareCommand.CompareSimple();
+                    //else
+                        //CompareCommand.CompareSimple();
                 }
                 catch (Exception ex)
                 {
@@ -193,6 +199,43 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 Application.ReportStatus($"Unexpected error during extrusion:\n{ex.Message}", StatusMessageType.Error, null);
             }
+        }
+
+        static Vector CanonicalUpForLine(Vector dirVec)
+        {
+            const double tol = 1e-9;
+
+            // Canonical world axes
+            Vector UZ = Vector.Create(0, 0, 1);
+            Vector UY = Vector.Create(0, 1, 0);
+            Vector UX = Vector.Create(1, 0, 0);
+
+            // Ensure we work with a unit direction
+            var d = dirVec.Direction.ToVector();
+
+            Vector ProjectOntoPlane(Vector up, Vector axisUnit)
+            {
+                // Reject the component along the axis; result is perpendicular to the line
+                return up - Vector.Dot(up, axisUnit) * axisUnit;
+            }
+
+            // 1) Prefer world-Z (so anything in the XY plane will keep +Z as up)
+            var up = ProjectOntoPlane(UZ, d);
+            if (up.Magnitude <= tol)
+            {
+                // 2) If the line is parallel to Z, use world-Y
+                up = ProjectOntoPlane(UY, d);
+                if (up.Magnitude <= tol)
+                {
+                    // 3) Degenerate edge case: fall back to world-X
+                    up = ProjectOntoPlane(UX, d);
+                }
+            }
+
+            // Force a consistent orientation: always toward +Z when possible
+            if (Vector.Dot(up, UZ) < 0) up = -up;
+
+            return up.Direction.ToVector();
         }
 
         /// <summary>
