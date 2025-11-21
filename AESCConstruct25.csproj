@@ -153,7 +153,7 @@
     <Compile Include="FrameGenerator\Modules\Profiles\RectangularProfile.cs" />
     <Compile Include="FrameGenerator\Modules\Profiles\ProfileBase.cs" />
     <Compile Include="FrameGenerator\Utilities\ProfileReplaceHelper.cs" />
-    <Compile Include="FrameGenerator\Utilities\RibCutOutSelectionHelper.cs" />
+    <Compile Include="RibCutout\Utilities\RibCutOutSelectionHelper.cs" />
     <Compile Include="Resources1.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -180,12 +180,12 @@
       <DependentUpon>SettingsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="UIMain\UIManager.cs" />
-    <Compile Include="FrameGenerator\Utilities\CompNameHelper.cs" />
-    <Compile Include="FrameGenerator\Utilities\DXFImportHelper.cs" />
+    <Compile Include="Utilities\CompNameHelper.cs" />
+    <Compile Include="Utilities\DXFImportHelper.cs" />
     <Compile Include="FrameGenerator\Modules\JointModule.cs" />
     <Compile Include="FrameGenerator\Utilities\JointCurveHelper.cs" />
     <Compile Include="FrameGenerator\Utilities\JointSelectionHelper.cs" />
-    <Compile Include="FrameGenerator\Utilities\Logger.cs" />
+    <Compile Include="Utilities\Logger.cs" />
     <Compile Include="FrameGenerator\Utilities\ProfileSelectionHelper.cs" />
     <Compile Include="RibCutout\UI\RibCutOut.xaml.cs">
       <DependentUpon>RibCutOut.xaml</DependentUpon>
