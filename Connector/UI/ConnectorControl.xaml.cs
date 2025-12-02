@@ -1409,7 +1409,6 @@ namespace AESCConstruct25.UI
             const string caption = "Linked bodies detected";
             const string text =
                 "This body is linked to others. Do you want to adjust all linked bodies?\n\n" +
-                "Choose an option:\n" +
                 "  • Yes  — Adjust ALL linked bodies\n" +
                 "  • No   — Adjust ONLY this body\n" +
                 "  • Cancel — Abort";
@@ -1479,11 +1478,16 @@ namespace AESCConstruct25.UI
             catch { return false; }
         }
 
-        // PropagateCutsForChoice applies connector cuts to neighbour bodies around the owner, honoring user batch decisions and caching.
+        // PropagateCutsForChoice applies connector cuts to neighbour bodies around the owner.
+        // Behaviour:
+        // - No prompts for neighbours.
+        // - If the owner was edited "ThisOnly" (made independent), then any linked neighbour hit by
+        //   a cut is also made independent before subtracting, so cuts stay local.
+        // - If the owner was edited "AllLinked", neighbours are cut on their shared master.
         private static void PropagateCutsForChoice(
             Part mainPart,
             IDesignBody ownerOccForNeighbours,   // enumerate neighbours / pick ring
-            IDesignBody ownerOccSourceForTools,  // ORIGINAL owner; tool geometry lives here
+            IDesignBody ownerOccSourceForTools,  // ORIGINAL owner; tool geometry lives here (bodies are in its master space)
             Part parentPart,
             IEnumerable<Body> collBodies,
             IEnumerable<Body> cutBodies,
@@ -1495,8 +1499,7 @@ namespace AESCConstruct25.UI
             var cutList = (cutBodies ?? Enumerable.Empty<Body>()).Where(b => b != null).ToList();
             if (collList.Count == 0 && cutList.Count == 0) return;
 
-            //Logger.Log($"[PropagateCutsForChoice] cutList={cutList.Count}, collList={collList.Count}");
-
+            // Prefer real cutters
             var ownersToProcess = (choice == LinkedChoice.AllLinked)
                 ? GetAllLinkedOccurrences(mainPart, ownerOccForNeighbours)
                 : new List<IDesignBody> { ownerOccForNeighbours };
@@ -1505,7 +1508,6 @@ namespace AESCConstruct25.UI
             {
                 if (ownerOcc?.Master?.Shape == null) continue;
 
-                // Prefer real cutters
                 var allTools = cutList.Count > 0 ? cutList : collList;
                 if (!allTools.Any()) continue;
 
@@ -1513,7 +1515,14 @@ namespace AESCConstruct25.UI
                 var toolWorldBoxes = new List<Box>();
                 foreach (var t in allTools)
                 {
-                    try { toolWorldBoxes.Add(t.GetBoundingBox(ownerOcc.TransformToMaster.Inverse)); } catch { }
+                    try
+                    {
+                        toolWorldBoxes.Add(t.GetBoundingBox(ownerOcc.TransformToMaster.Inverse));
+                    }
+                    catch
+                    {
+                        // ignore this tool for box prefiltering
+                    }
                 }
                 if (toolWorldBoxes.Count == 0) continue;
 
@@ -1521,8 +1530,8 @@ namespace AESCConstruct25.UI
                                          .Where(idb => idb != null && idb.Master != ownerOcc.Master)
                                          .ToList();
 
-                // Collect colliding neighbours
-                var colliding = new List<(IDesignBody nOcc, bool isLinked)>();
+                // Collect colliding neighbours first
+                var colliding = new List<IDesignBody>();
                 foreach (var nOcc in neighbours)
                 {
                     var nMaster = nOcc.Master;
@@ -1531,8 +1540,14 @@ namespace AESCConstruct25.UI
 
                     // coarse AABB
                     Box nWorldBox;
-                    try { nWorldBox = nShape.GetBoundingBox(nOcc.TransformToMaster.Inverse); }
-                    catch { continue; }
+                    try
+                    {
+                        nWorldBox = nShape.GetBoundingBox(nOcc.TransformToMaster.Inverse);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
 
                     if (!toolWorldBoxes.Any(tb => BoxesIntersect(nWorldBox, tb)))
                         continue;
@@ -1541,61 +1556,40 @@ namespace AESCConstruct25.UI
                     if (!allTools.Any(t => IntersectsNeighbour(ownerOcc, nOcc, t)))
                         continue;
 
-                    colliding.Add((nOcc, IsLinked(nOcc, mainPart)));
+                    colliding.Add(nOcc);
                 }
 
                 if (colliding.Count == 0) continue;
 
-                // Split colliding neighbours into: already-decided (cached) vs undecided & linked
-                var undecidedLinked = new List<IDesignBody>();
-                foreach (var (nOcc, isLinked) in colliding)
-                {
-                    if (!isLinked) continue; // unlinked never prompt
-                    var nMaster = nOcc.Master;
-                    if (!s_neighbourDecisionCache.ContainsKey(nMaster))
-                        undecidedLinked.Add(nOcc);
-                }
-
-                // If there are undecided linked neighbours, prompt ONCE for this owner
-                if (undecidedLinked.Count > 0)
-                {
-                    var batch = AskBatchForOwner(ownerOcc, colliding.Count);
-                    if (batch == NeighbourBatchChoice.SkipAll)
-                    {
-                        //Logger.Log($"[PropagateCutsForChoice] Owner[{ownerOcc.Master?.Name}] SkipAll ({colliding.Count} neighbours).");
-                        continue;
-                    }
-
-                    // Map batch choice → per-neighbour decision and cache it
-                    var perNeighbour = (batch == NeighbourBatchChoice.MakeIndependentAll)
-                        ? NeighbourIndepChoice.MakeIndependent
-                        : NeighbourIndepChoice.EditShared;
-
-                    foreach (var nOcc in undecidedLinked)
-                    {
-                        var nMaster = nOcc.Master;
-                        s_neighbourDecisionCache[nMaster] = perNeighbour;
-                    }
-                }
-
-                // Apply decisions and cut
-                foreach (var (nOcc0, isLinked) in colliding)
+                // Apply cuts to all colliding neighbours.
+                // If the owner was made independent (ThisOnly), then also make any linked neighbours
+                // independent before cutting them, so we do not modify their shared master.
+                foreach (var nOcc0 in colliding)
                 {
                     IDesignBody targetOcc = nOcc0;
 
-                    NeighbourIndepChoice decide =
-                        !isLinked ? NeighbourIndepChoice.EditShared
-                                  : s_neighbourDecisionCache.TryGetValue(nOcc0.Master, out var d) ? d
-                                    : NeighbourIndepChoice.EditShared; // fallback safety
-
-                    if (isLinked && decide == NeighbourIndepChoice.MakeIndependent)
+                    // Owner choice == ThisOnly means we unlinked the owner;
+                    // mirror that behaviour onto any linked neighbours we are about to cut.
+                    if (choice == LinkedChoice.ThisOnly && IsLinked(nOcc0, mainPart))
                     {
-                        nameIndex = 1;
-                        var newOcc = MakeIndependentOcc(nOcc0);
-                        //NormalizeStemSuffixes(newOcc);
-                        if (newOcc == null) continue;
-
-                        targetOcc = newOcc;
+                        try
+                        {
+                            nameIndex = 1; // reset suffix counter for a clean series of names
+                            var newOcc = MakeIndependentOcc(nOcc0);
+                            if (newOcc == null)
+                            {
+                                // Could not make this neighbour independent; skip it rather than
+                                // unexpectedly modifying the shared master.
+                                continue;
+                            }
+                            targetOcc = newOcc;
+                        }
+                        catch
+                        {
+                            // If independence fails for any reason, skip this neighbour to avoid
+                            // unintended edits on a shared master.
+                            continue;
+                        }
                     }
 
                     var targetMaster = targetOcc.Master;
@@ -1605,20 +1599,26 @@ namespace AESCConstruct25.UI
                     foreach (var toolSrc in allTools)
                     {
                         if (toolSrc == null) continue;
+
                         try
                         {
-                            if (!IntersectsNeighbour(ownerOcc, targetOcc, toolSrc)) continue;
+                            if (!IntersectsNeighbour(ownerOcc, targetOcc, toolSrc))
+                                continue;
 
                             using var mapped = MapTool(toolSrc, ownerOcc, targetOcc);
                             var tmp = DesignBody.Create(targetPart, $"_cut_tmp_{toolIdx++}", mapped.Copy());
-                            try { targetMaster.Shape.Subtract(new[] { tmp.Shape }); }
-                            finally { try { if (!tmp.IsDeleted) tmp.Delete(); } catch { } }
-
-                            //Logger.Log($"[PropagateCutsForChoice] Owner[{ownerOcc.Master?.Name}] → Neighbour[{targetMaster?.Name}]: subtracted tool {toolIdx}");
+                            try
+                            {
+                                targetMaster.Shape.Subtract(new[] { tmp.Shape });
+                            }
+                            finally
+                            {
+                                try { if (!tmp.IsDeleted) tmp.Delete(); } catch { }
+                            }
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            //Logger.Log($"[PropagateCutsForChoice] Subtract failed: {ex.Message}");
+                            // swallow and continue with the next tool / neighbour
                         }
                     }
                 }
