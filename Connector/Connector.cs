@@ -25,11 +25,11 @@ public class Connector
     public bool RoundCutout { get; set; }     // chkTubeLockRoundCutout.Checked
     public int PatternQty { get; set; }       // TubeLockPattern
     public bool HasPattern { get; set; }      // chkTubeLockPattern.Checked
-    public bool HasCornerCutout { get; set; } // new property
-    public double CornerCutoutRadius { get; set; } // new property
-    public bool RadiusInCutOut { get; set; }       // new property
-    public double RadiusInCutOut_Radius { get; set; } // new property
-    public bool ConnectorStraight { get; set; }    // new property
+    public bool HasCornerCutout { get; set; }
+    public double CornerCutoutRadius { get; set; }
+    public bool RadiusInCutOut { get; set; } 
+    public double RadiusInCutOut_Radius { get; set; } 
+    public bool ConnectorStraight { get; set; }
 
     // Constructor
     public Connector(
@@ -80,49 +80,33 @@ public class Connector
         // correlation id to tie UI parse → geometry creation → unite/propagation
         string rid = Guid.NewGuid().ToString("N").Substring(0, 8);
         var sw = Stopwatch.StartNew();
-        //Logger.Log($"[{rid}] CreateConnector: ENTER");
 
         try
         {
             double ParseWithTrace(string label, string s)
             {
                 string raw = s ?? "<null>";
-                //Logger.Log($"[{rid}] CreateConnector: parsing '{label}' raw='{raw}' (Culture={CultureInfo.CurrentCulture.Name})");
 
                 // Accept current culture, invariant, and comma→dot fallback
                 if (!string.IsNullOrWhiteSpace(s))
                 {
                     if (double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out var v1))
                     {
-                        //Logger.Log($"[{rid}] CreateConnector: parsed '{label}'={v1} (current-culture)");
                         return v1;
                     }
                     if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v2))
                     {
-                        //Logger.Log($"[{rid}] CreateConnector: parsed '{label}'={v2} (invariant)");
                         return v2;
                     }
                     var norm = s.Replace(',', '.');
                     if (double.TryParse(norm, NumberStyles.Float, CultureInfo.InvariantCulture, out var v3))
                     {
-                        //Logger.Log($"[{rid}] CreateConnector: parsed '{label}'={v3} (comma→dot normalized)");
                         return v3;
                     }
                 }
 
-                //Logger.Log($"[{rid}] CreateConnector: FAIL parsing '{label}' value='{raw}'");
                 throw new FormatException($"Invalid number for {label}: \"{raw}\"");
             }
-
-            // --- dump raw UI state before parsing ---
-            //Logger.Log($"[{rid}] CreateConnector: RAW UI " +
-            //           $"W1='{form.connectorWidth1?.Text}', H='{form.connectorHeight?.Text}', Tol='{form.connectorTolerance?.Text}', " +
-            //           $"W2='{form.connectorWidth2?.Text}', R='{form.connectorRadiusChamfer?.Text}', Loc='{form.connectorLocation?.Text}', " +
-            //           $"EndRelief='{form.connectorSpacing?.Text}', CCut='{form.connectorCornerCutoutValue?.Text}', " +
-            //           $"TopPairR='{form.connectorCornerCutoutRadiusValue?.Text}', " +
-            //           $"Flags: Click={form.connectorClickLocation?.IsChecked}, DynH={form.connectorDynamicHeight?.IsChecked}, " +
-            //           $"CornerCutout={form.connectorCornerCutout?.IsChecked}, TopPair={form.connectorCornerCutoutRadius?.IsChecked}, " +
-            //           $"RadiusRadio={form.connectorRadius?.IsChecked}, ChamferRadio={form.connectorChamfer?.IsChecked}");
 
             // --- parse textboxes ---
             double width1 = ParseWithTrace(nameof(width1), form.connectorWidth1.Text);
@@ -142,29 +126,11 @@ public class Connector
             bool radiusInCutOut = form.connectorCornerCutoutRadius.IsChecked == true;
             bool rounding = form.connectorRadius.IsChecked == true;
             bool chamfering = form.connectorChamfer.IsChecked == true;
-            bool oneSide = false;           // consistent with your code
-            bool roundCutout = false;       // "
-            bool hasPattern = form.connectorPattern.IsChecked == true; // "
-            int patternQty = (int)ParseWithTrace(nameof(patternQty), form.connectorPatternValue.Text); // "
-            bool connectorStraight = false; // "
-
-            // sanity: radio state
-            //if (rounding && chamfering)
-            //    Logger.Log($"[{rid}] CreateConnector: WARN both radius & chamfer radios checked, will treat as 'radius'.");
-
-            // summarize parsed values (original message kept + rid)
-            //Logger.Log($"[{rid}] CreateConnector: parsed values " +
-            //           $"W1={width1}, H={height}, Tol={tolerance}, W2={width2}, R={radius}, " +
-            //           $"Loc={location}, Round={(rounding ? 1 : 0)}, DynH={(dynamicHeight ? 1 : 0)}, " +
-            //           $"CornerCutout={(hasCornerCutout ? 1 : 0)}({cornerCutoutRadius}), TopPair={(radiusInCutOut ? 1 : 0)}({radiusInCutOut_Radius}), " +
-            //           $"EndRelief={endRelief}, PatternQty={patternQty}");
-
-            // light derived warnings that often cause “no geometry”
-            //if (radius > 0 && width2 > 0 && radius >= width2 * 0.5)
-            //    Logger.Log($"[{rid}] CreateConnector: WARN corner radius/chamfer >= half top width → potential profile degeneracy.");
-            //if (endRelief > 0 && Math.Abs(width1 - width2) > 1e-9)
-            //    Logger.Log($"[{rid}] CreateConnector: WARN end relief with W1!=W2 → height may collapse depending on branch.");
-            //Logger.Log("result qty " + patternQty.ToString());
+            bool oneSide = false;
+            bool roundCutout = false;
+            bool hasPattern = form.connectorPattern.IsChecked == true;
+            int patternQty = (int)ParseWithTrace(nameof(patternQty), form.connectorPatternValue.Text);
+            bool connectorStraight = false;
 
             var result = new Connector(
                 width1, height, tolerance, endRelief, width2, radius,
@@ -175,13 +141,11 @@ public class Connector
             );
 
             sw.Stop();
-            //Logger.Log($"[{rid}] CreateConnector: EXIT ok in {sw.ElapsedMilliseconds} ms");
             return result;
         }
         catch (Exception ex)
         {
             sw.Stop();
-            //Logger.Log($"[{rid}] CreateConnector: EXIT FAIL in {sw.ElapsedMilliseconds} ms — {ex}");
             return null;
         }
     }
@@ -234,15 +198,6 @@ public class Connector
         List<IDesignBody> _listIDB = part.Document.MainPart.GetDescendants<IDesignBody>().ToList();
         DesignBody.Create(part.Document.MainPart, "checkDynHeightBody", body.Copy());
 
-        //IDesignBody idbDynHeightBody = null;
-        //foreach (IDesignBody idb in _listIDB)
-        //{
-        //    if (idb.Master.Shape == body)
-        //    {
-        //        idbDynHeightBody = idb;
-        //    }
-        //}
-
         return height;
     }
 
@@ -258,10 +213,6 @@ public class Connector
         var boundary = new List<ITrimmedCurve>();
 
         // -------- inputs (mm → m conversions inline too) --------
-        //Logger.Log($"[CreateBoundary] ENTER " +
-        //           $"W1={Width1}mm W2={Width2}mm Height={Height}mm Radius={Radius}mm " +
-        //           $"HasRounding={HasRounding} Dyn={DynamicHeight} widthDiff={widthDiff}mm bottomHeigth={bottomHeigth}m dynHeightVal={dynHeightVal}m");
-
         Point pCenter = center - bottomHeigth * dirZ;
 
         double halfWidth1 = ((Width1 - widthDiff * 1000.0) * 0.5) / 1000.0; // m
@@ -269,15 +220,11 @@ public class Connector
         double r = (Radius) / 1000.0;                                       // m
         double h = DynamicHeight ? dynHeightVal : (Height / 1000.0) + bottomHeigth; // m
 
-        //Logger.Log($"[CreateBoundary] derived " +
-        //           $"halfW1={halfWidth1:0.######}m halfW2={halfWidth2:0.######}m r={r:0.######}m h={h:0.######}m");
-
         // Bottom and top references (X only at top)
         Point p1 = pCenter - halfWidth1 * dirX;        // bottom-left
         Point p6 = pCenter + halfWidth1 * dirX;        // bottom-right
         Point pTopLRef = pCenter - halfWidth2 * dirX;  // top-left ref (no Z)
         Point pTopRRef = pCenter + halfWidth2 * dirX;  // top-right ref (no Z)
-        //Logger.Log($"[CreateBoundary] p1={p1} p6={p6} pTopLRef={pTopLRef} pTopRRef={pTopRRef}");
 
         Point p2; // side tangency (left)
         Point p5; // side tangency (right)
@@ -288,14 +235,10 @@ public class Connector
             p2 = pTopLRef + h * dirZ;
             p5 = pTopRRef + h * dirZ;
 
-            //Logger.Log($"[CreateBoundary] R=0 → trapezoid " +
-            //           $"p2={p2} p5={p5}");
-
-            boundary.Add(CurveSegment.Create(p1, p2)); //Logger.Log($"[CreateBoundary] seg p1→p2");
-            boundary.Add(CurveSegment.Create(p2, p5)); //Logger.Log($"[CreateBoundary] seg p2→p5");
-            boundary.Add(CurveSegment.Create(p5, p6)); //Logger.Log($"[CreateBoundary] seg p5→p6");
-            boundary.Add(CurveSegment.Create(p6, p1)); //Logger.Log($"[CreateBoundary] seg p6→p1");
-            //Logger.Log($"[CreateBoundary] EXIT (trapezoid), segments={boundary.Count}");
+            boundary.Add(CurveSegment.Create(p1, p2));
+            boundary.Add(CurveSegment.Create(p2, p5));
+            boundary.Add(CurveSegment.Create(p5, p6));
+            boundary.Add(CurveSegment.Create(p6, p1));
             return boundary;
         }
 
@@ -305,7 +248,6 @@ public class Connector
         double sideLen = Math.Sqrt(dxAbs * dxAbs + h * h);
         double alpha = (dxAbs < EPSM) ? (Math.PI * 0.5) : Math.Atan(h / dxAbs);
 
-        //Logger.Log($"[CreateBoundary] slope alpha={alpha:0.######} rad ({alpha * 180.0 / Math.PI:0.###}°) sideLen={sideLen:0.######}m dxAbs={dxAbs:0.######}m");
 
         // distance from TOP corner down along side to arc/chamfer start
         double dist;
@@ -314,25 +256,20 @@ public class Connector
             double gamma = (Math.PI - alpha) * 0.5;
             double tg = Math.Tan(gamma);
             dist = (Math.Abs(tg) < 1e-12) ? r : (r / tg);
-            //Logger.Log($"[CreateBoundary] fillet gamma={gamma:0.######} rad dist={dist:0.######}m (r/tan(gamma))");
         }
         else
         {
             dist = r;
-            //Logger.Log($"[CreateBoundary] chamfer dist={dist:0.######}m");
         }
 
         // clamp dist to guarantee top span and avoid overshoot
         double distBefore = dist;
         dist = Math.Max(0.0, Math.Min(dist, sideLen - 1e-12));
         dist = Math.Min(dist, Math.Max(0.0, halfWidth2 - 1e-12));
-        //if (Math.Abs(dist - distBefore) > 0)
-        //    Logger.Log($"[CreateBoundary] dist clamped {distBefore:0.######}→{dist:0.######} to keep profile valid");
 
         // top inner (tangency) points p3/p4
         Point p3 = pTopLRef + h * dirZ + dist * dirX; // left top inner
         Point p4 = pTopRRef + h * dirZ - dist * dirX; // right top inner
-        //Logger.Log($"[CreateBoundary] p3={p3} p4={p4}");
 
         // from bottom corners to side tangency p2/p5
         double rem = Math.Max(0.0, sideLen - dist);
@@ -347,45 +284,36 @@ public class Connector
         p5 = topWider ? (p6 + stepX * dirX + stepZ * dirZ)
                       : (p6 - stepX * dirX + stepZ * dirZ);
 
-        //Logger.Log($"[CreateBoundary] topWider={topWider} rem={rem:0.######} stepX={stepX:0.######} stepZ={stepZ:0.######} " +
-        //           $"p2={p2} p5={p5}");
-
         // tiny degen guards: if any consecutive points are ~identical, nudge a hair on Z
         double Near(Point a, Point b) => (a - b).Magnitude;
 
         if (Near(p1, p2) < 1e-12)
         {
             p2 = p2 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p2 (too close to p1)");
         }
         if (Near(p2, p3) < 1e-12)
         {
             p3 = p3 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p3 (too close to p2)");
         }
         if (Near(p3, p4) < 1e-12)
         {
             p4 = p4 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p4 (too close to p3)");
         }
         if (Near(p4, p5) < 1e-12)
         {
             p5 = p5 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p5 (too close to p4)");
         }
         if (Near(p5, p6) < 1e-12)
         {
             p6 = p6 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p6 (too close to p5)");
         }
         if (Near(p6, p1) < 1e-12)
         {
             p1 = p1 + 1e-9 * dirZ;
-            //Logger.Log("[CreateBoundary] nudged p1 (too close to p6)");
         }
 
         // build loop: p1→p2→(corner)→p3→p4→(corner)→p5→p6→p1
-        boundary.Add(CurveSegment.Create(p1, p2)); //Logger.Log("[CreateBoundary] seg p1→p2");
+        boundary.Add(CurveSegment.Create(p1, p2));
 
         if (HasRounding)
         {
@@ -396,10 +324,10 @@ public class Connector
             // choose the one consistent with top plane (smaller distance to top ref)
             var aL = (aL1.ProjectPoint(pTopLRef).Point - pTopLRef).Magnitude >
                      (aL2.ProjectPoint(pTopLRef).Point - pTopLRef).Magnitude ? aL1 : aL2;
-            boundary.Add(aL); //Logger.Log($"[CreateBoundary] arc LEFT center={cL} r={r:0.######} normal={(aL == aL1 ? "-Y" : "+Y")} p2→p3");
+            boundary.Add(aL);
 
             // top span
-            boundary.Add(CurveSegment.Create(p3, p4)); //Logger.Log("[CreateBoundary] seg p3→p4");
+            boundary.Add(CurveSegment.Create(p3, p4));
 
             // RIGHT arc p4→p5
             Point cR = p4 - r * dirZ;
@@ -407,14 +335,14 @@ public class Connector
             var aR2 = CurveSegment.CreateArc(cR, p4, p5, -dirY);
             var aR = (aR1.ProjectPoint(pTopRRef).Point - pTopRRef).Magnitude >
                      (aR2.ProjectPoint(pTopRRef).Point - pTopRRef).Magnitude ? aR1 : aR2;
-            boundary.Add(aR); //Logger.Log($"[CreateBoundary] arc RIGHT center={cR} r={r:0.######} normal={(aR == aR1 ? "+Y" : "-Y")} p4→p5");
+            boundary.Add(aR);
         }
         else
         {
             // chamfers
-            boundary.Add(CurveSegment.Create(p2, p3)); //Logger.Log("[CreateBoundary] seg p2→p3 (chamfer)");
-            boundary.Add(CurveSegment.Create(p3, p4)); //Logger.Log("[CreateBoundary] seg p3→p4");
-            boundary.Add(CurveSegment.Create(p4, p5)); //Logger.Log("[CreateBoundary] seg p4→p5 (chamfer)");
+            boundary.Add(CurveSegment.Create(p2, p3));
+            boundary.Add(CurveSegment.Create(p3, p4));
+            boundary.Add(CurveSegment.Create(p4, p5));
         }
 
         boundary.Add(CurveSegment.Create(p5, p6)); //Logger.Log("[CreateBoundary] seg p5→p6");
@@ -487,7 +415,6 @@ public class Connector
             }
             catch
             {
-                // best-effort debug draw only
             }
         }
 
@@ -508,7 +435,6 @@ public class Connector
             }
             catch
             {
-                // best-effort debug draw only
             }
         }
 
@@ -534,7 +460,6 @@ public class Connector
             }
             catch
             {
-                // best-effort debug draw only
                 return null;
             }
         }
@@ -548,7 +473,6 @@ public class Connector
             }
             catch
             {
-                // best-effort debug draw only
             }
         }
 
@@ -564,17 +488,10 @@ public class Connector
         // --- Build profile boundary (unchanged base logic) ---
         var boundary = new List<ITrimmedCurve>();
 
-        // mm → m conversions
-        //double halfWidth1 = (Width1 * 0.5) / 1000.0;
-        //double halfWidth2 = (Width2 * 0.5) / 1000.0;
         double halfWidth1 = Width1 * 0.001 * 0.5;
         double halfWidth2 = Width2 * 0.001 * 0.5;
         double chamferOrRadius = Radius / 1000.0;
-        double tol = 0.001 * Tolerance; // m
-
-        //DBG($"Inputs: W1={Width1}mm W2={Width2}mm H={height}mm adjH={adjustedHeight}mm tol={Tolerance}mm → {tol}m, R={Radius}mm " +
-        //    $"flags: CornerCutout={HasCornerCutout}({CornerCutoutRadius}mm), TopPair={RadiusInCutOut}({RadiusInCutOut_Radius}mm).");
-        //DBG($"Dirs |X|={dirX.ToVector().Magnitude:0.###} |Y|={dirY.ToVector().Magnitude:0.###} |Z|={dirZ.ToVector().Magnitude:0.###}");
+        double tol = 0.001 * Tolerance; 
 
         // Base corners (at bottom)
         Point p1 = center - halfWidth1 * dirX;  // bottom-left
@@ -717,8 +634,6 @@ public class Connector
                 DrawPoint(part, "p3_chamfer_L", p3);
                 DrawPoint(part, "p4_chamfer_R", p4);
                 DrawPoint(part, "p5_chamfer_R", p5);
-
-                //DBG($"Chamfer using c={c:F4}m => legs a=b={a:F4}m; loop closed p1→p6");
             }
         }
 
@@ -745,7 +660,6 @@ public class Connector
             main = Body.ExtrudeProfile(
                 new Profile(Plane.Create(Frame.Create(center, dirX, dirZ)), boundary),
                 sign1 * thickness);
-            //DBG($"Connector outward flip applied. sign1={sign1}");
         }
 
         TryDrawBody(part, "Connector_profile_extrude_raw", main);
@@ -779,7 +693,6 @@ public class Connector
         if (rect.ContainsPoint(center + (0.99 * thickness) * dirY))
         {
             rect = Body.ExtrudeProfile(new Profile(rectProfilePlane, rectBoundary), -thickness);
-            //DBG("Rect outward flip applied to match connector orientation.");
         }
 
         // Collision: plain rectangle (no tolerance), top at cutHeight (usedHeight)
@@ -843,7 +756,6 @@ public class Connector
             }
             catch
             {
-                // offset is best effort; failures fall back to base rect
             }
             TryDrawBody(part, "CutRect_afterOffset", cutBody.Copy());
         }
@@ -860,7 +772,6 @@ public class Connector
 
             DrawPoint(part, "cTopR_cylCenter", cTopR);
             DrawPoint(part, "cTopL_cylCenter", cTopL);
-            //DBG($"TopPair: r={r} m, depth={depth} m, centers: L={cTopL}, R={cTopR}");
 
             Plane pr = Plane.Create(Frame.Create(cTopR, dirX, dirZ)); // ⟂ dirY
             Plane pl = Plane.Create(Frame.Create(cTopL, dirX, dirZ));
@@ -892,13 +803,8 @@ public class Connector
                 }
                 catch
                 {
-                    // best-effort debug draw only
                 }
             }
-        }
-        else
-        {
-            //DBG("TopPair: disabled or zero radius.");
         }
 
         // === Bottom pair (CornerCutout) — owner cuts via cutBodiesSource ===
@@ -919,14 +825,9 @@ public class Connector
 
             cutBodiesSource.Add(c1_pos.Copy());
             cutBodiesSource.Add(c2_pos.Copy());
-            //DBG($"CornerCutout: r={rCC} m depth={depth} m. Added 2 bodies to cutBodiesSource.");
 
             TryDrawBody(part, "CornerCutout_L", c1_pos.Copy());
             TryDrawBody(part, "CornerCutout_R", c2_pos.Copy());
-        }
-        else
-        {
-            //DBG("CornerCutout: disabled or zero radius.");
         }
 
         // === Final sanity visuals ===
@@ -935,10 +836,5 @@ public class Connector
 
         // Wireframe of the rectangle used for cut/collision
         var wire = DrawWireBox(part, "RectLoop", new[] { p1, pTopL, pTopR, p6 });
-
-        // Log summary — key points and booleans
-        //DBG($"SUMMARY: sign1={sign1}, drawBodies={drawBodies}, DEBUG={DEBUG}");
-        //DBG($"SUMMARY: p1={p1}, p6={p6}, pTopL={pTopL}, pTopR={pTopR}, center={center}");
-        //DBG($"SUMMARY: cutHeight={cutHeight} m, connHeight={connHeight} m, thickness={thickness} m, tol={tol} m");
     }
 }

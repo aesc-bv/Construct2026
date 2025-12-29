@@ -179,46 +179,11 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"drawConnector failed: {ex}");
             }
         }
 
         // btnCreate_connector is the click handler that starts 3D connector creation from the current UI.
         private void btnCreate_connector(object sender, RoutedEventArgs e) => createConnector();
-
-        // btnCreate_Test executes a test MakeIndependent command against the current selection.
-        private void btnCreate_Test(object sender, RoutedEventArgs e)
-        {
-            Command.Execute("MakeIndependent");
-        }
-
-        // txtDouble_Validated validates the numeric input and triggers a connector redraw.
-        private void txtDouble_Validated(object sender, EventArgs e)
-        {
-            ValidateAndDrawConnector();
-        }
-
-        // txtDouble_KeyDown commits and redraws the connector when Enter is pressed in a numeric TextBox.
-        private void txtDouble_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key == System.Windows.Input.Key.Enter)
-            {
-                ValidateAndDrawConnector();
-                e.Handled = true; // swallow Enter
-            }
-        }
-
-        // ValidateAndDrawConnector checks connectorHeight for a valid double and redraws or warns the user.
-        private void ValidateAndDrawConnector()
-        {
-            if (double.TryParse(connectorHeight?.Text, out _))
-                drawConnector();
-            else
-            {
-                Application.ReportStatus("Please enter a valid double value.", StatusMessageType.Warning, null);
-                connectorHeight?.Focus();
-            }
-        }
 
         // ConnectorControl_Loaded runs once when the control is loaded to wire UI events, load presets, and draw the initial connector.
         private void ConnectorControl_Loaded(object sender, RoutedEventArgs e)
@@ -228,9 +193,9 @@ namespace AESCConstruct25.UI
                 WireUiChangeHandlers();
                 LoadConnectorPresets();
                 drawConnector();
-                UpdateGenerateEnabled(); // ← add
+                UpdateGenerateEnabled();
             }
-            catch (Exception ex) { } ////Logger.Log($"ConnectorControl_Loaded failed: {ex}"); }
+            catch (Exception ex) { }
         }
 
         // LoadConnectorPresets reads connector presets from a CSV file and binds them into the preset combobox.
@@ -346,7 +311,6 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"ConnectorPresetCombo_SelectionChanged failed: {ex}");
             }
         }
 
@@ -542,12 +506,17 @@ namespace AESCConstruct25.UI
 
                 Point pStartWorld = p1 + nudge * testDir;
 
-                // Build the tiny probe ONCE in WORLD
-                Direction t1 = Direction.Cross(testDir, Vector.Create(1, 0, 0).Direction);
-                if (t1.IsZero) t1 = Direction.Cross(testDir, Vector.Create(0, 1, 0).Direction);
-                if (t1.IsZero) t1 = Direction.Cross(testDir, Vector.Create(0, 0, 1).Direction);
-                var probePlaneWorld = Plane.Create(Frame.Create(pStartWorld, t1, testDir));
+                // Build the tiny probe ONCE in WORLD, with its extrusion axis aligned to testDir
+                Direction x = Direction.Cross(testDir, Vector.Create(1, 0, 0).Direction);
+                if (x.IsZero) x = Direction.Cross(testDir, Vector.Create(0, 1, 0).Direction);
+                if (x.IsZero) x = Direction.Cross(testDir, Vector.Create(0, 0, 1).Direction);
+
+                // Choose y so that Cross(x, y) equals testDir (plane normal drives the extrude direction)
+                Direction y = Direction.Cross(testDir, x);
+
+                var probePlaneWorld = Plane.Create(Frame.Create(pStartWorld, x, y));
                 using var probeWorld = Body.ExtrudeProfile(new CircleProfile(probePlaneWorld, probeR), probeLen);
+
 
                 double best = double.PositiveInfinity;
 
@@ -593,16 +562,49 @@ namespace AESCConstruct25.UI
         // createConnector is the main entry that builds connector geometries on selected edges and applies all booleans and neighbour cuts.
         private void createConnector()
         {
-            // local helper so this is fully drop-in
             static bool IsAttachedLocal(DesignBody ownerMaster, Body tool)
             {
                 if (ownerMaster?.Shape == null || tool == null) return false;
                 try
                 {
                     var c = ownerMaster.Shape.GetCollision(tool);
-                    return c == Collision.Intersect;// || c == Collision.Touch; // if touch, connnector might still fail
+                    return c == Collision.Intersect;// || c == Collision.Touch;
                 }
                 catch { return false; }
+            }
+            static bool IsAttachedLocalCyl(DesignBody ownerMaster, Body tool)
+            {
+                if (ownerMaster?.Shape == null || tool == null) return false;
+                try
+                {
+                    var c = ownerMaster.Shape.GetCollision(tool);
+                    return c == Collision.Intersect || c == Collision.Touch;
+                }
+                catch { return false; }
+            }
+
+            static bool ShouldExtendPlanarLocal(
+                Part mainPart,
+                IDesignBody ownerOcc,
+                DesignBody ownerMaster,
+                Body connectorBody,
+                Body cutBody)
+            {
+                try
+                { 
+                    using var ownerCopy = ownerMaster.Shape.Copy();
+                    int ownerfaces = ownerCopy.Faces.Count;
+                    using var connCopy = connectorBody.Copy();
+                    ownerCopy.Unite(new[] { connCopy });
+                    Logger.Log("ShouldExtendPlanarLocal: No extension needed");
+                    // If this try doesn't revert to catch, unite() was successful. No extension needed.
+                    return false;
+                }
+                catch
+                {
+                    Logger.Log("ShouldExtendPlanarLocal: Unite failed, extend");
+                    return true;
+                }
             }
 
             s_neighbourDecisionCache.Clear();
@@ -610,6 +612,27 @@ namespace AESCConstruct25.UI
             string rid = Guid.NewGuid().ToString("N").Substring(0, 8);
             var swAll = System.Diagnostics.Stopwatch.StartNew();
             bool rectangularCut = connectorRectangularCut?.IsChecked == true;
+
+            const bool LOG_CYL = true;
+
+            string P(Point p) => $"({p.X:0.######},{p.Y:0.######},{p.Z:0.######})";
+            string D(Direction d)
+            {
+                var v = d.ToVector();
+                return $"({v.X:0.###},{v.Y:0.###},{v.Z:0.###})";
+            }
+
+            void LogRun(string msg)
+            {
+                if (!LOG_CYL) return;
+                try { Logger.Log($"[Connector][{rid}] {msg}"); } catch { }
+            }
+
+            void LogCyl(int edgeNo, int placeNo, string msg)
+            {
+                if (!LOG_CYL) return;
+                try { Logger.Log($"[Connector][{rid}][E{edgeNo} P{placeNo}][CYL] {msg}"); } catch { }
+            }
 
             try
             {
@@ -639,12 +662,18 @@ namespace AESCConstruct25.UI
                     return;
                 }
 
+                LogRun(
+                    $"UI W1={c.Width1}mm W2={c.Width2}mm H={c.Height}mm Tol={c.Tolerance}mm EndRelief={c.EndRelief}mm " +
+                    $"DynamicHeight={c.DynamicHeight} RectCut={rectangularCut} Straight={c.ConnectorStraight} " +
+                    $"CornerCutout={c.HasCornerCutout} CornerR={c.CornerCutoutRadius} " +
+                    $"TopPair={c.RadiusInCutOut} TopPairR={c.RadiusInCutOut_Radius}"
+                );
+
                 bool patternEnabled = (connectorPattern?.IsChecked == true);
-                //Logger.Log("Pattern enabled: " + patternEnabled.ToString());
+
                 int patternQty = 0;
                 if (patternEnabled)
                     int.TryParse(connectorPatternValue?.Text ?? "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out patternQty);
-                //Logger.Log("Pattern patternQty: " + patternQty.ToString());
                 patternEnabled = patternEnabled && patternQty > 0;
                 if (patternEnabled && patternQty <= 0)
                 {
@@ -704,7 +733,6 @@ namespace AESCConstruct25.UI
                         }
                         else
                         {
-                            //Logger.Log("Pattern centers: " + centers.ToString());
                             centers.AddRange(ComputePatternCentersOcc(iEdge, c, patternQty));
 
                         }
@@ -713,7 +741,7 @@ namespace AESCConstruct25.UI
                             allPlacements.Add((iEdge, iDesignBody, designBody, centers));
 
                     }
-                    catch { /* robust per-edge */ }
+                    catch {}
                 }
 
                 if (allPlacements.Count == 0)
@@ -750,6 +778,8 @@ namespace AESCConstruct25.UI
 
                         bool isPlaneEdge = bigFaceEdge.Shape.Geometry is Plane;
 
+                        LogRun($"Edge #{edgeCounter} placements={entry.centers.Count} isPlaneEdge={isPlaneEdge} owner={ownerMaster?.Name}");
+
                         // Cylindrical data per edge (used only in cylindrical branch)
                         DesignFace innerFaceEdge = null, outerFaceEdge = null;
                         double thicknessEdge = 0, outerRadiusEdge = 0;
@@ -757,15 +787,27 @@ namespace AESCConstruct25.UI
                         if (!isPlaneEdge)
                         {
                             var cyl = CylInfo.GetCoaxialCylPair(iDesignBody, bigFaceEdge);
-                            // NOTE: tuple fields are capitalized in your signature
                             innerFaceEdge = cyl.InnerFace;
                             outerFaceEdge = cyl.OuterFace;
                             thicknessEdge = cyl.Thickness;
                             outerRadiusEdge = cyl.OuterRadius;
                             axisEdge = cyl.Axis;
 
-                            if (innerFaceEdge == null || outerFaceEdge == null)
+                            var bigCyl = bigFaceEdge.Shape.Geometry as Cylinder;
+                            var innerCyl = innerFaceEdge?.Shape?.Geometry as Cylinder;
+                            var outerCyl = outerFaceEdge?.Shape?.Geometry as Cylinder;
+
+                            LogRun(
+                                $"CylPair axisO={P(axisEdge?.Origin ?? Point.Origin)} axisD={D(axisEdge?.Direction ?? Direction.DirZ)} " +
+                                $"outerR={outerRadiusEdge:0.######}m thick={thicknessEdge:0.######}m " +
+                                $"bigR={(bigCyl != null ? bigCyl.Radius.ToString("0.######") : "na")} " +
+                                $"innerR={(innerCyl != null ? innerCyl.Radius.ToString("0.######") : "na")} " +
+                                $"outerFaceR={(outerCyl != null ? outerCyl.Radius.ToString("0.######") : "na")}"
+                            );
+
+                            if (innerFaceEdge == null || outerFaceEdge == null || axisEdge == null)
                             {
+                                LogRun("CylPair invalid: innerFace or outerFace or axis is null");
                                 Application.ReportStatus($"No inner/outer Face found", StatusMessageType.Information, null);
                                 continue;
                             }
@@ -779,8 +821,9 @@ namespace AESCConstruct25.UI
                             protoCylInner = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge - thicknessEdge), 20);
                             protoCylOuter = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge), 20);
                             protoCylAnnulus = Body.ExtrudeProfile(new CircleProfile(shellPlane, outerRadiusEdge + 1), 20);
-                            // annulus := [R+1] minus [R]
-                            try { protoCylAnnulus.Subtract(protoCylOuter.Copy()); } catch { }
+
+                            try { protoCylAnnulus.Subtract(protoCylOuter.Copy()); }
+                            catch (Exception ex) { LogRun($"Proto annulus subtract failed: {ex.Message}"); }
                         }
 
                         int placementIdx = 0;
@@ -871,6 +914,13 @@ namespace AESCConstruct25.UI
                                     null, rectangularCut
                                 );
 
+                                bool doExtend = ShouldExtendPlanarLocal(
+                                    winMainPart,
+                                    iDesignBody,
+                                    ownerMaster,
+                                    connectorBody,
+                                    cutBody);
+
                                 // Always build both base and extended geometries, then merge results (unchanged policy)
                                 var extCenter = pCenterM;                 // no downward shift
                                 var extConnHeight = connectorHeightM;     // same height
@@ -878,80 +928,64 @@ namespace AESCConstruct25.UI
                                 Body extConnector = null, extCut = null, extCollision = null;
                                 var extOwnerCuts = new List<Body>();
 
-                                //Logger.Log("CreateGeometry (flipped extension) at " + extCenter.ToString());
-
-                                c.CreateGeometry(
-                                    parentPart,
-                                    dirX_m,
-                                    dirY_m,
-                                    -dirZ_m,            // ← flipped direction only
-                                    extCenter,
-                                    cutterHeightM,
-                                    extConnHeight,
-                                    thickness,
-                                    out extConnector,
-                                    out extOwnerCuts,
-                                    out extCut,
-                                    out extCollision,
-                                    false,
-                                    null,
-                                    rectangularCut,
-                                    false // disable corner features for extended pass
-                                );
-
-                                //Logger.Log("CreateGeometry done");
+                                if (doExtend)
+                                {
+                                    c.CreateGeometry(
+                                        parentPart,
+                                        dirX_m,
+                                        dirY_m,
+                                        -dirZ_m,            // ← flipped direction only
+                                        extCenter,
+                                        cutterHeightM,
+                                        extConnHeight,
+                                        thickness,
+                                        out extConnector,
+                                        out extOwnerCuts,
+                                        out extCut,
+                                        out extCollision,
+                                        false,
+                                        null,
+                                        rectangularCut,
+                                        false // disable corner features for extended pass
+                                    );
+                                }
 
                                 try
                                 {
-                                    //Logger.Log($"[UnitePhase] connectorBody={(connectorBody != null)}, extConnector={(extConnector != null)}, cutBody={(cutBody != null)}, extCut={(extCut != null)}, collisionBody={(collisionBody != null)}, extCollision={(extCollision != null)}");
-
                                     if (extConnector != null && connectorBody != null)
                                     {
-                                        //Logger.Log("[UnitePhase] Trying connectorBody.Unite(extConnector)");
                                         connectorBody.Unite(extConnector.Copy());
-                                        //Logger.Log("[UnitePhase] connectorBody.Unite(extConnector) OK");
                                     }
                                     else if (connectorBody == null && extConnector != null)
                                     {
                                         connectorBody = extConnector.Copy();
-                                        //Logger.Log("[UnitePhase] connectorBody created from extConnector.Copy()");
                                     }
 
                                     if (extCut != null && cutBody != null)
                                     {
-                                        //Logger.Log("[UnitePhase] Trying cutBody.Unite(extCut)");
                                         cutBody.Unite(extCut.Copy());
-                                        //Logger.Log("[UnitePhase] cutBody.Unite(extCut) OK");
                                     }
                                     else if (cutBody == null && extCut != null)
                                     {
                                         cutBody = extCut.Copy();
-                                        //Logger.Log("[UnitePhase] cutBody created from extCut.Copy()");
                                     }
 
                                     if (extCollision != null && collisionBody != null)
                                     {
-                                        //Logger.Log("[UnitePhase] Trying collisionBody.Unite(extCollision)");
                                         collisionBody.Unite(extCollision.Copy());
-                                        //Logger.Log("[UnitePhase] collisionBody.Unite(extCollision) OK");
                                     }
                                     else if (collisionBody == null && extCollision != null)
                                     {
                                         collisionBody = extCollision.Copy();
-                                        //Logger.Log("[UnitePhase] collisionBody created from extCollision.Copy()");
                                     }
 
                                     foreach (var b in extOwnerCuts)
                                     {
                                         cutBodiesSource.Add(b.Copy());
-                                        //Logger.Log("[UnitePhase] Added extOwnerCut.Copy()");
                                     }
-
-                                    //Logger.Log("[UnitePhase] Done merging ext bodies for this placement");
                                 }
                                 catch (Exception exUnite)
                                 {
-                                    //Logger.Log($"[UnitePhase] EXCEPTION: {exUnite.Message}");
                                 }
                                 finally
                                 {
@@ -975,8 +1009,12 @@ namespace AESCConstruct25.UI
                                     }
                                     catch { inflated?.Dispose(); }
                                 }
-                                //Logger.Log("line logic done");
                             }
+                            // AFTER (full cylindrical branch, no omissions)
+                            // Fix: force c.Height to connectorHeightM only while building the connector loft,
+                            // then force c.Height to cutterHeightM while building rectLoft and rectCutLoft,
+                            // so the cutter becomes (height + tol) and is not influenced by end relief.
+
                             else
                             {
                                 // === CYLINDRICAL === (face pair computed once per edge)
@@ -984,31 +1022,62 @@ namespace AESCConstruct25.UI
                                 {
                                     double w1m = c.Width1 / 1000.0;
                                     double w2m = c.Width2 / 1000.0;
+
+                                    LogCyl(edgeCounter, placementIdx, $"Widths w1m={w1m:0.######} w2m={w2m:0.######} outerDiamMm={outerRadiusEdge * 2000.0:0.###}");
+
                                     if (outerRadiusEdge * 2 < w1m)
                                     {
+                                        LogCyl(edgeCounter, placementIdx, "Abort: width1 exceeds diameter check");
                                         Application.ReportStatus($"Too wide, width should be less than: {outerRadiusEdge * 2000} mm", StatusMessageType.Information, null);
                                         continue;
                                     }
 
                                     var pCenter = occToMaster * pCenterOcc;
+                                    LogCyl(edgeCounter, placementIdx, $"pCenterM={P(pCenter)} pCenterOcc={P(pCenterOcc)}");
 
                                     double distSelectionPoint2Axis = (axisEdge.ProjectPoint(pCenter).Point - pCenter).Magnitude;
                                     bool selectedInnerFace = outerRadiusEdge - distSelectionPoint2Axis > 1e-5;
                                     DesignFace selectedFace = selectedInnerFace ? innerFaceEdge : outerFaceEdge;
 
+                                    LogCyl(edgeCounter, placementIdx, $"distToAxis={distSelectionPoint2Axis:0.######} selectedFace={(selectedInnerFace ? "INNER" : "OUTER")}");
+
                                     Point pAxis = axisEdge.ProjectPoint(pCenter).Point;
                                     Direction dirPoint2Axis = (pAxis - pCenter).Direction;
                                     Direction dirZ = axisEdge.Direction;
 
-                                    Point pTest = pCenter + 0.00001 * dirZ;
-                                    if (selectedFace.Shape.ContainsPoint(pTest)) dirZ = -dirZ;
+                                    bool insideTest = false;
+                                    try
+                                    {
+                                        insideTest = ownerMaster.Shape.ContainsPoint(pCenter + 1e-5 * dirZ);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogCyl(edgeCounter, placementIdx, $"Owner ContainsPoint test failed: {ex.Message}");
+                                    }
+
+                                    LogCyl(edgeCounter, placementIdx, $"Axis pAxis={P(pAxis)} dirP2A={D(dirPoint2Axis)} dirZ_pre={D(dirZ)} containsTest={insideTest}");
+
+                                    if (insideTest) dirZ = -dirZ;
+
+                                    LogCyl(edgeCounter, placementIdx, $"dirZ_post={D(dirZ)}");
 
                                     Direction dirX = Direction.Cross(dirPoint2Axis, dirZ);
+
+                                    double dXZ = Math.Abs(Vector.Dot(dirX.ToVector(), dirZ.ToVector()));
+                                    double dXP = Math.Abs(Vector.Dot(dirX.ToVector(), dirPoint2Axis.ToVector()));
+                                    double dZP = Math.Abs(Vector.Dot(dirZ.ToVector(), dirPoint2Axis.ToVector()));
+                                    LogCyl(edgeCounter, placementIdx, $"Frame dot(X,Z)={dXZ:0.######} dot(X,P2A)={dXP:0.######} dot(Z,P2A)={dZP:0.######}");
+
                                     double maxWidth = Math.Max(w1m, w2m);
-                                    double distWidth = Math.Sqrt(outerRadiusEdge * outerRadiusEdge - (0.5 * maxWidth) * (0.5 * maxWidth));
+                                    double under = outerRadiusEdge * outerRadiusEdge - (0.5 * maxWidth) * (0.5 * maxWidth);
+                                    LogCyl(edgeCounter, placementIdx, $"maxWidth={maxWidth:0.######} underSqrt={under:0.######}");
+
+                                    double distWidth = Math.Sqrt(under);
                                     Point pWidth = pAxis - distWidth * dirPoint2Axis;
                                     Point pWidth_A = pAxis - distWidth * dirPoint2Axis + 0.5 * maxWidth * dirX;
                                     Point pWidth_B = pAxis - distWidth * dirPoint2Axis - 0.5 * maxWidth * dirX;
+
+                                    LogCyl(edgeCounter, placementIdx, $"pWidth={P(pWidth)} pWidthA={P(pWidth_A)} pWidthB={P(pWidth_B)}");
 
                                     Direction dir_A = c.ConnectorStraight ? dirPoint2Axis : (pAxis - pWidth_A).Direction;
                                     Direction dir_B = c.ConnectorStraight ? dirPoint2Axis : (pAxis - pWidth_B).Direction;
@@ -1019,27 +1088,59 @@ namespace AESCConstruct25.UI
                                     Point p_InnerFace = pAxis - (outerRadiusEdge - thicknessEdge) * dirPoint2Axis;
                                     Point p_OuterFace = pAxis - (outerRadiusEdge) * dirPoint2Axis;
 
+                                    LogCyl(edgeCounter, placementIdx, $"dirA={D(dir_A)} dirB={D(dir_B)} pInnerA={P(pInner_A)} pInnerB={P(pInner_B)} pInnerMid={P(pInnerMid)}");
+                                    LogCyl(edgeCounter, placementIdx, $"pInnerFaceRef={P(p_InnerFace)} pOuterFaceRef={P(p_OuterFace)}");
+
                                     double alpha = Math.Acos(distWidth / outerRadiusEdge);
                                     double distOuter = outerRadiusEdge / Math.Cos(alpha);
+
+                                    LogCyl(edgeCounter, placementIdx, $"alphaDeg={(alpha * 180.0 / Math.PI):0.###} distOuter={distOuter:0.######}");
 
                                     Point pOuter_A = pAxis - distOuter * dir_A;
                                     Point pOuter_B = pAxis - distOuter * dir_B;
 
                                     var (success, innerEdge, outerEdge) = CylInfo.GetEdges(innerFaceEdge, p_InnerFace, outerFaceEdge, p_OuterFace);
+                                    LogCyl(edgeCounter, placementIdx, $"GetEdges success={success} innerEdgeNull={(innerEdge == null)} outerEdgeNull={(outerEdge == null)}");
+
                                     var (successInnerA, p_InnerEdge_A) = CylInfo.GetClosestPoint(innerEdge, pInner_A, dirZ);
                                     var (successInnerB, p_InnerEdge_B) = CylInfo.GetClosestPoint(innerEdge, pInner_B, dirZ);
                                     var (successOuterA, p_OuterEdge_A) = CylInfo.GetClosestPoint(outerEdge, pWidth_A, dirZ);
                                     var (successOuterB, p_OuterEdge_B) = CylInfo.GetClosestPoint(outerEdge, pWidth_B, dirZ);
 
+                                    LogCyl(edgeCounter, placementIdx, $"ClosestPoints innerA={successInnerA} innerB={successInnerB} outerA={successOuterA} outerB={successOuterB}");
+
                                     double maxDistanceBottom = 0;
-                                    if (successInnerA && (pInner_A - p_InnerEdge_A).Direction == dirZ)
-                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_A - p_InnerEdge_A).Magnitude);
-                                    if (successInnerB && (pInner_B - p_InnerEdge_B).Direction == dirZ)
-                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pInner_B - p_InnerEdge_B).Magnitude);
-                                    if (successOuterA && (pWidth_A - p_OuterEdge_A).Direction == dirZ)
-                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_A - p_OuterEdge_A).Magnitude);
-                                    if (successOuterB && (pWidth_B - p_OuterEdge_B).Direction == dirZ)
-                                        maxDistanceBottom = Math.Max(maxDistanceBottom, (pWidth_B - p_OuterEdge_B).Magnitude);
+
+                                    if (successInnerA)
+                                    {
+                                        var dv = pInner_A - p_InnerEdge_A;
+                                        bool ok = dv.Direction == dirZ;
+                                        LogCyl(edgeCounter, placementIdx, $"InnerA snap dist={dv.Magnitude:0.######} dirOk={ok}");
+                                        if (ok) maxDistanceBottom = Math.Max(maxDistanceBottom, dv.Magnitude);
+                                    }
+                                    if (successInnerB)
+                                    {
+                                        var dv = pInner_B - p_InnerEdge_B;
+                                        bool ok = dv.Direction == dirZ;
+                                        LogCyl(edgeCounter, placementIdx, $"InnerB snap dist={dv.Magnitude:0.######} dirOk={ok}");
+                                        if (ok) maxDistanceBottom = Math.Max(maxDistanceBottom, dv.Magnitude);
+                                    }
+                                    if (successOuterA)
+                                    {
+                                        var dv = pWidth_A - p_OuterEdge_A;
+                                        bool ok = dv.Direction == dirZ;
+                                        LogCyl(edgeCounter, placementIdx, $"OuterA snap dist={dv.Magnitude:0.######} dirOk={ok}");
+                                        if (ok) maxDistanceBottom = Math.Max(maxDistanceBottom, dv.Magnitude);
+                                    }
+                                    if (successOuterB)
+                                    {
+                                        var dv = pWidth_B - p_OuterEdge_B;
+                                        bool ok = dv.Direction == dirZ;
+                                        LogCyl(edgeCounter, placementIdx, $"OuterB snap dist={dv.Magnitude:0.######} dirOk={ok}");
+                                        if (ok) maxDistanceBottom = Math.Max(maxDistanceBottom, dv.Magnitude);
+                                    }
+
+                                    LogCyl(edgeCounter, placementIdx, $"maxDistanceBottom={maxDistanceBottom:0.######}");
 
                                     Plane planeInner = Plane.Create(Frame.Create(pInnerMid, dirX, dirZ));
                                     Plane planeOuter = Plane.Create(Frame.Create(p_OuterFace, dirX, dirZ));
@@ -1048,23 +1149,41 @@ namespace AESCConstruct25.UI
                                     double widthDiffOuter = c.ConnectorStraight ? 0 : (pWidth_A - pWidth_B).Magnitude - (pOuter_A - pOuter_B).Magnitude;
 
                                     Direction dirZ_world = (masterToOcc * dirZ.ToVector()).Direction;
-                                    Direction shiftThicknessWorld = (masterToOcc * dirPoint2Axis.ToVector()).Direction;
+
+                                    // Thickness shift direction must go into the wall material
+                                    // Outer face selected: into wall is toward axis
+                                    // Inner face selected: into wall is away from axis
+                                    Direction thickIntoWall_master = selectedInnerFace ? -dirPoint2Axis : dirPoint2Axis;
+                                    Direction shiftThicknessWorld = (masterToOcc * thickIntoWall_master.ToVector()).Direction;
 
                                     double userHeightM = 0.001 * c.Height;
                                     double usedHeightM = c.DynamicHeight
-                                        ? ComputeAvailableHeightAlongRay(Window.ActiveWindow.Document.MainPart, ownerMaster, iDesignBody, pCenterOcc, dirZ_world, userHeightM, thicknessEdge, shiftThicknessWorld)
+                                        ? ComputeAvailableHeightAlongRay(
+                                            Window.ActiveWindow.Document.MainPart,
+                                            ownerMaster, iDesignBody,
+                                            pCenterOcc,
+                                            -dirZ_world,
+                                            userHeightM, thicknessEdge, shiftThicknessWorld)
                                         : userHeightM;
 
                                     double tolM = Math.Max(0.0, c.Tolerance) * 0.001;
                                     double gapM = Math.Max(0.0, c.EndRelief) * 0.001;
-
                                     double connectorHeightM = Math.Max(0.0, usedHeightM - gapM);
-                                    double cutterHeightM = usedHeightM; // + tol
+                                    double cutterHeightM = usedHeightM;
 
-                                    var savedDyn = c.DynamicHeight;
+                                    LogCyl(edgeCounter, placementIdx,
+                                        $"Heights user={userHeightM} used={usedHeightM} gap={gapM} tol={tolM} " +
+                                        $"connectorH={connectorHeightM} cutterH={cutterHeightM} dyn={c.DynamicHeight}"
+                                    );
+
+                                    double savedHeightMm = c.Height;
+
                                     try
                                     {
-                                        c.DynamicHeight = true;
+                                        LogCyl(edgeCounter, placementIdx, $"widthDiffInner={widthDiffInner:0.######} widthDiffOuter={widthDiffOuter:0.######} Straight={c.ConnectorStraight}");
+
+                                        // Connector uses (usedHeight - gap)
+                                        c.Height = connectorHeightM * 1000.0;
 
                                         var boundary_Outer = c.CreateBoundary(
                                             dirX, dirPoint2Axis, dirZ, p_OuterFace,
@@ -1074,16 +1193,53 @@ namespace AESCConstruct25.UI
                                             dirX, dirPoint2Axis, dirZ, pInnerMid,
                                             widthDiffInner, maxDistanceBottom, connectorHeightM);
 
+                                        LogCyl(edgeCounter, placementIdx,
+                                            $"BoundaryHeight connectorHeightM={connectorHeightM:0.######} c.HeightMmNow={c.Height:0.###}");
+
+                                        LogCyl(edgeCounter, placementIdx, $"Boundary counts outer={boundary_Outer?.Count ?? 0} inner={boundary_Inner?.Count ?? 0}");
+
+                                        if (true && c.HasCornerCutout && c.CornerCutoutRadius > 0)
+                                        {
+                                            double rCC = 0.001 * c.CornerCutoutRadius;
+
+                                            double dbgLen = thicknessEdge * 2.0;
+
+                                            Direction toolAxisA = (pInner_A - pWidth_A).Direction;
+                                            Direction toolAxisB = (pInner_B - pWidth_B).Direction;
+
+                                            double shiftIn = -0.5 * thicknessEdge;
+
+                                            Point pToolA = pWidth_A + shiftIn * toolAxisA;
+                                            Point pToolB = pWidth_B + shiftIn * toolAxisB;
+
+                                            Plane ccPlaneA = Plane.Create(Frame.Create(pToolA, toolAxisA));
+                                            Plane ccPlaneB = Plane.Create(Frame.Create(pToolB, toolAxisB));
+
+                                            // Build the actual subtraction tools (these are the ones we will subtract)
+                                            Body cornerToolA = Body.ExtrudeProfile(new CircleProfile(ccPlaneA, rCC), dbgLen);
+                                            Body cornerToolB = Body.ExtrudeProfile(new CircleProfile(ccPlaneB, rCC), dbgLen);
+
+                                            // This is what makes them subtract from the owner AFTER unite
+                                            // Only add these two bodies, and nothing else.
+                                            cutBodiesSource.Add(cornerToolA);
+                                            cutBodiesSource.Add(cornerToolB);
+                                        }
+
                                         var connectorBodyLocal = c.CreateLoft(boundary_Outer, planeOuter, boundary_Inner, planeInner);
 
-                                        // use per-edge prototypes; copy for each subtraction (behavior unchanged)
+                                        // Shell copies used for subtraction
                                         var cylInnerCopy = protoCylInner?.Copy();
                                         var cylAnnulCopy = protoCylAnnulus?.Copy();
 
-                                        if (cylInnerCopy != null) connectorBodyLocal.Subtract(cylInnerCopy);
-                                        if (cylAnnulCopy != null) connectorBodyLocal.Subtract(cylAnnulCopy);
+                                        try { if (cylInnerCopy != null) connectorBodyLocal.Subtract(cylInnerCopy); } catch { }
+                                        try { if (cylAnnulCopy != null) connectorBodyLocal.Subtract(cylAnnulCopy); } catch { }
 
                                         connectorBody = connectorBodyLocal.Copy();
+
+                                        // IMPORTANT FIX: switch c.Height back to full cutter height before building cutter/collision
+                                        c.Height = cutterHeightM * 1000.0;
+                                        LogCyl(edgeCounter, placementIdx,
+                                            $"BoundaryHeight cutterHeightM={cutterHeightM:0.######} c.HeightMmNow={c.Height:0.###}");
 
                                         var savedRadius = c.Radius;
                                         var savedHasRounding = c.HasRounding;
@@ -1116,52 +1272,148 @@ namespace AESCConstruct25.UI
                                         if (cylInnerCopy2 != null) rectLoft.Subtract(cylInnerCopy2);
                                         if (cylAnnulCopy2 != null) rectLoft.Subtract(cylAnnulCopy2);
 
+                                        // Collision stays the true rectangular loft without tolerance
                                         collisionBody = rectLoft;
-                                        cutBody = rectLoft.Copy();
-                                        try { cutBody.OffsetFaces(cutBody.Faces, Math.Max(1e-6, tolM)); } catch { }
+
+                                        // Cut body depends on rectangularCut, matching planar behavior
+                                        if (rectangularCut)
+                                        {
+                                            double halfW = 0.5 * maxWidth;
+                                            double halfW_g = halfW + tolM;
+
+                                            // Planar logic equivalent:
+                                            // dynamic: top at used height
+                                            // not dynamic: top at user height + tol
+                                            double topH_g = cutterHeightM;
+
+                                            // Keep c.Height full for the cutter tool
+                                            c.Height = cutterHeightM * 1000.0;
+
+                                            c.Radius = 0.0;
+                                            c.HasRounding = false;
+
+                                            var rectOuter = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, p_OuterFace,
+                                                widthDiffOuter, maxDistanceBottom, cutterHeightM);
+
+                                            var rectInner = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, pInnerMid,
+                                                widthDiffInner, maxDistanceBottom, cutterHeightM);
+
+                                            var rectCutLoft = c.CreateLoft(rectOuter, planeOuter, rectInner, planeInner);
+                                            rectCutLoft.OffsetFaces(rectCutLoft.Faces, tolM);
+
+                                            // Keep prototype subtractions consistent with your existing cutter behavior
+                                            var cylInnerCopyCut = protoCylInner?.Copy();
+                                            var cylAnnulCopyCut = protoCylAnnulus?.Copy();
+                                            if (cylInnerCopyCut != null) rectCutLoft.Subtract(cylInnerCopyCut);
+                                            if (cylAnnulCopyCut != null) rectCutLoft.Subtract(cylAnnulCopyCut);
+
+                                            cutBody = rectCutLoft;
+
+                                            LogCyl(edgeCounter, placementIdx,
+                                                $"RectCut: halfW={halfW:0.######} halfW_g={halfW_g:0.######} topH_g={topH_g:0.######} maxDistanceBottom={maxDistanceBottom:0.######}");
+                                        }
+                                        else
+                                        {
+                                            // Non rectangular cut: inflate by face offset, same as before
+                                            cutBody = rectLoft.Copy();
+                                            try { cutBody.OffsetFaces(cutBody.Faces, tolM); } catch { }
+                                        }
+
                                     }
                                     finally
                                     {
-                                        c.DynamicHeight = savedDyn;
+                                        c.Height = savedHeightMm;
                                     }
 
                                     // ---- Ensure attachment; else extend once (cylindrical) ----
-                                    if (connectorBody != null && !IsAttachedLocal(ownerMaster, connectorBody))
+                                    if (connectorBody != null)
                                     {
+                                        try
+                                        {
+                                            var col = ownerMaster.Shape.GetCollision(connectorBody);
+                                            LogCyl(edgeCounter, placementIdx, $"AttachCheck collision={col}");
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            LogCyl(edgeCounter, placementIdx, $"AttachCheck collision query failed: {ex.Message}");
+                                        }
+                                    }
+                                    Logger.Log($"isnull{connectorBody == null}");
+                                    Logger.Log($"isattached{IsAttachedLocalCyl(ownerMaster, connectorBody)}");
+                                    if (connectorBody != null && !IsAttachedLocalCyl(ownerMaster, connectorBody))
+                                    {
+                                        LogCyl(edgeCounter, placementIdx, "Not attached, attempting extension");
+
                                         var extConnHeight = 2.0 * connectorHeightM;
 
                                         var p_OuterFace_ext = p_OuterFace - connectorHeightM * dirZ;
                                         var pInnerMid_ext = pInnerMid - connectorHeightM * dirZ;
 
+                                        LogCyl(edgeCounter, placementIdx,
+                                            $"Extension extConnHeight={extConnHeight:0.######} pOuterExt={P(p_OuterFace_ext)} pInnerMidExt={P(pInnerMid_ext)} dirZ={D(dirZ)}"
+                                        );
+
                                         Plane planeInner_ext = Plane.Create(Frame.Create(pInnerMid_ext, dirX, dirZ));
                                         Plane planeOuter_ext = Plane.Create(Frame.Create(p_OuterFace_ext, dirX, dirZ));
 
-                                        var boundary_Outer_ext = c.CreateBoundary(
-                                            dirX, dirPoint2Axis, dirZ, p_OuterFace_ext,
-                                            widthDiffOuter, maxDistanceBottom, extConnHeight);
-
-                                        var boundary_Inner_ext = c.CreateBoundary(
-                                            dirX, dirPoint2Axis, dirZ, pInnerMid_ext,
-                                            widthDiffInner, maxDistanceBottom, extConnHeight);
-
-                                        var connectorBodyLocal_ext = c.CreateLoft(boundary_Outer_ext, planeOuter_ext, boundary_Inner_ext, planeInner_ext);
-
-                                        var cylInnerCopy3 = protoCylInner?.Copy();
-                                        var cylAnnulCopy3 = protoCylAnnulus?.Copy();
-                                        if (cylInnerCopy3 != null) connectorBodyLocal_ext.Subtract(cylInnerCopy3);
-                                        if (cylAnnulCopy3 != null) connectorBodyLocal_ext.Subtract(cylAnnulCopy3);
-
-                                        var extConnector = connectorBodyLocal_ext.Copy();
-
-                                        if (extConnector != null && IsAttachedLocal(ownerMaster, extConnector))
+                                        double savedHeightMm_Ext = c.Height;
+                                        try
                                         {
-                                            connectorBody?.Dispose();
-                                            connectorBody = extConnector;
+                                            c.Height = extConnHeight * 1000.0;
+
+                                            var boundary_Outer_ext = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, p_OuterFace_ext,
+                                                widthDiffOuter, maxDistanceBottom, extConnHeight);
+
+                                            var boundary_Inner_ext = c.CreateBoundary(
+                                                dirX, dirPoint2Axis, dirZ, pInnerMid_ext,
+                                                widthDiffInner, maxDistanceBottom, extConnHeight);
+
+                                            LogCyl(edgeCounter, placementIdx, $"Ext boundary counts outer={boundary_Outer_ext?.Count ?? 0} inner={boundary_Inner_ext?.Count ?? 0}");
+
+                                            var connectorBodyLocal_ext = c.CreateLoft(boundary_Outer_ext, planeOuter_ext, boundary_Inner_ext, planeInner_ext);
+
+                                            var cylInnerCopy3 = protoCylInner?.Copy();
+                                            var cylAnnulCopy3 = protoCylAnnulus?.Copy();
+
+                                            try { if (cylInnerCopy3 != null) connectorBodyLocal_ext.Subtract(cylInnerCopy3); }
+                                            catch (Exception ex) { LogCyl(edgeCounter, placementIdx, $"Ext subtract protoInner failed: {ex.Message}"); }
+
+                                            try { if (cylAnnulCopy3 != null) connectorBodyLocal_ext.Subtract(cylAnnulCopy3); }
+                                            catch (Exception ex) { LogCyl(edgeCounter, placementIdx, $"Ext subtract protoAnnulus failed: {ex.Message}"); }
+
+                                            var extConnector = connectorBodyLocal_ext.Copy();
+
+                                            if (extConnector != null && IsAttachedLocalCyl(ownerMaster, extConnector))
+                                            {
+                                                try
+                                                {
+                                                    var col2 = ownerMaster.Shape.GetCollision(extConnector);
+                                                    LogCyl(edgeCounter, placementIdx, $"Extension attached collision={col2}");
+                                                }
+                                                catch { }
+
+                                                connectorBody?.Dispose();
+                                                connectorBody = extConnector;
+                                            }
+                                            else
+                                            {
+                                                try
+                                                {
+                                                    var col2 = ownerMaster.Shape.GetCollision(extConnector);
+                                                    LogCyl(edgeCounter, placementIdx, $"Extension still not attached collision={col2}");
+                                                }
+                                                catch { }
+
+                                                try { extConnector?.Dispose(); } catch { }
+                                                throw new InvalidOperationException("Connector could not attach to the owner body (after one extension).");
+                                            }
                                         }
-                                        else
+                                        finally
                                         {
-                                            try { extConnector?.Dispose(); } catch { }
-                                            throw new InvalidOperationException("Connector could not attach to the owner body (after one extension).");
+                                            c.Height = savedHeightMm_Ext;
                                         }
                                     }
 
@@ -1183,7 +1435,8 @@ namespace AESCConstruct25.UI
                                     Application.ReportStatus($"Connector cylindrical geometry failed: {exCyl}", StatusMessageType.Error, null);
                                     continue;
                                 }
-                            } // end branch
+                            }
+
 
                             // --- Accumulate this placement (kept identical) ---
                             if (connectorBody != null) uniteList.Add(connectorBody.Copy());
@@ -1199,7 +1452,6 @@ namespace AESCConstruct25.UI
 
                         try
                         {
-                            //Logger.Log($"[BooleanPhase] uniteList={uniteList.Count}, cutPropList={cutPropList.Count}, collList={collList.Count}, ownerCuts={ownerCuts.Count}");
                             var ownerOccSourceForTools = iDesignBody;
 
                             if (!ApplyOwnerEditsWithChoice(
@@ -1214,8 +1466,6 @@ namespace AESCConstruct25.UI
                             {
                                 continue;
                             }
-                            //Logger.Log($"[BooleanPhase] collList.Count={collList.Count}");
-                            //Logger.Log($"[BooleanPhase] cutPropList.Count={cutPropList.Count}");
                             if (collList.Count > 0 && cutPropList.Count > 0)
                             {
                                 // neighbours are found around ownerOccForMapping,
@@ -1434,27 +1684,6 @@ namespace AESCConstruct25.UI
 
         private enum NeighbourBatchChoice { MakeIndependentAll, EditSharedAll, SkipAll }
 
-        // AskBatchForOwner prompts the user how to treat all linked neighbour bodies for a given owner.
-        private static NeighbourBatchChoice AskBatchForOwner(IDesignBody ownerOcc, int hitCount)
-        {
-            var title = "Linked neighbours detected";
-            var msg =
-                $"Owner “{ownerOcc?.Master?.Name}” will cut {hitCount} neighbour(s).\n\n" +
-                "How do you want to apply the cuts?\n\n" +
-                "No  — Make each linked neighbour independent, then cut ONLY here (recommended)\n" +
-                "Yes — Cut the SHARED neighbour master (affects all its linked instances)\n" +
-                "Cancel — Skip cutting all these neighbours for this owner";
-            var res = System.Windows.Forms.MessageBox.Show(
-                msg, title,
-                System.Windows.Forms.MessageBoxButtons.YesNoCancel,
-                System.Windows.Forms.MessageBoxIcon.Question,
-                System.Windows.Forms.MessageBoxDefaultButton.Button2);
-
-            if (res == System.Windows.Forms.DialogResult.No) return NeighbourBatchChoice.MakeIndependentAll;
-            if (res == System.Windows.Forms.DialogResult.Yes) return NeighbourBatchChoice.EditSharedAll;
-            return NeighbourBatchChoice.SkipAll;
-        }
-
         // BoxesIntersect performs an AABB intersection test between two SpaceClaim boxes.
         private static bool BoxesIntersect(Box a, Box b)
         {
@@ -1639,12 +1868,7 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"UniteIntoOwner failed: {ex}");
             }
-            //finally
-            //{
-            //    try { if (tmp != null && !tmp.IsDeleted) tmp.Delete(); } catch { }
-            //}
         }
 
         // SubtractFromOwner wraps a tool in a temporary DesignBody and subtracts it from the owner DesignBody.
@@ -1660,7 +1884,6 @@ namespace AESCConstruct25.UI
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"UniteIntoOwner failed: {ex}");
             }
         }
 
@@ -1676,12 +1899,10 @@ namespace AESCConstruct25.UI
                 try
                 {
                     var cp = b.Copy();
-                    //Logger.Log($"[UniteEachIntoOwner] Calling UniteIntoOwner for connector {idx++}");
                     UniteIntoOwner(owner, part, cp);
                 }
                 catch (Exception ex)
                 {
-                    //Logger.Log($"[UniteEachIntoOwner] connector {idx} failed: {ex.Message}");
                 }
             }
         }
@@ -1689,26 +1910,19 @@ namespace AESCConstruct25.UI
         // SubtractEachFromOwner iterates over all cutter bodies and subtracts each from the owner master.
         private static void SubtractEachFromOwner(DesignBody owner, Part part, IEnumerable<Body> cutters)
         {
-            //Logger.Log($"[SubtractEachFromOwner] owner = null {owner == null}");
-            //Logger.Log($"[SubtractEachFromOwner] part = null {part == null}");
-            //Logger.Log($"[SubtractEachFromOwner] cutters = null {cutters == null}");
-            //Logger.Log($"[SubtractEachFromOwner] cutters count {cutters.Count()}");
             if (owner == null || part == null || cutters == null) return;
 
             int idx = 0;
             foreach (var b in cutters)
             {
-                //Logger.Log($"[SubtractEachFromOwner] var b in cutters = null {b == null}");
                 if (b == null) continue;
                 try
                 {
                     var cp = b.Copy();
-                    //Logger.Log($"[SubtractEachFromOwner] Calling SubtractFromOwner for cutter {idx++}");
                     SubtractFromOwner(owner, part, cp);
                 }
                 catch (Exception ex)
                 {
-                    //Logger.Log($"[SubtractEachFromOwner] cutter {idx} failed: {ex.Message}");
                 }
             }
         }
@@ -2505,12 +2719,10 @@ namespace AESCConstruct25.UI
                     g.DrawLine(pen2, _bottomX1, _bottomY1, _topX1, _topY1); // left side
                     g.DrawLine(pen2, _topX1, _topY1, _topX2, _topY2);       // top
                     g.DrawLine(pen2, _topX2, _topY2, _bottomX2, _bottomY2); // right side
-                    //g.DrawLine(pen2, _bottomX2, _bottomY2, _bottomX1, _bottomY1); // bottom
                 }
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"DrawConnector error: {ex}");
             }
         }
 
@@ -2518,7 +2730,7 @@ namespace AESCConstruct25.UI
         private void InvalidateDrawing()
         {
             try { picDrawing?.Invalidate(); }
-            catch (Exception ex) { }////Logger.Log($"InvalidateDrawing error: {ex}"); }
+            catch (Exception ex) { }
         }
 
         // CheckSelectedEdgeWidth ensures the connector bottom width does not exceed the available length on the selected edge.
@@ -2550,7 +2762,7 @@ namespace AESCConstruct25.UI
             if (line != null)
             {
                 double lenM = (p1 - p0).Magnitude;
-                availableWidthMm = lenM * 1000.0; // m → mm
+                availableWidthMm = lenM * 1000.0;
             }
             else
             {
@@ -2559,7 +2771,7 @@ namespace AESCConstruct25.UI
                 if (circle != null)
                 {
                     var center = circle.Axis.Origin;
-                    double R = circle.Radius; // meters
+                    double R = circle.Radius;
 
                     var v0 = p0 - center;
                     var v1 = p1 - center;
@@ -2580,15 +2792,14 @@ namespace AESCConstruct25.UI
                         if (dot > 1.0) dot = 1.0;
                         if (dot < -1.0) dot = -1.0;
 
-                        theta = Math.Acos(dot);       // [0, π], shorter central angle
+                        theta = Math.Acos(dot);
                         if (theta < eps && chordM > eps)
                         {
-                            // Start≈End but nonzero chord (rare numeric oddity) → assume full circle
                             theta = 2.0 * Math.PI;
                         }
                     }
 
-                    double arcLenM = R * theta;       // meters
+                    double arcLenM = R * theta;
                     availableWidthMm = arcLenM * 1000.0;
                 }
                 else
@@ -2605,9 +2816,7 @@ namespace AESCConstruct25.UI
         private static Body MapTool(Body toolInOwnerMaster, IDesignBody ownerOcc, IDesignBody targetOcc)
         {
             var mapped = toolInOwnerMaster.Copy();
-            // OwnerMaster → WORLD
             mapped.Transform(ownerOcc.TransformToMaster.Inverse);
-            // WORLD → TargetMaster
             mapped.Transform(targetOcc.TransformToMaster);
             return mapped;
         }
