@@ -25,35 +25,51 @@ using Window = SpaceClaim.Api.V242.Window;
 namespace AESCConstruct2026
 {
     [Serializable]
-    public class Construct2026 : MarshalByRefObject, IExtensibility, IRibbonExtensibility
+    public class Construct2026 : MarshalByRefObject, IExtensibility, ICommandExtensibility, IRibbonExtensibility
     {
         private static bool isCommandRegistered = false;
 
-        // Entry point for the add-in: initializes API, attaches to a session, sets up licensing and registers all commands.
+        // Early entry point: initializes the SpaceClaim API and returns true so the add-in is marked Active.
+        // Session-dependent work (commands, licensing) is deferred to Initialize().
         public bool Connect()
         {
             try
             {
                 Api.Initialize();
+                Logger.Log("API 1.1 Initialized");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Connect() failed: " + ex.Message);
+                return false;
+            }
+        }
 
-                // Attach to first active session
+        // Called by SpaceClaim after sessions are available. Registers all commands and sets up licensing.
+        public void Initialize()
+        {
+            try
+            {
                 var session = Session.GetSessions().FirstOrDefault();
-                if (session == null)
+                if (session != null)
+                    Api.AttachToSession(session);
+
+                // Check license, but don't let it prevent command registration
+                bool valid = false;
+                try
                 {
-                    return false;
+                    ConstructLicenseSpot.CheckLicense();
+                    ConstructLicenseSpot.EnsureNetworkDeactivatedOnStartup();
+                    valid = ConstructLicenseSpot.IsValid;
                 }
-
-                Api.AttachToSession(session);
-
-
-                bool LicenseValid = ConstructLicenseSpot.CheckLicense();
-
-                ConstructLicenseSpot.EnsureNetworkDeactivatedOnStartup();
+                catch (Exception ex)
+                {
+                    LogFull("License check failed", ex);
+                }
 
                 if (!isCommandRegistered)
                 {
-                    bool valid = ConstructLicenseSpot.IsValid;
-
                     //AESC.Construct.SetMode3D
                     var set3DConstruct = Command.Create("AESC.Construct.SetMode3D");
                     set3DConstruct.Hint = "3D mode without converting closed line loops to surfaces";
@@ -71,7 +87,7 @@ namespace AESCConstruct2026
                     exportExcel.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
                     exportExcel.Hint = "Export frame data to an Excel file.";
                     exportExcel.Image = loadImg(Resources.ExcelLogo);
-                    exportExcel.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+                    exportExcel.IsEnabled = valid;
                     exportExcel.Executing += (s, e) => ExportCommands.ExportExcel(Window.ActiveWindow);
                     exportExcel.KeepAlive(true);
 
@@ -80,7 +96,7 @@ namespace AESCConstruct2026
                     exportBOM.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
                     exportBOM.Hint = "Create a bill-of-materials.";
                     exportBOM.Image = loadImg(Resources.BOMLogo);
-                    exportBOM.IsEnabled = valid;// LicenseSpot.LicenseSpot.State.Valid;
+                    exportBOM.IsEnabled = valid;
                     exportBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, false);
                     exportBOM.KeepAlive(true);
 
@@ -89,7 +105,7 @@ namespace AESCConstruct2026
                     updateBOM.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
                     updateBOM.Hint = "Update an existing bill-of-materials.";
                     updateBOM.Image = loadImg(Resources.Icon_Update);
-                    updateBOM.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+                    updateBOM.IsEnabled = valid;
                     updateBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
                     updateBOM.KeepAlive(true);
 
@@ -98,7 +114,7 @@ namespace AESCConstruct2026
                     exportSTEP.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
                     exportSTEP.Hint = "Export frame as a STEP file.";
                     exportSTEP.Image = loadImg(Resources.STEPLogo);
-                    exportSTEP.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+                    exportSTEP.IsEnabled = valid;
                     exportSTEP.Executing += (s, e) => ExportCommands.ExportSTEP(Window.ActiveWindow);
                     exportSTEP.KeepAlive(true);
                     //
@@ -138,7 +154,7 @@ namespace AESCConstruct2026
                     CompareCmd.Text = "Compare";
                     CompareCmd.Hint = "Compare bodies to look for duplicates";
                     CompareCmd.Image = loadImg(Resources.compare);
-                    CompareCmd.IsEnabled = valid;//LicenseSpot.LicenseSpot.State.Valid;
+                    CompareCmd.IsEnabled = valid;
                     CompareCmd.KeepAlive(true);
                     CompareCmd.Executing += (s, e) =>
                         CompareCommand.compareLegacy();
@@ -198,7 +214,7 @@ namespace AESCConstruct2026
                     };
 
                     // Initial button state (enabled/disabled) based on license type
-                    ConstructLicenseSpot.UpdateNetworkButtonUI();
+                    try { ConstructLicenseSpot.UpdateNetworkButtonUI(); } catch { }
 
                     // Sidebar commands
                     var _ = Localization.Language.Translate("Settings");
@@ -208,14 +224,20 @@ namespace AESCConstruct2026
 
                     isCommandRegistered = true;
                 }
-                Logger.Log("API 1.1 Initialized");
-
-                return true;
+                Logger.Log("Commands registered");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                LogFull("Initialize() failed", ex);
             }
+        }
+
+        // Logs a message with the full exception chain (including InnerException).
+        private static void LogFull(string context, Exception ex)
+        {
+            Logger.Log(context + ": " + ex.ToString());
+            for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+                Logger.Log("  Caused by: " + inner.ToString());
         }
 
         // Switches SpaceClaim to solid interaction mode while temporarily hiding all visible curves.

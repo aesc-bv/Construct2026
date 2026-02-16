@@ -2,5 +2,15 @@
 * text=auto
 * text eol=lf
 
-[alias]
-    diffnosum = diff -I '^#pragma checksum'
+# Binary files — do not normalize line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.ico binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.snk binary
+*.pfx binary
