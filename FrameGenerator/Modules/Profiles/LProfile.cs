@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public class LProfile : ProfileBase
     {
@@ -14,7 +14,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
         private readonly double outerCornerRadius;
         private readonly double offsetX;
         private readonly double offsetY;
-        private static string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "AESCConstruct25_Log.txt");
+        private static string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "AESCConstruct2026_Log.txt");
 
         public LProfile(double height, double width, double thickness, double innerCornerRadius, double outerCornerRadius, double offsetX, double offsetY)
         {
@@ -26,7 +26,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            // Logger.Log($"AESCConstruct25: Generating L Profile {width}x{height}x{thickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+            // Logger.Log($"AESCConstruct2026: Generating L Profile {width}x{height}x{thickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
@@ -36,7 +36,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             Vector offsetVector = offsetX * frame.DirX + offsetY * frame.DirY;
             Point center = frame.Origin;// + offsetVector;
 
-            // Logger.Log($"AESCConstruct25: OffsetL: {offsetX},  {offsetY}\n");
+            // Logger.Log($"AESCConstruct2026: OffsetL: {offsetX},  {offsetY}\n");
             // Define 9 key points
             Point p1 = center + (-width / 2) * frame.DirX + (height / 2) * frame.DirY;
             Point p2 = center + (-width / 2 + thickness - outerCornerRadius) * frame.DirX + (height / 2) * frame.DirY;

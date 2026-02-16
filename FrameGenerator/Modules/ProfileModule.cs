@@ -8,8 +8,8 @@
  - Providing utilities for profile argument extraction, axis selection, naming and custom property management.
 */
 
-using AESCConstruct25.FrameGenerator.Modules.Profiles;
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Modules.Profiles;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -25,7 +25,7 @@ using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using Matrix = SpaceClaim.Api.V242.Geometry.Matrix;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
-namespace AESCConstruct25.FrameGenerator.Modules
+namespace AESCConstruct2026.FrameGenerator.Modules
 {
     public static class ProfileModule
     {

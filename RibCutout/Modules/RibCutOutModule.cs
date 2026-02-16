@@ -4,7 +4,7 @@
  and subtracts them from body pairs to form the final joint geometry.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities; // Logger
+using AESCConstruct2026.FrameGenerator.Utilities; // Logger
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -15,7 +15,7 @@ using System.Globalization;
 using System.Linq;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
-namespace AESCConstruct25.RibCutout.Modules
+namespace AESCConstruct2026.RibCutout.Modules
 {
     internal static class RibCutOutModule
     {

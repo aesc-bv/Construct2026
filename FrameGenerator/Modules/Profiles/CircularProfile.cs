@@ -1,7 +1,7 @@
 ﻿using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public class CircularProfile : ProfileBase
     {
@@ -19,7 +19,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            // Logger.Log($"AESCConstruct25: Generating Circular Profile with diameter {diameter}m and thickness {thickness}m, Hollow: {isHollow}\n");
+            // Logger.Log($"AESCConstruct2026: Generating Circular Profile with diameter {diameter}m and thickness {thickness}m, Hollow: {isHollow}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)
@@ -32,7 +32,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             double innerDiameter = diameter - 2 * thickness;
             if (innerDiameter <= 0)
             {
-                // Logger.Log("AESCConstruct25: ERROR - Inner diameter too small, skipping hollow profile.\n");
+                // Logger.Log("AESCConstruct2026: ERROR - Inner diameter too small, skipping hollow profile.\n");
                 return new List<ITrimmedCurve>(); // No inner profile
             }
 

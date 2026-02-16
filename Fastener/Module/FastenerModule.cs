@@ -9,9 +9,9 @@ using Application = SpaceClaim.Api.V242.Application;
 using Body = SpaceClaim.Api.V242.Modeler.Body;
 using Document = SpaceClaim.Api.V242.Document;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
-using Settings = AESCConstruct25.Properties.Settings;
+using Settings = AESCConstruct2026.Properties.Settings;
 
-namespace AESCConstruct25.Fastener.Module
+namespace AESCConstruct2026.Fastener.Module
 {
     internal class FastenerModule
     {

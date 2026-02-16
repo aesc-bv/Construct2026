@@ -5,7 +5,7 @@
  */
 
 // SpaceClaim APIs
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -36,7 +36,7 @@ using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using Line = SpaceClaim.Api.V242.Geometry.Line;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using RadioButton = System.Windows.Controls.RadioButton;
-using Settings = AESCConstruct25.Properties.Settings;
+using Settings = AESCConstruct2026.Properties.Settings;
 using TextBox = System.Windows.Controls.TextBox;
 using UserControl = System.Windows.Controls.UserControl;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
@@ -44,7 +44,7 @@ using WF = System.Windows.Forms;
 using Window = SpaceClaim.Api.V242.Window;
 
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class ConnectorControl : UserControl
     {

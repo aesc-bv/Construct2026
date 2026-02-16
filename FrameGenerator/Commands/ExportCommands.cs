@@ -8,8 +8,8 @@
  It also contains helpers for cut-angle calculation and unit-aware length formatting.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Properties;
+using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Properties;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -35,7 +35,7 @@ using Table = SpaceClaim.Api.V242.Table;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.FrameGenerator.Commands
+namespace AESCConstruct2026.FrameGenerator.Commands
 {
     public static class ExportCommands
     {
@@ -314,7 +314,7 @@ namespace AESCConstruct25.FrameGenerator.Commands
             {
                 Title = "Export BOM to Excel",
                 Filter = "Excel Workbook (*.xlsx)|*.xlsx|All files (*.*)|*.*",
-                FileName = "AESC_Construct25_BOM.xlsx",
+                FileName = "AESC_Construct2026_BOM.xlsx",
                 AddExtension = true,
                 DefaultExt = ".xlsx",
                 OverwritePrompt = true

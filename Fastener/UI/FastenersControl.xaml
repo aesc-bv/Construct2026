@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AESCConstruct25.UI.FastenersControl"
+﻿<UserControl x:Class="AESCConstruct2026.UI.FastenersControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Width="300"
@@ -8,7 +8,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/AESCConstruct25;component/UIMain/Styles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/AESCConstruct2026;component/UIMain/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>

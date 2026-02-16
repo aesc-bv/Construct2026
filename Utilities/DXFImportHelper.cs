@@ -10,7 +10,7 @@ using System.Linq;
 using Application = SpaceClaim.Api.V242.Application;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     /// <summary>
     /// Simple container for a DXF profile (name, profile‐string, and preview image).

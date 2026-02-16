@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace AESCConstruct25.Fastener.Module
+namespace AESCConstruct2026.Fastener.Module
 {
     public class Bolt
     {

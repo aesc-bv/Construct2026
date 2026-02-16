@@ -4,7 +4,7 @@
  to create joints between overlapping bodies in the active SpaceClaim document.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
+using AESCConstruct2026.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class RibCutOutControl : UserControl
     {

@@ -1,7 +1,7 @@
 ﻿using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public class DXFProfile : ProfileBase
     {

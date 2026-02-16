@@ -1,11 +1,11 @@
 ﻿/*
- SettingsControl is the WPF settings panel for Construct25.
+ SettingsControl is the WPF settings panel for Construct2026.
  It loads and saves user preferences (units, BOM placement, CSV paths, language),
  integrates license activation and status display, and supports JSON export/import of all settings.
 */
 
-using AESCConstruct25.Licensing;
-using AESCConstruct25.Properties;
+using AESCConstruct2026.Licensing;
+using AESCConstruct2026.Properties;
 using Microsoft.Win32;
 using SpaceClaim.Api.V242;
 using System;
@@ -22,7 +22,7 @@ using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
 
 
-namespace AESCConstruct25.FrameGenerator.UI
+namespace AESCConstruct2026.FrameGenerator.UI
 {
     public partial class SettingsControl : UserControl
     {
@@ -77,7 +77,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             Localization.Language.LocalizeFrameworkElement(this);
 
             UIMain.UIManager.UpdateCommandTexts();
-            Construct25.UpdateCommandTexts();
+            Construct2026.UpdateCommandTexts();
 
             PopulateCsvFilePathFields();
         }
@@ -152,7 +152,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             Localization.Language.LocalizeFrameworkElement(this);
 
             UIMain.UIManager.UpdateCommandTexts();
-            Construct25.UpdateCommandTexts();
+            Construct2026.UpdateCommandTexts();
         }
 
         // Saves all settings from the UI into the Settings store and updates license and BOM configuration.
@@ -186,7 +186,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             var expiration = ConstructLicenseSpot.CurrentLicense?.GetTimeLimit()?.EndDate;
             LicenseDetailsValue.Text = expiration.HasValue ? expiration.Value.ToShortDateString() : string.Empty;
 
-            Construct25.RefreshLicenseUI();
+            Construct2026.RefreshLicenseUI();
 
             // --- Persist BOM placement settings ---
             if (double.TryParse(AnchorXTextBox.Text, out var ax))
@@ -260,7 +260,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (SerialNumberTextBox.Text is string sn)
                 Settings.Default.SerialNumber = sn;
 
-            Construct25.RefreshLicenseUI();
+            Construct2026.RefreshLicenseUI();
 
             if (ok)
                 Application.ReportStatus("License activated.", StatusMessageType.Information, null);
@@ -278,7 +278,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 Localization.Language.LocalizeFrameworkElement(this);
 
                 UIMain.UIManager.UpdateCommandTexts();
-                Construct25.UpdateCommandTexts();
+                Construct2026.UpdateCommandTexts();
             }
         }
 
@@ -358,7 +358,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 var icon = new System.Windows.Controls.Image
                 {
                     Source = new System.Windows.Media.Imaging.BitmapImage(
-                        new Uri("pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Upload.png")
+                        new Uri("pack://application:,,,/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Upload.png")
                     )
                 };
                 btn.Content = icon;
@@ -383,7 +383,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 var folderIcon = new System.Windows.Controls.Image
                 {
                     Source = new System.Windows.Media.Imaging.BitmapImage(
-                        new Uri("pack://application:,,,/AESCConstruct25;component/FrameGenerator/UI/Images/openFolder.png")
+                        new Uri("pack://application:,,,/AESCConstruct2026;component/FrameGenerator/UI/Images/openFolder.png")
                     )
                 };
                 folderBtn.Content = folderIcon;
@@ -443,7 +443,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             try
             {
                 var map = new Dictionary<string, object>();
-                var settings = AESCConstruct25.Properties.Settings.Default;
+                var settings = AESCConstruct2026.Properties.Settings.Default;
 
                 foreach (SettingsProperty prop in settings.Properties)
                 {
@@ -475,7 +475,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 {
                     Title = "Export settings to JSON",
                     Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
-                    FileName = "Construct25.Settings.json",
+                    FileName = "Construct2026.Settings.json",
                     AddExtension = true,
                     DefaultExt = ".json",
                     OverwritePrompt = true
@@ -592,7 +592,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                 // If language changed via import, re-localize UI and refresh command texts
                 Localization.Language.LocalizeFrameworkElement(this);
                 UIMain.UIManager.UpdateCommandTexts();
-                Construct25.UpdateCommandTexts();
+                Construct2026.UpdateCommandTexts();
 
                 Application.ReportStatus("Settings imported.", StatusMessageType.Information, null);
             }

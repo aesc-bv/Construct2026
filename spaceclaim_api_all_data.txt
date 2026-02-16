@@ -1,0 +1,2518 @@
+================================================================================
+COMPLETE SPACECLAIM API DATA EXTRACTION
+================================================================================
+
+
+
+================================================================================
+SOURCE: Line 14 - Tool Result (string)
+================================================================================
+
+     1→# CLAUDE.md
+     2→
+     3→This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+     4→
+     5→## Project Overview
+     6→
+     7→AESCConstruct2026 is a SpaceClaim AddIn for ANSYS Discovery (v251). It provides structural modeling tools: frame/profile generation, fasteners, plates, connectors, rib cutouts, engraving, and custom component properties. The UI is WPF (XAML + code-behind) hosted inside SpaceClaim's dockable/floating panels.
+     8→
+     9→## Build
+    10→
+    11→- **Solution:** `AESCConstruct2026.sln` (Visual Studio 2017+)
+    12→- **Framework:** .NET Framework 4.8, C# 12.0
+    13→- **Output:** Class Library DLL
+    14→- **Debug output:** `%ProgramData%\SpaceClaim\AddIns\AESCConstruct2026\`
+    15→- **Release output:** `Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\`
+    16→- Build via Visual Studio or `msbuild AESCConstruct2026.sln`
+    17→- No test framework is configured; testing is done manually in SpaceClaim
+    18→
+    19→**AddIn registration:** `AESCConstruct2026.xml` must exist in the output directory alongside the DLL. If missing after build, copy it manually (see README.md).
+    20→
+    21→## Architecture
+    22→
+    23→### Entry Point
+    24→`Construct2026.cs` implements `IExtensibility` and `IRibbonExtensibility`. The `Connect()` method initializes the SpaceClaim API, validates the license, and registers all ribbon commands with `Command.Create()`. Commands use `KeepAlive(true)` to prevent GC collection.
+    25→
+    26→### SpaceClaim API
+    27→All SpaceClaim types come from `SpaceClaim.Api.V242`. Key aliases used throughout:
+    28→- `Application` = `SpaceClaim.Api.V242.Application`
+    29→- `Window` = `SpaceClaim.Api.V242.Window`
+    30→
+    31→### Module Structure
+    32→Each feature module follows the pattern: `Module/` (business logic), `UI/` (XAML controls), optionally `Commands/` and `Utilities/`.
+    33→
+    34→| Module | Purpose |
+    35→|--------|---------|
+    36→| **FrameGenerator** | Profile extrusion along curves, joint creation. Contains `ProfileBase`/`JointBase` hierarchies with specialized subclasses (Rectangular, H, L, T, U, Circular, DXF, CSV profiles; Miter, Straight, T, Trim joints) |
+    37→| **Fastener** | Bolt/Nut/Washer placement from CSV data files |
+    38→| **Plates** | Standard plate geometry with holes/slots/fillets |
+    39→| **Connector** | TubeLocker-style connectors with cylindrical geometry patterns |
+    40→| **RibCutout** | Rib cutout operations on structural members |
+    41→| **Engraving** | Text/pattern engraving on faces |
+    42→| **CustomComponent** | Custom property assignment to components |
+    43→
+    44→### UI System
+    45→- **UIManager** (`UIMain/UIManager.cs`): Registers docked and floating panel modes for each module's control. Uses `ElementHost` (WinForms-WPF bridge) for SpaceClaim panel integration.
+    46→- **Ribbon** (`UIMain/Ribbon.xml`): Defines the "AESC Construct" tab with button groups. Labels resolved via `GetRibbonLabel` callback using the localization system.
+    47→- **Localization** (`UIMain/Language.cs`): CSV-based translation loaded from `%ProgramData%\AESCConstruct\Language\languageConstruct.csv`. Access via `Language.Translate("key")`.
+    48→
+    49→### Licensing
+    50→`Licensing/LicenseSpot.cs` wraps LicenseSpot.Framework. Supports node-locked and network licenses. Commands are enabled/disabled based on `ConstructLicenseSpot.IsValid`. License file at `%ProgramData%\IPManager\AESC_License_Construct2026.lic`.
+    51→
+    52→### Data Files
+    53→All runtime data (profile CSVs, fastener CSVs, language files, connector properties) stored under `%ProgramData%\AESCConstruct\`. Paths configured in `Properties/Settings.settings` and `app.config`.
+    54→
+    55→### Logging
+    56→`Utilities/Logger.cs` writes to `%ProgramData%\AESCConstruct\AESCConstruct2026_Log.txt`. Status messages shown in SpaceClaim via `Application.ReportStatus()`.
+    57→
+    58→## Command Naming Convention
+    59→
+    60→SpaceClaim commands use dotted names: `AESCConstruct2026.ExportExcel`, `AESCConstruct2026.Plate`, `AESC.Construct.SetMode3D`, etc. These are registered in `Construct2026.cs` and referenced in `Ribbon.xml`.
+    61→
+    62→## Installer
+    63→
+    64→Inno Setup script at `Installer/Construct2026Installer.iss`. Outputs to `Installer/Output/`.
+    65→
+    66→## Key Namespaces
+    67→
+    68→- `AESCConstruct2026` — root, entry point, resources
+    69→- `AESCConstruct2026.FrameGenerator` — profiles, joints, commands, utilities
+    70→- `AESCConstruct2026.Fastener` — fastener module and UI
+    71→- `AESCConstruct2026.UIMain` — ribbon, panel management, settings, localization
+    72→- `AESCConstruct2026.Licensing` — license validation
+    73→- `AESCConstruct2026.Utilities` — shared helpers (Logger, DXFImportHelper, CompNameHelper)
+    74→
+
+
+================================================================================
+SOURCE: Line 18 - Tool Result (string)
+================================================================================
+
+     1→<?xml version="1.0"?>
+     2→<doc>
+     3→    <assembly>
+     4→        <name>SpaceClaim.Api.V242</name>
+     5→    </assembly>
+     6→    <members>
+     7→        <member name="T:SpaceClaim.Api.V242.Extensibility.AddIn">
+     8→            <summary>
+     9→            Defines the base class for add-ins.
+    10→            </summary>
+    11→            <remarks>
+    12→            All add-ins must derive from this base class.
+    13→            </remarks>
+    14→        </member>
+    15→        <member name="M:SpaceClaim.Api.V242.Extensibility.AddIn.OnSetDefaultTool">
+    16→            <summary>
+    17→            Called when the active tool is being set to the default tool (eg: when Escape key is pressed)
+    18→            </summary>
+    19→            <returns><b>true</b> if the default behavior was overridden by this method; otherwise <b>false.</b></returns>
+    20→            <example>
+    21→            The following code will set the CustomTool as the default tool if the SampleAddIn's ribbon tab is active. 
+    22→            <code>
+    23→            protected override bool OnSetDefaultTool() {
+    24→            	if (Command.GetCommand("SampleAddIn.C#.V242.RibbonTab").TabIsActive) {
+    25→            		Window.ActiveWindow.SetTool(new CustomTool());
+    26→            			return true;
+    27→            	}
+    28→            	return false;
+    29→            }
+    30→            
+    31→            </code>
+    32→            </example>
+    33→        </member>
+    34→        <member name="M:SpaceClaim.Api.V242.Extensibility.AddIn.ExecuteWindowsFormsCode(System.Threading.ThreadStart)">
+    35→            <summary>
+    36→            Executes code that uses Windows Forms, so that it runs in a single-threaded apartment.
+    37→            </summary>
+    38→            <param name="task">The code to execute.</param>
+    39→            
+    40→            
+    41→        </member>
+    42→        <member name="M:SpaceClaim.Api.V242.Extensibility.AddIn.GetInstance``1">
+    43→            <summary>
+    44→            Gets the instance of a specific add-in.
+    45→            </summary>
+    46→            <typeparam name="T">Type of add-in.</typeparam>
+    47→            <returns>Add-in instance.</returns>
+    48→            <remarks>
+    49→            This method allows an add-in to extend the SpaceClaim API.
+    50→            <para/>
+    51→            For example, the add-in might provide a <c>CreateBlock</c> method.
+    52→            Let's imagine that this creates a block by extruding a profile
+    53→            defined by 4 trimmed curves, and then creates a <see cref="T:SpaceClaim.Api.V242.DesignBody"/> for this <see cref="T:SpaceClaim.Api.V242.Modeler.Body"/> and
+    54→            sets its name and color.
+    55→            Other add-ins or standalone clients can call the <c>CreateBlock</c> method.
+    56→            For a client in another process, this can reduce the cost of IPC calls,
+    57→            since the add-in providing the <c>CreateBlock</c> method lives in the SpaceClaim process.
+    58→            <para/>
+    59→            This method returns the add-in object, which is currently being used by SpaceClaim.
+    60→            </remarks>
+    61→        </member>
+    62→        <member name="T:SpaceClaim.Api.V242.Extensibility.CustomHelper">
+    63→            <exclude/>
+    64→        </member>
+    65→        <member name="T:SpaceClaim.Api.V242.Extensibility.LightweightCustomHelper">
+    66→            <exclude/>
+    67→        </member>
+    68→        <member name="T:SpaceClaim.Api.V242.Extensibility.CommandCapsule">
+    69→            <summary>
+    70→            A base class for command implementations.
+    71→            </summary>
+    72→        </member>
+    73→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.#ctor(System.String)">
+    74→            <summary>
+    75→            Creates a command capsule.
+    76→            </summary>
+    77→            <param name="name">The name of the command.</param>
+    78→        </member>
+    79→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.#ctor(System.String,System.String)">
+    80→            <summary>
+    81→            Creates a command capsule.
+    82→            </summary>
+    83→            <param name="name">The name of the command.</param>
+    84→            <param name="text">The text to be displayed for the command.</param>
+    85→        </member>
+    86→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.#ctor(System.String,System.String,System.Drawing.Image,System.String)">
+    87→            <summary>
+    88→            Creates a command capsule.
+    89→            </summary>
+    90→            <param name="name">The name of the command.</param>
+    91→            <param name="text">The text to be displayed for the command.</param>
+    92→            <param name="image">The image to be displayed for the command.</param>
+    93→            <param name="hint">The tooltip text for the command.</param>
+    94→        </member>
+    95→        <member name="P:SpaceClaim.Api.V242.Extensibility.CommandCapsule.Command">
+    96→            <summary>
+    97→            Gets the command.
+    98→            </summary>
+    99→        </member>
+   100→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.Initialize">
+   101→            <summary>
+   102→            Initializes the command capsule.
+   103→            </summary>
+   104→            <remarks>
+   105→            This method creates the command and sets it properties and event handlers.
+   106→            <para/>
+   107→            To perform further initialization, the <see cref="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.OnInitialize(SpaceClaim.Api.V242.Command)"/> method can be overridden.
+   108→            </remarks>
+   109→        </member>
+   110→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.OnInitialize(SpaceClaim.Api.V242.Command)">
+   111→            <summary>
+   112→            Called after the command has been created.
+   113→            </summary>
+   114→            <param name="command">The command.</param>
+   115→        </member>
+   116→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.OnUpdate(SpaceClaim.Api.V242.Command)">
+   117→            <summary>
+   118→            Called when the command is updating.
+   119→            </summary>
+   120→            <param name="command">The command.</param>
+   121→        </member>
+   122→        <member name="M:SpaceClaim.Api.V242.Extensibility.CommandCapsule.OnExecute(SpaceClaim.Api.V242.Command,SpaceClaim.Api.V242.ExecutionContext,System.Drawing.Rectangle)">
+   123→            <summary>
+   124→            Called when the command is executing.
+   125→            </summary>
+   126→            <param name="command">The command.</param>
+   127→            <param name="context">The context in which execution is taking place.</param>
+   128→            <param name="buttonRect">The button rectangle.</param>
+   129→            <remarks>
+   130→            The <paramref name="buttonRect"/> is empty (<see cref="P:System.Drawing.Rectangle.IsEmpty"/> is <b>true</b>) if the command
+   131→            was not executed by pressing a button.
+   132→            </remarks>
+   133→        </member>
+   134→        <member name="T:SpaceClaim.Api.V242.Extensibility.IVersionedScriptExtensibility">
+   135→            <summary>
+   136→            This interface defines which namespaces/assemblies that are automatically imported into the SpaceClaim scripting environment.
+   137→            </summary>
+   138→        </member>
+   139→        <member name="T:SpaceClaim.Api.V242.Extensibility.IMultiVersionedScriptExtensibility">
+   140→            <summary>
+   141→            This interface defines which namespaces/assemblies that are automatically imported into the SpaceClaim scripting environment.
+   142→            </summary>
+   143→        </member>
+   144→        <member name="T:SpaceClaim.Api.V242.Extensibility.IScriptExtensibility">
+   145→            <summary>
+   146→            This interface defines which namespaces/assemblies that are automatically imported into the SpaceClaim scripting environment.
+   147→            </summary>
+   148→        </member>
+   149→        <member name="P:SpaceClaim.Api.V242.Extensibility.IScriptExtensibility.AddinScriptNamespace">
+   150→            <summary>
+   151→            Gets the Python alias used when importing the CommandNamespace.
+   152→            </summary>
+   153→        </member>
+   154→        <member name="P:SpaceClaim.Api.V242.Extensibility.IScriptExtensibility.CommandNamespace">
+   155→            <summary>
+   156→            Gets the namespace to automatically import into the SpaceClaim scripting environment.
+   157→            </summary>
+   158→        </member>
+   159→        <member name="P:SpaceClaim.Api.V242.Extensibility.IScriptExtensibility.CommandAssemblies">
+   160→            <summary>
+   161→            Gets the collection of assemblies to reference from the scripting environment.
+   162→            </summary>
+   163→        </member>
+   164→        <member name="T:SpaceClaim.Api.V242.Extensibility.IScriptedCommand">
+   165→            <summary>
+   166→            This interface should be implemented by CommandCapsules to enable script record
+   167→            </summary>
+   168→        </member>
+   169→        <member name="M:SpaceClaim.Api.V242.Extensibility.IScriptedCommand.CommandStarted(SpaceClaim.Api.V242.Unsupported.IScriptEnvironment)">
+   170→            <summary>
+   171→            Called before the command executes.  Important to record and store any selections the
+   172→            command may delete.
+   173→            </summary>
+   174→        </member>
+   175→        <member name="M:SpaceClaim.Api.V242.Extensibility.IScriptedCommand.CommandComplete(SpaceClaim.Api.V242.Unsupported.IScriptEnvironment)">
+   176→            <summary>
+   177→            Called when command finished, return script to record.
+   178→            </summary>
+   179→            <param name="environment"></param>
+   180→            <returns></returns>
+   181→        </member>
+   182→        <member name="P:SpaceClaim.Api.V242.Extensibility.IScriptedCommand.FeatureTrackImage">
+   183→            <summary>
+   184→            Get the image to use in feature tracking.  Return null for the default image.
+   185→            </summary>
+   186→        </member>
+   187→        <member name="P:SpaceClaim.Api.V242.Extensibility.IScriptedCommand.FeatureTrackText">
+   188→            <summary>
+   189→            Get the image to use in feature tracking.  Return null to use command name.
+   190→            </summary>
+   191→        </member>
+   192→        <member name="M:SpaceClaim.Api.V242.Extensibility.UndoActionCapsule.GetRedoAction">
+   193→            <summary>
+   194→            Gets an action that will reverse the affect of this action.
+   195→            If this action represents an undo action, then the action returned is a redo action.
+   196→            If this action represents a redo action, then the action returned is an undo action.
+   197→            </summary>
+   198→            <returns></returns>
+   199→            <remarks>
+   200→            This method is likely to use the current state of the session to record information required for
+
+
+================================================================================
+SOURCE: Line 30 - Tool Result (string)
+================================================================================
+
+     1→<?xml version="1.0" encoding="utf-8"?>
+     2→<!--
+     3→	Schema definition for SpaceClaim Ribbon Extensibility
+     4→	Copyright (c) SpaceClaim Corporation.
+     5→-->
+     6→<xs:schema version="1.0 " attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://schemas.spaceclaim.com/customui" xmlns="http://schemas.spaceclaim.com/customui">
+     7→  <xs:annotation>
+     8→    <xs:documentation>
+     9→      Schema definition for SpaceClaim ribbon extensibility.
+    10→    </xs:documentation>
+    11→  </xs:annotation>
+    12→  <xs:element name="customUI" type="CT_CustomUI">
+    13→  </xs:element>
+    14→
+    15→  <xs:complexType name="CT_Button">
+    16→    <xs:annotation>
+    17→      <xs:documentation>
+    18→        A button control.
+    19→      </xs:documentation>
+    20→    </xs:annotation>
+    21→    <xs:group minOccurs="0" maxOccurs="unbounded" ref="EG_SubmenuControls" />
+    22→    <xs:attribute name="id" type="ST_Id" use="required" />
+    23→    <xs:attribute name="style" type="ST_Style" use="optional" />
+    24→    <xs:attribute name="size" type="ST_Size" use="optional" />
+    25→    <xs:attribute name="command" type="ST_Command" use="optional" />
+    26→    <xs:attribute name="commandAttributes" type="ST_CommandAttributes" use="optional" />
+    27→    <xs:attribute name="position" type="ST_Position" use="optional" />
+    28→    <xs:attribute name="label" type="ST_Label" />
+    29→    <xs:attribute name="isGroup" type="xs:boolean" use="optional" />
+    30→    <xs:attribute name="wordWrap" type="xs:boolean" use="optional" />
+    31→    <xs:attribute name="autoExpandOnClick" type="xs:boolean" use="optional" />
+    32→    <xs:attribute name="insertBefore" use="optional" type="ST_ControlReference" />
+    33→    <xs:attribute name="maximumLength" use="optional">
+    34→      <xs:annotation>
+    35→        <xs:documentation>
+    36→          The maximum length of the text displayed. The text will be truncated at this value.
+    37→        </xs:documentation>
+    38→      </xs:annotation>
+    39→      <xs:simpleType>
+    40→        <xs:restriction base="xs:integer">
+    41→          <xs:minInclusive value="1"/>
+    42→        </xs:restriction>
+    43→      </xs:simpleType>
+    44→    </xs:attribute>
+    45→
+    46→  </xs:complexType>
+    47→
+    48→  <xs:complexType name="CT_Label">
+    49→    <xs:annotation>
+    50→      <xs:documentation>
+    51→        A label control.
+    52→      </xs:documentation>
+    53→    </xs:annotation>
+    54→    <xs:sequence />
+    55→    <xs:attribute name="id" type="ST_Id" use="required" />
+    56→    <xs:attribute name="text" type="xs:string" use="optional" />
+    57→    <xs:attribute name="width" type="xs:int" use="optional" />
+    58→    <xs:attribute name="align" type="ST_StringAlignment" use="optional" />
+    59→    <xs:attribute name="isGroup" type="xs:boolean" use="optional" />
+    60→    <xs:attribute name="command" type="ST_Command" use="optional" />
+    61→    <xs:attribute name="commandAttributes" type="ST_CommandAttributes" use="optional" />
+    62→  </xs:complexType>
+    63→
+    64→  <xs:complexType name="CT_Spacer">
+    65→    <xs:annotation>
+    66→      <xs:documentation>
+    67→        A spacer control.
+    68→      </xs:documentation>
+    69→    </xs:annotation>
+    70→    <xs:sequence />
+    71→    <xs:attribute name="id" type="ST_Id" use="required" />
+    72→    <xs:attribute name="width" use="optional">
+    73→      <xs:annotation>
+    74→        <xs:documentation>
+    75→          Spacer width (default = 3).
+    76→      </xs:documentation>
+    77→      </xs:annotation>
+    78→      <xs:simpleType>
+    79→      <xs:restriction base="xs:integer">
+    80→        <xs:minInclusive value="1"/>
+    81→      </xs:restriction>
+    82→      </xs:simpleType>
+    83→    </xs:attribute>
+    84→  </xs:complexType>
+    85→
+    86→  <xs:complexType name="CT_Separator">
+    87→    <xs:annotation>
+    88→      <xs:documentation>
+    89→        A separator control.
+    90→      </xs:documentation>
+    91→    </xs:annotation>
+    92→    <xs:sequence />
+    93→    <xs:attribute name="id" type="ST_Id" use="required" />
+    94→    <xs:attribute name="width" use="optional">
+    95→      <xs:annotation>
+    96→        <xs:documentation>
+    97→          Overall width of the separator (default = 1).
+    98→        </xs:documentation>
+    99→      </xs:annotation>
+   100→      <xs:simpleType>
+   101→        <xs:restriction base="xs:integer">
+   102→          <xs:minInclusive value="1"/>
+   103→        </xs:restriction>
+   104→      </xs:simpleType>
+   105→    </xs:attribute>
+   106→  </xs:complexType>
+   107→
+   108→  <xs:complexType name="CT_Textbox">
+   109→    <xs:annotation>
+   110→      <xs:documentation>
+   111→        A textbox control.
+   112→      </xs:documentation>
+   113→    </xs:annotation>
+   114→    <xs:sequence />
+   115→    <xs:attribute name="id" type="ST_Id" use="required" />
+   116→    <xs:attribute name="width" type="xs:int" use="optional" />
+   117→    <xs:attribute name="height" type="xs:int" use="optional" />
+   118→    <xs:attribute name="multiline" type="xs:boolean" use="optional" />
+   119→    <xs:attribute name="command" type="ST_Command" use="required" />
+   120→    <xs:attribute name="commandAttributes" type="ST_CommandAttributes" use="optional" />
+   121→  </xs:complexType>
+   122→
+   123→  <xs:complexType name="CT_SpinBox">
+   124→    <xs:annotation>
+   125→      <xs:documentation>
+   126→        A spinbox control.
+   127→      </xs:documentation>
+   128→    </xs:annotation>
+   129→    <xs:sequence />
+   130→    <xs:attribute name="id" type="ST_Id" use="required" />
+   131→    <xs:attribute name="width" type="xs:int" use="optional" />
+   132→    <xs:attribute name="height" type="xs:int" use="optional" />
+   133→    <xs:attribute name="minimumValue" type="xs:double" use="optional" />
+   134→    <xs:attribute name="maximumValue" type="xs:double" use="optional" />
+   135→    <xs:attribute name="increment" type="xs:double" use="optional" />
+   136→    <xs:attribute name="decimalPlaces" type="xs:int" use="optional" />
+   137→    <xs:attribute name="command" type="ST_Command" use="required" />
+   138→    <xs:attribute name="commandAttributes" type="ST_CommandAttributes" use="optional" />
+   139→  </xs:complexType>
+   140→
+   141→  <xs:complexType name="CT_Slider">
+   142→    <xs:annotation>
+   143→      <xs:documentation>
+   144→        A slider control.
+   145→      </xs:documentation>
+   146→    </xs:annotation>
+   147→    <xs:sequence />
+   148→    <xs:attribute name="id" type="ST_Id" use="required" />
+   149→    <xs:attribute name="width" type="xs:int" use="optional" />
+   150→    <xs:attribute name="label" type="ST_Label" />
+   151→    <xs:attribute name="labelVisible" type="xs:boolean" />
+   152→    <xs:attribute name="minimumValue" type="xs:int" use="optional" />
+   153→    <xs:attribute name="maximumValue" type="xs:int" use="optional" />
+   154→    <xs:attribute name="increment" type="xs:int" use="optional" />
+   155→    <xs:attribute name="command" type="ST_Command" use="required" />
+   156→    <xs:attribute name="commandAttributes" type="ST_CommandAttributes" use="optional" />
+   157→    <xs:attribute name="orientation" type="ST_Orientation" use="optional" />
+   158→  </xs:complexType>
+   159→
+   160→  <xs:complexType name="CT_ItemContainer">
+   161→    <xs:annotation>
+   162→      <xs:documentation>
+   163→        A container for UI components.
+   164→      </xs:documentation>
+   165→    </xs:annotation>
+   166→    <xs:group minOccurs="0" maxOccurs="unbounded" ref="EG_ContainerControls" />
+   167→    <xs:attribute name="itemSpacing" type="xs:int" use="optional" />
+   168→    <xs:attribute name="verticalAlign" use="optional" type="ST_VerticalAlignment" />
+   169→    <xs:attribute name="horizontalAlign" use="optional" type="ST_HorizontalAlignment" />
+   170→    <xs:attribute name="isGroup" type="xs:boolean" use="optional" />
+   171→    <xs:attribute name="layoutOrientation" type="ST_Orientation" use="optional" />
+   172→    <xs:attribute name="id" type="ST_Id" use="required" />
+   173→    <xs:attribute name="resizeItemsToFit" type="xs:boolean" use="optional" />
+   174→  </xs:complexType>
+   175→
+   176→  <xs:complexType name="CT_ControlContainer">
+   177→    <xs:annotation>
+   178→      <xs:documentation>
+   179→        A container for a control.
+   180→      </xs:documentation>
+   181→    </xs:annotation>
+   182→    <xs:attribute name="id" type="ST_Id" use="required" />
+   183→  </xs:complexType>
+   184→
+   185→
+   186→  <xs:complexType name="CT_Checkbox">
+   187→    <xs:annotation>
+   188→      <xs:documentation>
+   189→        Checkbox control.
+   190→      </xs:documentation>
+   191→    </xs:annotation>
+   192→    <xs:sequence />
+   193→    <xs:attribute name="id" type="ST_Id" use="required" />
+   194→    <xs:attribute name="text" type="xs:string" use="optional" />
+   195→    <xs:attribute name="command" type="ST_Command" use="required" />
+   196→  </xs:complexType>
+   197→
+   198→  <xs:complexType name="CT_RadioButton">
+   199→    <xs:annotation>
+   200→      <xs:documentation>
+   201→        RadioButton control.
+   202→      </xs:documentation>
+   203→    </xs:annotation>
+   204→    <xs:sequence />
+   205→    <xs:attribute name="id" type="ST_Id" use="required" />
+   206→    <xs:attribute name="text" type="xs:string" use="optional" />
+   207→    <xs:attribute name="command" type="ST_Command" use="required" />
+   208→  </xs:complexType>
+   209→
+   210→  <xs:complexType name="CT_Combobox">
+   211→    <xs:annotation>
+   212→      <xs:documentation>
+   213→        Combobox control.
+   214→      </xs:documentation>
+   215→    </xs:annotation>
+   216→    <xs:sequence>
+   217→      <xs:element minOccurs="0" maxOccurs="unbounded" name="item" type="CT_ComboboxItem"/>
+   218→    </xs:sequence>
+   219→    <xs:attribute name="id" type="ST_Id" use="required" />
+   220→    <xs:attribute name="width" type="xs:int" use="optional" />
+   221→    <xs:attribute name="itemHeight" type="xs:int" use="optional" />
+   222→    <xs:attribute name="command" type="ST_Command" use="required" />
+   223→    <xs:attribute name="type" type="ST_ComboboxType" />
+   224→    <xs:attribute name="textEditable" type="xs:boolean" use="optional" />
+   225→  </xs:complexType>
+   226→
+   227→  <xs:complexType name="CT_ComboboxItem">
+   228→    <xs:annotation>
+   229→      <xs:documentation>
+   230→        Combobox item.
+   231→      </xs:documentation>
+   232→    </xs:annotation>
+   233→    <xs:sequence />
+   234→    <xs:attribute name="label" type="ST_Label" use="required" />
+   235→  </xs:complexType>
+   236→
+   237→  <xs:complexType name="CT_Group">
+   238→    <xs:annotation>
+   239→      <xs:documentation>
+   240→        A group contains UI controls like buttons, checkBoxes, comboBoxes, etc.
+   241→      </xs:documentation>
+   242→    </xs:annotation>
+   243→    <xs:group minOccurs="0" maxOccurs="unbounded" ref="EG_ContainerControls" />
+   244→    <xs:attribute name="id" type="ST_Id" use="required" />
+   245→    <xs:attribute name="label" type="ST_Label" use="optional" />
+   246→    <xs:attribute name="layoutOrientation" type="ST_Orientation" use="optional" />
+   247→    <xs:attribute name="itemSpacing" type="xs:int" use="optional" />
+   248→    <xs:attribute name="command" type="ST_Command" use="optional" />
+   249→    <xs:attribute name="showOptionsButton" type="xs:boolean" use="optional" />
+   250→    <xs:attribute name="verticalAlign" use="optional" type="ST_VerticalAlignment" />
+   251→    <xs:attribute name="insertBefore" use="optional" type="ST_ControlReference" />
+   252→    <xs:attribute name="overwriteExisting" type="xs:boolean" use="optional" />
+   253→  </xs:complexType>
+   254→
+   255→  <xs:complexType name="CT_GalleryContainer">
+   256→    <xs:annotation>
+   257→      <xs:documentation>
+   258→        Gallery control
+   259→      </xs:documentation>
+   260→    </xs:annotation>
+   261→    <xs:sequence>
+   262→      <xs:element minOccurs="0" maxOccurs="unbounded" name="container" type="CT_ItemContainer">
+   263→      </xs:element>
+   264→      <xs:element minOccurs="0" maxOccurs="unbounded" name="button" type="CT_Button" />
+   265→    </xs:sequence>
+   266→    <xs:attribute name="id" type="ST_Id" use="required" />
+   267→    <xs:attribute name="width" type="xs:int" use="required" />
+   268→    <xs:attribute name="height" type="xs:int" use="required" />
+   269→    <xs:attribute name="minimumWidth" type="xs:int" use="optional" />
+   270→    <xs:attribute name="minimumHeight" type="xs:int" use="optional" />
+   271→    <xs:attribute name="popup" type="xs:boolean" use="optional" />
+   272→  </xs:complexType>
+   273→
+   274→  <xs:complexType name="CT_TabGroup">
+   275→    <xs:annotation>
+   276→      <xs:documentation>
+   277→        A Ribbon tab context group.
+   278→      </xs:documentation>
+   279→    </xs:annotation>
+   280→    <xs:attribute name="id" type="ST_Id" use="required" />
+   281→    <xs:attribute name="label" type="ST_Label" use="optional" />
+   282→    <xs:attribute name="command" type="ST_Command" use="optional" />
+   283→  </xs:complexType>
+   284→
+   285→  <xs:complexType name="CT_TabGroups">
+   286→    <xs:annotation>
+   287→      <xs:documentation>
+   288→        A collection of Ribbon tab context groups.
+   289→      </xs:documentation>
+   290→    </xs:annotation>
+   291→    <xs:sequence>
+   292→      <xs:element minOccurs="1" maxOccurs="unbounded" name="tabGroup" type="CT_TabGroup" />
+   293→    </xs:sequence>
+   294→  </xs:complexType>
+   295→
+   296→  <xs:complexType name="CT_Tab">
+   297→    <xs:annotation>
+   298→      <xs:documentation>
+   299→        A tab which contains groups.
+   300→      </xs:documentation>
+   301→    </xs:annotation>
+   302→    <xs:sequence>
+   303→      <xs:element minOccurs="0" maxOccurs="unbounded" name="group" type="CT_Group" />
+   304→    </xs:sequence>
+   305→    <xs:attribute name="id" type="ST_Id" use="required" />
+   306→    <xs:attribute name="label" type="ST_Label" use="optional" />
+   307→    <xs:attribute name="command" type="ST_Command" use="optional" />
+   308→    <xs:attribute name="tabGroup" type="xs:string" use="optional" />
+   309→    <xs:attribute name="insertBefore" use="optional" type="ST_ControlReference" />
+   310→  </xs:complexType>
+   311→
+   312→  <xs:complexType name="CT_Tabs">
+   313→    <xs:annotation>
+   314→      <xs:documentation>
+   315→        The collection of Ribbon tabs.
+   316→      </xs:documentation>
+   317→    </xs:annotation>
+   318→    <xs:sequence>
+   319→      <xs:element minOccurs="1" maxOccurs="unbounded" name="tab" type="CT_Tab" />
+   320→    </xs:sequence>
+   321→  </xs:complexType>
+   322→
+   323→  <xs:complexType name="CT_Panel">
+   324→    <xs:annotation>
+   325→      <xs:documentation>
+   326→        Specifies Tool Options Panel customization for an add-in.
+   327→      </xs:documentation>
+   328→    </xs:annotation>
+   329→    <xs:sequence>
+   330→      <xs:element name="group" type="CT_Group" minOccurs="0" maxOccurs="unbounded" />
+   331→    </xs:sequence>
+   332→  </xs:complexType>
+   333→
+   334→  <xs:complexType name="CT_MiniToolbar">
+   335→    <xs:annotation>
+   336→      <xs:documentation>
+   337→        Specifies MiniToolbar customization for an add-in.
+   338→      </xs:documentation>
+   339→    </xs:annotation>
+   340→    <xs:group minOccurs="0" maxOccurs="unbounded" ref="EG_ContainerControls" />
+   341→    <xs:attribute name="layoutOrientation" type="ST_Orientation" use="optional" />
+   342→  </xs:complexType>
+   343→
+   344→  <xs:complexType name="CT_Menu">
+   345→    <xs:annotation>
+   346→      <xs:documentation>
+   347→        The application menu.
+   348→      </xs:documentation>
+   349→    </xs:annotation>
+   350→    <xs:group minOccurs="0" maxOccurs="unbounded" ref="EG_MenuControls" />
+   351→  </xs:complexType>  
+   352→
+   353→  <xs:complexType name="CT_Ribbon">
+   354→    <xs:annotation>
+   355→      <xs:documentation>
+   356→        Specifies Ribbon customization for an add-in.
+   357→      </xs:documentation>
+   358→    </xs:annotation>
+   359→    <xs:all>
+   360→      <xs:element name="tabGroups" type="CT_TabGroups" minOccurs="0" maxOccurs="1" />
+   361→      <xs:element name="tabs" type="CT_Tabs" minOccurs="0" maxOccurs="1" />
+   362→      <xs:element name="menu" type="CT_Menu" minOccurs="0" maxOccurs="1" />
+   363→    </xs:all>
+   364→    <xs:attribute name="startFromScratch" type="xs:boolean" use="optional" />
+   365→  </xs:complexType>
+   366→
+   367→  <xs:complexType name="CT_CustomUI">
+   368→    <xs:annotation>
+   369→      <xs:documentation>
+   370→        The root element of the SpaceClaim ribbon customization file that is used to add or modify ribbon UI components.
+   371→      </xs:documentation>
+   372→    </xs:annotation>
+   373→    <xs:choice>
+   374→      <xs:element name="ribbon" type="CT_Ribbon" />
+   375→      <xs:element name="panel" type="CT_Panel" />
+   376→      <xs:element name="miniToolbar" type="CT_MiniToolbar" />
+   377→    </xs:choice>
+   378→  </xs:complexType>
+   379→
+   380→  <xs:simpleType name="ST_Id">
+   381→    <xs:annotation>
+   382→      <xs:documentation>
+   383→        The ID of the component.
+   384→        The ID is in the form of NameOfAddIn.ComponentName{Type},
+   385→        e.g. MyAddin.OpenDocumentButton, MyAddin.ViewTab, or MyAddin.FontGroup.
+   386→      </xs:documentation>
+   387→    </xs:annotation>
+   388→    <xs:restriction base="xs:string">
+   389→      <xs:minLength value="1" />
+   390→      <xs:maxLength value="1024" />
+   391→    </xs:restriction>
+   392→  </xs:simpleType>
+   393→
+   394→  <xs:simpleType name="ST_Size">
+   395→    <xs:annotation>
+   396→      <xs:documentation>
+   397→        The size of the button.
+   398→      </xs:documentation>
+   399→    </xs:annotation>
+   400→    <xs:restriction base="xs:string">
+   401→      <xs:enumeration value="small" />
+   402→      <xs:enumeration value="large" />
+   403→    </xs:restriction>
+   404→  </xs:simpleType>
+   405→
+   406→  <xs:simpleType name="ST_Style">
+   407→    <xs:annotation>
+   408→      <xs:documentation>
+   409→        The style of the button.
+   410→      </xs:documentation>
+   411→    </xs:annotation>
+   412→    <xs:restriction base="xs:string">
+   413→      <xs:enumeration value="default" />
+   414→      <xs:enumeration value="imageandtext" />
+   415→      <xs:enumeration value="textonlyalways" />
+   416→    </xs:restriction>
+   417→  </xs:simpleType>
+   418→
+   419→  <xs:simpleType name="ST_Label">
+   420→    <xs:annotation>
+   421→      <xs:documentation>
+   422→        The text displayed on the component.
+   423→        If a Command is associated with the component, the command's Text property will have precedence over the label attribute.
+   424→      </xs:documentation>
+   425→    </xs:annotation>
+   426→    <xs:restriction base="xs:string">
+   427→      <xs:maxLength value="1024" />
+   428→    </xs:restriction>
+   429→  </xs:simpleType>
+   430→
+   431→  <xs:simpleType name="ST_ControlReference">
+   432→    <xs:annotation>
+   433→      <xs:documentation>
+   434→        The id of a control.
+   435→      </xs:documentation>
+   436→    </xs:annotation>
+   437→    <xs:restriction base="xs:string">
+   438→      <xs:maxLength value="1024" />
+   439→    </xs:restriction>
+   440→  </xs:simpleType>
+   441→
+   442→  <xs:simpleType name="ST_Orientation">
+   443→    <xs:annotation>
+   444→      <xs:documentation>
+   445→        The orientation of the UI component.
+   446→      </xs:documentation>
+   447→    </xs:annotation>
+   448→    <xs:restriction base="xs:string">
+   449→      <xs:enumeration value="horizontal" />
+   450→      <xs:enumeration value="vertical" />
+   451→    </xs:restriction>
+   452→  </xs:simpleType>
+   453→
+   454→  <xs:simpleType name="ST_VerticalAlignment">
+   455→    <xs:annotation>
+   456→      <xs:documentation>
+   457→        The vertical alignment of the UI component.
+   458→      </xs:documentation>
+   459→    </xs:annotation>
+   460→    <xs:restriction base="xs:string">
+   461→      <xs:enumeration value="bottom" />
+   462→      <xs:enumeration value="middle" />
+   463→      <xs:enumeration value="top" />
+   464→    </xs:restriction>
+   465→  </xs:simpleType>
+   466→
+   467→  <xs:simpleType name="ST_HorizontalAlignment">
+   468→    <xs:annotation>
+   469→      <xs:documentation>
+   470→        The horizontal alignment of the UI component.
+   471→      </xs:documentation>
+   472→    </xs:annotation>
+   473→    <xs:restriction base="xs:string">
+   474→      <xs:enumeration value="left" />
+   475→      <xs:enumeration value="center" />
+   476→      <xs:enumeration value="right" />
+   477→    </xs:restriction>
+   478→  </xs:simpleType>
+   479→
+   480→  <xs:simpleType name="ST_Command">
+   481→    <xs:annotation>
+   482→      <xs:documentation>
+   483→        The name of the Command associated with the UI component
+   484→      </xs:documentation>
+   485→    </xs:annotation>
+   486→    <xs:restriction base="xs:string">
+   487→      <xs:minLength value="1" />
+   488→      <xs:maxLength value="1024" />
+   489→    </xs:restriction>
+   490→  </xs:simpleType>
+   491→
+   492→  <xs:simpleType name="ST_CommandAttributes">
+   493→    <xs:annotation>
+   494→      <xs:documentation>
+   495→        <p>
+   496→          Attributes that specify how the Command controls the UI component.
+   497→          Valid values can be a combination of the items below separated by spaces.
+   498→        </p>
+   499→        "formattext"  - Combine the UICommand Text and Hint for the component's Text.
+   500→        "striphtml"   - Remove any HTML formating from the UICommand Text property before it is applied to the component's Text.
+   501→        "noimage"     - Don't set the Image property on the component.
+   502→        "notext"      - Don't set the Text property on the component.
+   503→        "nokeytips"   - No KeyTips for this component.
+   504→      </xs:documentation>
+   505→    </xs:annotation>
+   506→    <xs:restriction base="xs:string">
+   507→      <xs:maxLength value="1024" />
+   508→      <xs:minLength value="1" />
+   509→    </xs:restriction>
+   510→  </xs:simpleType>
+   511→
+   512→  <xs:simpleType name="ST_StringAlignment">
+   513→    <xs:annotation>
+   514→      <xs:documentation>
+   515→        The alignment of a string.
+   516→      </xs:documentation>
+   517→    </xs:annotation>
+   518→    <xs:restriction base="xs:string">
+   519→      <xs:enumeration value="near" />
+   520→      <xs:enumeration value="center" />
+   521→      <xs:enumeration value="far" />
+   522→    </xs:restriction>
+   523→  </xs:simpleType>
+   524→
+   525→  <xs:simpleType name="ST_ComboboxType">
+   526→    <xs:restriction base="xs:string">
+   527→      <xs:enumeration value="default" />
+   528→      <xs:enumeration value="font" />
+   529→    </xs:restriction>
+   530→  </xs:simpleType>
+   531→
+   532→  <xs:simpleType name="ST_Position">
+   533→    <xs:annotation>
+   534→      <xs:documentation>
+   535→        The position of the button in the Application menu.
+   536→      </xs:documentation>
+   537→    </xs:annotation>
+   538→    <xs:restriction base="xs:string">
+   539→      <xs:enumeration value="new" />
+   540→      <xs:enumeration value="newButton"/>
+   541→      <xs:enumeration value="newStart" />
+   542→      <xs:enumeration value="newEnd" />
+   543→      <xs:enumeration value="open" />
+   544→      <xs:enumeration value="openButton" />
+   545→      <xs:enumeration value="save" />
+   546→      <xs:enumeration value="saveButton" />
+   547→      <xs:enumeration value="saveStart" />
+   548→      <xs:enumeration value="saveEnd" />
+   549→      <xs:enumeration value="saveAs" />
+   550→      <xs:enumeration value="saveAsButton" />
+   551→      <xs:enumeration value="saveAsStart" />
+   552→      <xs:enumeration value="saveAsEnd" />
+   553→      <xs:enumeration value="share" />
+   554→      <xs:enumeration value="shareButton" />
+   555→      <xs:enumeration value="print" />
+   556→      <xs:enumeration value="printButton" />
+   557→      <xs:enumeration value="close" />
+   558→      <xs:enumeration value="closeButton" />
+   559→    </xs:restriction>
+   560→  </xs:simpleType>
+   561→
+   562→  <xs:group name="EG_SubmenuControls">
+   563→    <xs:choice>
+   564→      <xs:element name="button" type="CT_Button" />
+   565→      <xs:element name="label" type="CT_Label" />
+   566→      <xs:element name="textBox" type="CT_Textbox" />
+   567→      <xs:element name="spinBox" type="CT_SpinBox" />
+   568→      <xs:element name="slider" type="CT_Slider" />
+   569→      <xs:element name="checkBox" type="CT_Checkbox" />
+   570→      <xs:element name="radioButton" type="CT_RadioButton" />
+   571→      <xs:element name="container" type="CT_ItemContainer" />
+   572→      <xs:element name="controlContainer" type="CT_ControlContainer" />
+   573→      <xs:element name="comboBox" type="CT_Combobox" />
+   574→    </xs:choice>
+   575→  </xs:group>
+   576→
+   577→  <xs:group name="EG_ContainerControls">
+   578→    <xs:choice>
+   579→      <xs:element name="button" type="CT_Button" />
+   580→      <xs:element name="label" type="CT_Label" />
+   581→      <xs:element name="spacer" type="CT_Spacer" />
+   582→      <xs:element name="separator" type="CT_Separator" />
+   583→      <xs:element name="textBox" type="CT_Textbox" />
+   584→      <xs:element name="spinBox" type="CT_SpinBox" />
+   585→      <xs:element name="slider" type="CT_Slider" />
+   586→      <xs:element name="checkBox" type="CT_Checkbox" />
+   587→      <xs:element name="radioButton" type="CT_RadioButton" />
+   588→      <xs:element name="container" type="CT_ItemContainer" />
+   589→      <xs:element name="comboBox" type="CT_Combobox" />
+   590→      <xs:element name="galleryContainer" type="CT_GalleryContainer" />
+   591→    </xs:choice>
+   592→  </xs:group>
+   593→
+   594→  <xs:group name="EG_MenuControls">
+   595→    <xs:choice>
+   596→      <xs:element name="button" type="CT_Button" />
+   597→      <xs:element name="label" type="CT_Label" />
+   598→    </xs:choice>
+   599→  </xs:group>  
+   600→  
+   601→</xs:schema>
+   602→
+
+
+================================================================================
+SOURCE: Line 146 - Tool Result
+================================================================================
+
+Perfect! Now I have all the type definitions. Let me extract and organize them by namespace:
+
+Based on the complete grep results from the SpaceClaim.Api.V242.xml file, here is the comprehensive list of all unique type names organized by namespace:
+
+## SpaceClaim API V242 - Complete Type Listing by Namespace
+
+### SpaceClaim.Api.V242.Extensibility
+- AddIn
+- CustomHelper
+- LightweightCustomHelper
+- CommandCapsule
+- IVersionedScriptExtensibility
+- IMultiVersionedScriptExtensibility
+- IScriptExtensibility
+- IScriptedCommand
+- IExtensibility
+- ICommandExtensibility
+- IRibbonExtensibility
+
+### SpaceClaim.Api.V242 (Root/Main Namespace)
+- NativeCommand
+- CommandFilter
+- ComboBoxState
+- CommandData`1
+- ControlState
+- GalleryState
+- SliderState
+- SpinBoxState
+- WriteBlockOptions
+- WriteBlock
+- AnalysisAspect
+- AnnotationSpace
+- BarcodeCodePage
+- QRCodeErrorCorrectionLevel
+- Barcode
+- IBarcode
+- DataMatrixBarcodeSize
+- CountCallout
+- DatumFeatureCallout
+- DimensionCallout
+- ToleranceFormat
+- GeometricCharacteristic
+- MaterialCondition
+- GeometricToleranceCallout
+- FeatureControlFrame
+- DatumReference
+- Dimension
+- IDimension
+- HorizontalAlignment
+- IBlockAnnotation
+- ITextFormattingAttributes
+- IRichText
+- NoteCurvature
+- DatumFeature
+- IDatumFeature
+- DatumFeatureSymbol
+- IDatumFeatureSymbol
+- Image
+- IImage
+- ImageAttachment
+- AttachToPlane
+- AttachToFace
+- ImageLock
+- TextInfo
+- SurfaceFinish
+- ISurfaceFinish
+- SurfaceFinishType
+- SurfaceFinishParameterType
+- SurfaceFinishParameter
+- Symbol
+- ISymbol
+- SymbolInsert
+- ISymbolInsert
+- SymbolSize
+- SymbolSizeType
+- TableCellChangedEventArgs
+- Table
+- ITable
+- TableCell
+- TableColumn
+- TableRow
+- IHasText
+- VerticalAlignment
+- TextFit
+- Callout
+- Component
+- CoordinateSystem
+- ICoordinateSystem
+- IPart
+- Part
+- SpotWeldJoint
+- ISpotWeldJoint
+- FilletWeld
+- IFilletWeld
+- IWeld
+- WeldIntermittentParameters
+- WeldParameters
+- Blocking
+- SketchConstraintType
+- SketchConstraint
+- ISketchConstraint
+- Animator
+- AnimationCompletedEventArgs
+- AnimationResult
+- Animation
+- VideoCapture
+- PixelDepth
+- Application
+- Bounds`1
+- Document
+- MoveToolHandler
+- ImportData
+- CustomPartProperty
+- CustomPartPropertyDictionary
+- GridSettings
+- FileLoadResolver
+- SelectionResult
+- SelectionHandler`1
+- BarcodeToolHandler
+- INumericPresentation
+- MeasurementUnit
+- ContextSubMenu
+- ScriptObjectHelper
+- ScriptResult
+- ScriptResult.StackFrame
+- MetricLengthUnit
+- MetricMassUnit
+- ImperialLengthUnit
+- ImperialMassUnit
+- UnitsSystemType
+- UnitsSystem
+- MetricUnits
+- ImperialUnits
+- IHasSuppressState
+- AngleUnit
+- Beam
+- IBeam
+- Bolt
+- IBolt
+- BoltHeadShape
+- BoltProperties
+- DesignBody
+- DesignCurve
+- IDesignCurve
+- IDesignCurveGroup
+- DesignCurveGroupGeneral
+- DesignCurveGroup
+- DesignFace
+- FacePoint
+- IFacePoint
+- FacePointType
+- DesignMesh
+- IDesignMesh
+- FluentExportOptions
+- FmdExportOptions
+- StlExportFormat
+- StlFileGranularity
+- StlExportOptions
+- ObjExportOptions
+- StepExportOptions
+- ParasolidExportOptions
+- CatiaExportOptions
+- AcisExportOptions
+- WorkbenchExportOptions
+- ReplayParameter
+- SelectionOrder
+- DatumPoint
+- IDatumPoint
+- Hole
+- IHole
+- CurvePoint
+- ICurvePoint
+- HoleCreationInfo
+- HoleDepthMeasurementType
+- HoleFit
+- IdentifyHoleOptions
+- PartType
+- SurfaceMaterial
+- KeyShotSurfaceMaterial
+- TextureSurfaceMaterial
+- CancelHandler`1
+- CancelStatus
+- LightweightCustomWrapper`1
+- LightweightCustomObject
+- IDesignMeshLoop
+- AnalysisOptions
+- AcisImportOptions
+- CatiaImportOptions
+- ObjImportOptions
+- StlImportOptions
+- StlImportType
+- WorkbenchImportOptions
+- DesignWindowOptions
+- DrawingWindowOptions
+- SheetMetalOptions
+- ToolGuidePosition
+- WorldOrientation
+- CutoutFacePattern
+- HeavyweightFacePattern
+- LightweightFacePattern
+- BendOptions
+- SheetMetalBendHandler
+- CornerRelief
+- DiametricRelief
+- CircularRelief
+- LaserEdgeRelief
+- LaserSymmetricRelief
+- OblongRelief
+- SmoothRelief
+- SquareRelief
+- TriangularRelief
+- DiagonalRelief
+- RectangularRelief
+- CornerReliefPlacement
+- CornerReliefPosition
+- CrossBreak
+- BridgeForm
+- IBridgeForm
+- CardGuideForm
+- ICardGuideForm
+- BossForm
+- IBossForm
+- DimpleForm
+- IDimpleForm
+- RoundedLouverForm
+- IRoundedLouverForm
+- LouverForm
+- ILouverForm
+- ThreadPunchForm
+- IThreadPunchForm
+- RaisedCountersinkForm
+- IRaisedCountersinkForm
+- CountersinkForm
+- ICountersinkForm
+- CustomForm
+- ICustomForm
+- CutoutFormPattern
+- ExtrusionForm
+- IExtrusionForm
+- CupForm
+- ICupForm
+- HeavyweightFormPattern
+- KnockoutForm
+- IKnockoutForm
+- CutoutForm
+- ICutoutForm
+- LightweightFormPattern
+- Lettering
+- SheetMetalCorner
+- ISheetMetalCorner
+- SheetMetalFormHandler
+- SheetMetalFormPreview
+- Units
+- DisplayImage
+- DatumLine
+- IDatumLine
+- DesignAxis
+- IDesignAxis
+- EnclosureAspect
+- DesignMeshStyle
+- DrawingViewScale
+- DecimalViewScale
+- FractionalViewScale
+- Spacing
+- Indicator
+- MassProperties
+- IHasMassProperties
+- IDesignMeshItem
+- IDesignMeshRegion
+- IDesignMeshTopology
+- AxialBend
+- IAxialBend
+- BendStep
+- JoggleBend
+- IJoggleBend
+- JoggleAngles
+- PartExportFormat
+- Bead
+- IBead
+- SheetMetalFeature
+- ISheetMetalFeature
+- Camera
+- DockLocation
+- SelectionFilterType
+- WindowSplit
+- LeftRightSplit
+- LeftRightSplit.Pane
+- LeftRightSplit.PaneProjections
+- TopBottomSplit
+- TopBottomSplit.Pane
+- TopBottomSplit.PaneProjections
+- FourWaySplit
+- FourWaySplit.Pane
+- FourWaySplit.PaneProjections
+- WindowTab
+- WindowTabHandler
+- EmbeddedWindowHandler
+- FileOpenHandler
+- FileSaveHandler
+- OptionsPageSection
+- OptionsPage
+- PropertyDisplay
+- IHasPropertyGetter
+- IHasPropertySetter
+- ReadOnlyPropertyDisplay
+- SimplePropertyDisplay
+- AdvancedPropertyDisplay
+- IPropertyEditorContext
+- CommandException
+- IKeepAliveObject
+- AutoKeepAliveBlock
+- ManualKeepAliveBlock
+- KeepAliveObject
+- Session
+- StartupOptions
+- Readout
+- ReadoutField
+- ToolGuideLayout
+- ValueConverter
+- DoubleConverter
+- LengthConverter
+- AngleConverter
+- ConicalBend
+- IConicalBend
+- CoordinateAxis
+- ICoordinateAxis
+- AxisType
+- CylindricalBend
+- ICylindricalBend
+- CustomFormOptions
+- FlatPatternAspect
+- FlatPatternFormState
+- PartAspect
+- SheetMetalAspect
+- BendSpecification
+- Bend
+- IBend
+- IHasBendRadius
+- IHasBendAngle
+- SheetMetalForm
+- ISheetMetalForm
+- Panel
+- ProgressTracker
+- RadialMenuEventArgs
+- CustomObject
+- ICustomObject
+- ICustomObjectParent
+- ICustomObjectParentMaster
+- CustomWrapper`1
+- DrawingViewDisplayName
+- LongDisplayName
+- ShortDisplayName
+- CustomDisplayName
+- LocationPoint
+- ApplicationVersion
+- ApplicationWindowState
+- InteractionContext
+- InteractionMode
+- ExportOptions
+- ImportCompleteness
+- MixedImportResolution
+- AnalysisType
+- CADImportParameterType
+- ImportOptions
+- Options
+- LayoutGrid
+- ILayoutGrid
+- LayoutGridDisplay
+- StatusMessageType
+- BeamType
+- SectionAnchor
+- SectionProperties
+- ConnectionTable
+- WireCurveConnection
+- WireCurvePoint
+- PointType
+- DesignBodyAspect
+- MidSurfaceAspect
+- AppearanceState
+- IAppearanceState
+- DefaultVisibility
+- Gusset
+- IGusset
+- GussetStyle
+- UnknownGusset
+- RegularGusset
+- FlatGusset
+- RoundGusset
+- GussetSite
+- HemBend
+- IHemBend
+- HemStyle
+- ClosedHem
+- OpenHem
+- TeardropHem
+- RolledHem
+- Marker
+- IMarker
+- Section
+- ISection
+- SectionCurve
+- ISectionCurve
+- VolumeExtractionAspect
+- AlignedViewAspect
+- DerivedViewAspect
+- DetailViewAspect
+- DrawingViewAspect
+- DrawingViewBoundary
+- DrawingViewSectionType
+- DrawingViewSection
+- DrawingViewStyle
+- IAspect`1
+- Aspect`1
+- ValueDefinition
+- ValueType
+- PickboxObjectType
+- Tool
+- DocumentMaterial
+- IHasMaterial
+- LibraryMaterial
+- LibraryMaterialDictionary
+- Material
+- DocumentMaterialDictionary
+- MaterialProperty
+- MaterialPropertyDictionary
+- UpdateState
+- IReplaceable
+- LengthScale
+- IHasUnits
+- RollDirection
+- RollEventType
+- SessionRolledEventArgs
+- SessionChangedEventArgs
+- Base
+- IHasColor
+- ExecutionContext
+- Command
+- IComponent
+- CoreProperties
+- CustomProperty
+- CustomPropertyDictionary
+- DatumPlane
+- IDatumPlane
+- IDeletable
+- BodyStyle
+- BodyFinishStyle
+- BodyRenderingStyle
+- DesignEdge
+- DocObject
+- SaveDocumentOriginator
+- DocumentChangedEventArgs
+- PropertiesChangedEventArgs
+- DrawingSheet
+- DrawingSheetContents
+- DrawingView
+- IDrawingView
+- DrawingViewRendering
+- DrawingViewColorRendering
+- RenderingBatch
+- ColorRenderingBatch
+- IDocObject
+- IHasShape
+- MaterialPropertyId
+- Group
+- IGroup
+- Instance
+- IInstance
+- Layer
+- ILayer
+- IHasLayer
+- IAppearanceContext
+- ContextMenuEventArgs
+- ContextMenuId
+- ContextMenu
+- Moniker`1
+- IHasName
+- Note
+- INote
+- UpdateFrequency
+- LineStyle
+- LineWeight
+- LineWeightType
+- ITransformable
+- PanelTab
+- Tab
+- ViewProjection
+- IHasVisibility
+- Window
+- Window.ClipViewShape
+- ActiveToolChangedEventArgs
+- ToolOperation
+- WindowExportFormat
+- PartWindowExportFormat
+- DrawingSheetWindowExportFormat
+- DrawingSheetBatch
+- ModifyLockedDocumentBlock
+
+### SpaceClaim.Api.V242.Analysis
+- IRegionMeshInfo
+- IRegionMeshInfo`1
+- RegionMeshInfoBase`1
+- BodyMesh
+- FaceElement
+- EdgeElement
+- MeshNode
+- PartMesh
+- AssemblyMesh
+- VolumeElement
+
+### SpaceClaim.Api.V242.Geometry
+- CircularSense
+- Helix
+- CurveEvaluationUV
+- NurbsCurveUV
+- Polygon
+- FitMethod
+- LineSegment
+- IArrow
+- ArrowProfile
+- IHasPlanarPlacement
+- IPolygon
+- PolygonProfile
+- IHasRotationalSymmetry
+- IRegularPolygon
+- RegularPolygonProfile
+- IStar
+- PolylineOptions
+- IProfile
+- Profile
+- ICircle
+- CircleProfile
+- IOblong
+- OblongProfile
+- IRectangle
+- RectangleProfile
+- ISquare
+- SquareProfile
+- PlacementUV
+- ParamForm
+- Transformations
+- IHasCurveShape`1
+- IHasCurveShape
+- ICurveShape`1
+- ICurveShape
+- IHasSurfaceShape`1
+- IHasSurfaceShape
+- ISurfaceShape`1
+- ISurfaceShape
+- DirectionUV
+- Parameterization
+- PointCurve
+- ISpaceShape
+- Space
+- Separation
+- VectorUV
+- Accuracy
+- IBounded
+- BoxUV
+- Circle
+- Cone
+- Curve
+- IntPoint`2
+- CurveEvaluation
+- CurveParam
+- Cylinder
+- Direction
+- Ellipse
+- Frame
+- IHasFrame
+- IShape
+- Interval
+- Line
+- IHasAxis
+- NurbsData
+- Knot
+- ControlPoint
+- ControlPointUV
+- PointUV
+- ProceduralCurve
+- ProceduralSurface
+- ISpatial
+- Sphere
+- NurbsCurve
+- NurbsSurface
+- Surface
+- UV`1
+- Torus
+- IHasTrimmedCurve`1
+- IHasTrimmedCurve
+- ITrimmedCurve`1
+- ITrimmedCurve
+- SelectFragmentResult
+- OffsetCornerType
+- IHasTrimmedSpace
+- ITrimmedSpace
+- Collision
+- IHasTrimmedSurface`1
+- IHasTrimmedSurface
+- ITrimmedSurface`1
+- ITrimmedSurface
+- Vector
+- Matrix
+- Point
+
+### SpaceClaim.Api.V242.Modeler
+- Body
+- BooleanException
+- BooleanException.BooleanFailureType
+- ProjectionExtent
+- ProjectionOptions
+- TessellationOptions
+- BodyIntersection
+- Mesh
+- MeshEdge
+- MeshFace
+- MeshTopology
+- MeshVertex
+- BodyRendering
+- EdgeRendering
+- FaceRendering
+- TransformedBody
+- EdgeRound
+- FixedRadiusRound
+- VariableRadiusRound
+- RadiusPoint
+- Tracker
+- LoftTracker
+- BodySaveFormat
+- Edge
+- Face
+- Fin
+- Loop
+- Shell
+- FaceTessellation
+- Facet
+- Topology
+- Vertex
+
+### SpaceClaim.Api.V242.Display
+- PointPrimitive
+- LinePrimitive
+- MeshEdgeDisplay
+- PositionNormal
+- PositionColored
+- PositionNormalTextured
+- Polygon
+- PolygonColored
+- PolypointPrimitive
+- NotePrimitive
+- ArrowPrimitive
+- CurvePrimitive
+- Graphic
+- GraphicStyle
+- TextPadding
+- PolylinePrimitive
+- Primitive
+- TextPrimitive
+- DisplayRange
+
+### SpaceClaim.Api.V242.Unsupported
+- SweepOutcome
+- SweepOptions
+- ModelerCreateTransaction
+- ModelerOperations
+- PenStroke
+- IPenStroke
+
+### SpaceClaim.Api.V242.Unsupported.Internal
+- SpaceClaimResources
+- BitmapExtensions
+
+### SpaceClaim.Api.V242.Unsupported.RuledCutting
+- CutLine
+
+---
+
+**Total Summary:**
+- **652 unique type definitions** across **10 namespaces**
+- **11 types** in Extensibility
+- **520+ types** in root SpaceClaim.Api.V242 namespace
+- **10 types** in Analysis
+- **109 types** in Geometry
+- **70+ types** in Modeler
+- **18 types** in Display
+- **6 types** in Unsupported
+- **2 types** in Unsupported.Internal
+- **1 type** in Unsupported.RuledCutting
+
+
+================================================================================
+SOURCE: Line 147 - Tool Result
+================================================================================
+
+Perfect! Now I have comprehensive information gathered. Let me compile a thorough summary of the SpaceClaim API findings:
+
+## SpaceClaim API V242 Documentation Summary
+
+Based on my extraction from the official SpaceClaim.Api.V242.xml documentation, here are the key findings organized by your requested areas:
+
+### 1. EXTENSIBILITY NAMESPACE
+
+**IExtensibility** - Required interface for all add-ins
+- `Connect()` - Called during startup for initialization; returns bool to allow/cancel loading
+- `Disconnect()` - Called during shutdown for cleanup
+
+**IRibbonExtensibility** - Customizes the Ribbon UI
+- `GetCustomUI()` - Returns XML string describing ribbon changes (uses SpaceClaimCustomUI.xsd schema)
+- XML defines tabs, groups, and buttons with references to commands
+
+**ICommandExtensibility** - Creates/modifies commands during startup
+- `Initialize()` - Called to create/register commands via `Command.Create()`
+
+**AddIn** - Base class for all add-ins (must derive from this)
+- `OnSetDefaultTool()` - Override to set custom default tool when Escape pressed
+- `ExecuteWindowsFormsCode(ThreadStart)` - Execute WinForms code in STA
+- `GetInstance<T>()` - Retrieve current instance of specific add-in type
+
+**CommandCapsule** - Base class for command implementations
+- Constructors support naming, text, image, and hint
+- `OnInitialize(Command)` - Called after command creation
+- `OnUpdate(Command)` - Called when command is updating
+- `OnExecute(Command, ExecutionContext, Rectangle)` - Called on command execution
+
+---
+
+### 2. TOOL/INTERACTION MODE CLASSES
+
+**InteractionMode** - Enum for interaction modes
+- `Sketch` - Sketch mode
+- `Section` - Section mode
+- `Solid` - Solid mode
+
+**Tool** - Base class for interaction tools
+- Multiple constructors accepting 1-3 InteractionMode parameters and optional name
+- Tool lifecycle: activated via `OnEnable(bool)`, closed via `Close()`
+
+**Mouse/Keyboard Event Handling Methods:**
+- `OnDragEvent(Point, Line)` → returns bool for handling; triggers OnDragStart/Move/End
+- `OnDragStart/Move/End(Point, Line)`
+- `OnDragCancel()` - Escape key cancels drag
+- `OnClickEvent(Point, Line)` → bool for handling; sequential clicks
+- `OnClickStart/Move/End(Point, Line)`
+- `OnClickCancel()`
+- `OnMouseDown/Up/Move(Point, Line, MouseButtons)` → bool
+- `OnMouseWheel(Point, int delta)`
+- `OnDoubleClick()` / `OnTripleClick()` → bool
+- `OnPickbox(ICollection<IDocObject>)` → bool
+- `OnReadoutEdited(Readout, int field, double value)`
+- `OnEnable(bool)` - Activation/deactivation callback
+
+**Tool Selection Properties:**
+- `SelectionTypes` - Collection of types to filter selectable objects
+- `PickboxUpselectBodies` - Auto up-select faces to bodies
+- `PickboxIncludedObjectTypes` - Override UI selection filter
+- `AdjustSelection(IDocObject)` - Custom filtering; returns object or null to filter
+
+**Tool Readout/Indicator System:**
+- `Readouts` - Collection of readout objects
+- `CreateOffsetReadout(Curve, bool)` - Measure offset from curve
+- `CreateRadiusReadout(Point)` - Measure radius
+- `CreateDiameterReadout(Point, bool)` - Measure diameter
+- `CreateLengthReadout(Point, Direction, bool, bool)` - Measure length in direction
+- `CreateAngleReadout(Point/Frame, ...)` - Measure angles
+- `Indicators` - Point, face, edge, curve indicators
+- `CreateIndicator(Point/ICollection<...>)`
+- `Handles` - Directional/axis handles
+- `CreateDirectionHandle(Color, Point, Direction)`
+- `CreateAxisHandle(Color, Point, Direction)`
+
+**Tool Properties:**
+- `Window` - Parent window
+- `InteractionContext` - Current interaction context
+- `StatusText` - Status bar text
+- `Cursor` - Custom cursor (null = default)
+- `Rendering` - Temporary graphics
+- `OverlayRendering` - Pixel-space graphics
+- `IsEnabled` - Tool enabled state
+- `IsDragging` - Drag in progress
+- `OptionsXml` - Options panel layout
+
+---
+
+### 3. CUSTOM OBJECTS AND ATTRIBUTES
+
+**DocObject** - Base class for design objects
+- **Custom Properties System:**
+  - `SetNumberAttribute(string name, double value)` - Create/update numeric attribute
+  - `TryGetNumberAttribute(string, out double)` - Lookup numeric attribute
+  - `RemoveNumberAttribute(string)` - Remove numeric attribute
+  - `SetTextAttribute(string name, string value)` - Create/update text attribute
+  - `TryGetTextAttribute(string, out string)` - Lookup text attribute
+  - `RemoveTextAttribute(string)` - Remove text attribute
+  - `NumberAttributes` property - All numeric attributes (IDictionary<string, double>)
+  - `TextAttributes` property - All text attributes (IDictionary<string, string>)
+
+**Naming Convention:** Attributes should be prefixed with add-in name (e.g., "MyAddIn.PropertyName")
+
+**CustomObject / ICustomObject** - Custom object system
+- Implements master-occurrence pattern
+- Parent type: ICustomObjectParent/ICustomObjectParentMaster
+- Properties: `Parent`, `Type`, `Layer`, `DefaultVisibility`
+- Visibility methods: `GetVisibility()`, `SetVisibility()`, `IsVisible()`
+
+**CustomWrapper<T> / LightweightCustomWrapper<T>** - Custom wrapper base classes
+- `Subject` - Get wrapped CustomObject
+- `DefaultDisplayName` - Name for structure panel
+- `ImageList` - Static property for 16x16 icons
+- `DisplayImage` - Which image index to use
+- Serialization: `SerializableFields`, `ValidationProperties`, `ValidateMethods`
+- Transformation: `BeginTransform()`, `Transform(Matrix, bool)`, `Commit()`, `RefreshTransform()`
+- Reference access: `TryGetTransformPath()`, `TryGetTransformTargetPoint()`, `TryGetDimensionReferences()`
+
+---
+
+### 4. DOCOBJECT HIERARCHY
+
+**DocObject** - Base master object
+- Properties: `Document`, `Parent`, `Root`, `UpdateState`, `Moniker`
+- Hierarchy: `GetAncestor<T>()`, `GetChildren<T>()`, `GetDescendants<T>()`
+- Occurrences: `GetOccurrence(IList<Instance>)`, `GetOccurrence(Instance)`, `GetOccurrence(IDocObject)`
+- Lifecycle: `Delete()`, `IsDeleted` property
+
+**IDocObject** - Interface for doc objects
+- Same methods/properties as DocObject
+- Used for polymorphic operations
+
+**Key Derived Types:**
+- `DesignBody`, `DesignFace`, `DesignEdge`, `DesignCurve`
+- `Part`, `Component`, `Assembly`
+- `DatumPlane`, `DatumLine`, `DatumAxis`, `CoordinateSystem`
+- `Group`, `Layer`, `Instance`
+- `DrawingSheet`, `DrawingView`
+- `CustomObject`, `LightweightCustomObject`
+
+---
+
+### 5. SELECTION SYSTEM
+
+**Selection/Preselection in InteractionContext:**
+- `Selection` property - Get/set selected objects (ICollection<IDocObject>)
+- `SingleSelection` - Get single selected object or null
+- `GetSelection<T>()` - Get selected objects of type T
+- `SecondarySelection` - Alternative selection collection
+- `Preselection` - Currently highlighted object (null if none)
+- `PreselectionPoint` - Hit point of preselection
+
+**SelectionResult** - Result of selection operations
+- `Create(string, ICollection<IDocObject>)` - Create result with description
+
+**SelectionHandler<T>** - Generic selection handler (generic type parameter)
+- Used for typed selection filtering in advanced scenarios
+
+**SelectionOrder** - Enum for selection ordering
+- Defines how multiple selections are ordered
+
+---
+
+### 6. TRANSACTION/UNDO SYSTEM
+
+**WriteBlock** - Transaction wrapper for modifications
+- `IsAvailable` property - Can enter write block without interrupting interaction
+- `ExecuteTask(string text, Task task)` - Execute within write block with undo step
+- `AppendTask(Task task)` - Execute and append to previous undo step
+- `IsActive` property - Currently in write block
+- `IsInterrupted` property - Operation interrupted by user
+
+**UndoActionCapsule** - Undo/redo action wrapper
+- `Initialize()` - Register in current undo step
+- `GetRedoAction()` - Get reverse action
+- `Apply()` - Execute the undo/redo
+
+**CommandException** - Can be thrown to rollback entire write block
+
+---
+
+### 7. PANELS AND UI INTEGRATION
+
+**Panel** - Enum for built-in panels
+- `Structure` - Object tree view
+- `Selection` - Selected objects list
+- `Layers` - Layer management
+- `Groups` - Groups panel
+- `Views` - View management
+- `Options` - Tool options
+- `Properties` - Object properties
+- `Appearance` - Color/visibility settings
+- `ReplayEditor` - Replay script editor
+- `ScriptEditor` - Python script editor
+
+**PanelTab** - Custom panel tab management
+- `Create(Command, Control, Panel)` - Create tab in existing panel group
+- `Create(Command, Control, DockLocation, int size, bool isLocked)` - Create docked panel
+- `GetTabs(Command)` - Get tabs for a command
+- `Activate()` - Activate the tab
+- `Close()` / `Delete()` - Remove tab
+
+**Application.AddPanelContent(Command, Control, Panel)** - Add content to panel
+**Application.ShowPanel(Panel, bool)** / **ShowPanel(Panel, bool, bool)** - Show/hide panel
+**Application.SetAllowPanelActivation(Panel, bool)** - Control panel activation
+
+**UIManager Pattern (from project context):**
+- Uses `ElementHost` for WinForms-WPF bridge
+- Registers docked/floating panels for each module
+- Integrates with ribbon commands
+
+---
+
+### 8. IMPORT/EXPORT FILE I/O
+
+**ImportOptions** - Detailed import configuration
+- `CreateExternalAssembly` - Each part in separate document
+- `UseMatchingDocuments` - Use existing .scdoc files
+- `Completeness` - ImportCompleteness enum:
+  - `Structure` - Assembly structure only
+  - `StructureAndRendering` - Add body rendering
+  - `StructureAndRenderingWithBackup` - With backup .scdoc files
+  - `Everything` - Full import
+- `CleanUpBodies`, `StitchSurfaces`, `StitchTolerance`
+- `ImportCurves`, `ImportPoints`, `ImportNames`
+- `ImportPlanes`, `ImportAxes`, `ImportCoordinateSystems`
+- `ImportHiddenComponentsAndGeometry`
+
+**ExportOptions** - Export configuration
+- `CleanUpBodies` - Simplify geometry
+- `ExportNames` - Include object names
+- Format-specific options: `Acis`, `Parasolid`, `Catia`, `Step`, `Stl`, `Obj`
+
+**Document.Open(string path, ImportOptions)** - Import with options
+**Part.Export(PartExportFormat, string path, bool overwrite, ExportOptions)** - Export with options
+
+**Supported Formats:**
+- STEP, STL, OBJ, ACIS, Parasolid, CATIA, FMD, Workbench, Fluent
+
+---
+
+### 9. INTERACTION CONTEXT
+
+**InteractionContext** - Coordinate space mapping system
+- Maps between scene-space and context-space
+- Handles transformations for instances (components in assemblies, drawing views, etc.)
+
+**Properties:**
+- `Window` - Parent window
+- `Context` - Context-space root object
+- `ContextRoot`, `ActiveContextRoot` - Scene-space roots
+- `TransformToContext`, `TransformToScene` - Transformation matrices
+- `Root` - Context root object
+- `ActivePart` - Current part being edited
+- `ActiveDatum` - Current datum plane
+- `DesignCurveParent` - Where new curves are created
+- `SectionPlane` - Current section plane
+- `VisibleBodies` - All visible bodies
+
+**Mapping Methods:**
+- `MapToContext<T>(IDocObject)` - Map scene→context
+- `MapToContext<T>(ICollection<T>)` - Map collection scene→context
+- `MapToScene<T>(IDocObject)` - Map context→scene
+- `MapToScene<T>(ICollection<T>)` - Map collection context→scene
+
+**Selection Methods:**
+- `GetSelectionPoint(IDocObject)` - Hit point for clicked selection
+- `SelectById(string[])`, `SecondarySelectById(string[])`, `SelectByGroup(string[])`
+
+---
+
+### 10. WINDOW CLASS
+
+**Window** - Main interaction window
+- `ActiveWindow` - Currently active window (static)
+- `ActiveContext` - Context for active user work
+- `SceneContext` - Context for scene-space (no filtering)
+- `GetContext(IDocObject)` - Context for specific object
+- `SetTool(Tool)` - Set active tool
+- Tools work with context-space rays: `(Point cursorPos, Line cursorRay)`
+
+---
+
+## Key Design Patterns
+
+1. **Master-Occurrence:** Objects have masters (in part space) and occurrences (in assembly/view space)
+2. **Interaction Context:** Tools operate in context-space (not scene-space) for proper coordinate handling
+3. **Attribute Namespacing:** Use "AddInName.PropertyName" to avoid collisions
+4. **Transaction Wrapping:** All modifications use `WriteBlock.ExecuteTask()` for undo
+5. **Ribbon/Command Integration:** Commands link UI to code; text/images from localization
+6. **Write Block Protection:** Prevents data model changes during interactive operations like dragging
+
+This comprehensive API provides the foundation for the AESCConstruct2026 add-in's structural modeling features across frame generation, fasteners, plates, connectors, rib cutouts, engraving, and custom components.
+
+
+================================================================================
+SOURCE: Line 148 - Tool Result
+================================================================================
+
+Perfect! I now have comprehensive information. Let me compile the findings into a well-organized report:
+
+## SpaceClaim API V242 - Key Classes and API Members
+
+Based on the SpaceClaim.Api.V242.xml documentation file, here are the most important/commonly-used API members for an AddIn developer:
+
+---
+
+### 1. APPLICATION-LEVEL CLASSES
+
+#### **Application**
+Core API entry point for controlling SpaceClaim.
+
+**Key Properties:**
+- `MainWindow` - Window for displaying modal dialogs
+- `UndoSteps`, `RedoSteps` - Undo/redo management
+- `Version` - SpaceClaim version
+- `UserOptions` - Current user options
+- `IsVisible`, `IsRibbonMinimized` - UI visibility control
+- `TitleBarPrefix`, `TitleBarSuffix` - Customize window title
+
+**Key Methods:**
+- `Undo(int)`, `Redo(int)` - Undo/redo operations
+- `PurgeUndo(int)` - Clear undo history
+- `Exit()` - Exit SpaceClaim
+- `BringToFront()` - Bring to front
+- `ReportStatus(string, StatusMessageType, Task)` - Display status messages
+- `CheckLicense(string)` - Check license existence
+- `AddPropertyDisplay(PropertyDisplay)` - Add property panel
+- `AddPanelContent(Command, Control, Panel)` - Replace panel content
+- `ShowPanel(Panel, bool)` - Show/hide panels
+- `AddFileHandler(FileOpenHandler)` / `AddFileHandler(FileSaveHandler)` - Custom file formats
+- `AddSelectionHandler<T>(SelectionHandler<T>)` - Custom selection behavior
+- `AddCommandFilter(NativeCommand, CommandFilter)` - Filter native commands
+- `RunScript(string)` - Execute scripts (.scscript, .py)
+- `ExecuteOnMainThread(Task)` - Execute async on main thread
+
+**Key Events:**
+- `ExitProposed`, `ExitAgreed` - Application exit lifecycle
+- `ContextMenuOpening`, `RadialMenuOpening` - Menu events
+- `SessionChanged`, `SessionRolled`, `SessionRolledIncremental` - Session changes
+
+---
+
+#### **Document**
+Represents a SpaceClaim document containing parts, bodies, curves, and design objects.
+
+**Key Properties:**
+- `MainPart` - Primary part in document
+- `Parts` - All parts in document
+- `Symbols` - Design symbols (XY plane sketches)
+- `DrawingSheets` - Drawing sheets collection
+- `Layers` - Layer management
+- `DefaultLayer` - Default layer for new objects
+- `Materials` - Material library
+- `Units` - Document unit system
+- `Path` - Full file path
+- `IsModified` - Needs saving
+- `IsComplete` - Fully loaded (not lightweight)
+- `IsRemoved` - Removed from session
+
+**Key Methods:**
+- `Create()` - Create new document
+- `Open(string, ImportOptions)` - Open/import file
+- `Load(string)` - Load without displaying windows
+- `Save()`, `SaveAs(string)`, `SaveAsSnapshot(string)` - Save operations
+- `DeleteObjects<T>(ICollection<T>)` - Batch delete
+- `InternalizeParts(ICollection<Part>, bool)` - Copy external parts
+- `ExternalizeParts(ICollection<Part>, string)` - Save parts to files
+- `GetLayer(string)` - Get layer by name
+- `GetReferencedDocuments(bool)` - Get referenced documents
+- `PurgeUndo(int)` - Clear undo history
+
+**Key Events:**
+- `DocumentAdded`, `DocumentRemoved` - Document lifecycle
+- `DocumentOpened`, `DocumentClosed` - Window lifecycle
+- `DocumentSaving`, `DocumentSaved` - Save operations
+- `DocumentChanged` - Content changed
+- `CustomPropertiesChanged` - Properties modified
+- `DocumentCompleted` - Lightweight loading finished
+
+---
+
+#### **Window**
+Graphics window displaying a Part or DrawingSheet.
+
+**Key Properties:**
+- `Scene` - Current part or drawing sheet
+- `Document` - Parent document
+- `ActiveWindow` - Currently active window (static)
+- `AllWindows` - All open windows (static)
+- `ActiveContext` - Interaction context for selection
+- `SceneContext` - Scene-space context
+- `SelectionFilter` - Selection type filtering
+- `IsVisible` - Window visibility
+- `HomeProjection` - Default view orientation
+- `Projection` - Current view matrix
+- `Split` - Window split arrangement
+- `IsViewProjectionLocked` - Lock view manipulation
+
+**Key Methods:**
+- `Create(Part, bool)` - Create window for part
+- `Create(DrawingSheet)` - Create window for sheet
+- `CreateEmbedded(Part, EmbeddedWindowHandler)` - Embedded window
+- `Copy()` - Create duplicate window
+- `GetWindows(Document)` - Get windows for document
+- `GetWindows(Part)`, `GetWindows(DrawingSheet)` - Get windows for scene
+- `GetContext(IDocObject)` - Get context for object
+- `ZoomExtents()` - Fit scene to window
+- `ZoomSelection()` - Fit selection to window
+- `SetProjection(Matrix, bool, bool)` - Set view by matrix
+- `SetProjection(Frame, double)` - Set view by plane/size
+- `Close()` - Close window
+- `Export(WindowExportFormat, string)` - Export view image
+
+**Key Events:**
+- `SelectionChanged`, `WindowSelectionChanged` - Selection changes
+- `PreselectionChanged`, `WindowPreselectionChanged` - Highlight changes
+- `WindowOpened`, `WindowClosed` - Window lifecycle
+- `WindowCloseProposed`, `WindowCloseAgreed` - Close confirmation
+- `ActiveWindowChanged` - Active window changed
+- `ActiveToolChanged` - Tool changed
+- `InteractionModeChanged` - Interaction mode changed
+
+---
+
+### 2. STRUCTURAL DESIGN CLASSES
+
+#### **Part** (Master object, root of hierarchy)
+A piece part or assembly containing components and design bodies.
+
+**Key Properties:**
+- `Components` - Sub-assemblies/components
+- `Bodies` - Design bodies (solids and surfaces)
+- `Curves` - Design curves (construction, sketch)
+- `CoordinateSystems` - Reference frames
+- `DatumPlanes`, `DatumLines`, `DatumPoints` - Reference geometry
+- `DatumFeatures` - Combined reference features
+- `Beams` - Structural beams
+- `Meshes` - Design meshes
+- `SpotWeldJoints`, `FilletWelds`, `Bolts` - Fasteners/welds
+- `MatingConditions` - Assembly constraints
+- `CustomProperties` - Part properties
+- `IsEmpty` - Contains no design bodies
+- `SheetMetal` - Sheet metal properties (if applicable)
+- `AppearanceStates` - Visual states
+
+**Key Methods:**
+- `Create(Document, string)` - Create new part
+- `Export(PartExportFormat, string, bool, ExportOptions)` - Export to CAD format
+- `ConvertToSheetMetal()` - Convert to sheet metal
+- `ConvertToSheetMetal(ICollection<DesignFace>)` - With seed faces
+- `CreateBeamProfile(Document, string, Profile)` - Create beam profile
+- `TryGetCollision(ICollection<IDesignFace>, ICollection<IDesignFace>, ...)` - Collision detection
+- `GetDesignCurvesInPlane(Plane)` - Get curves in plane
+- `IsSketchCurve(DesignCurve)`, `SetSketchCurve(DesignCurve, bool)` - Sketch curve management
+
+---
+
+#### **Component** (Assembly instance)
+References a Part template with placement transformation.
+
+**Key Properties:**
+- `Template` - Referenced part master
+- `Parent` - Parent part master
+- `Content` - Component's design bodies/curves
+- `Components` - Child components
+- `Placement` - Transform matrix (rotation/translation only)
+- `Name` - Component name
+
+**Key Methods:**
+- `Create(Part, Part)` - Create component instance
+- `CreateFromFile(Part, string, ImportOptions)` - Import from file
+- `ReplaceFromFile(string)` - Replace template part
+- `Transform(Matrix)` - Apply transformation
+
+---
+
+#### **DesignBody** (Solid or surface)
+Represents geometry with design intent (solid or surface body).
+
+**Key Properties:**
+- `Parent` - Parent part
+- `Faces` - Design faces collection
+- `Edges` - Design edges collection
+- `Shape` - Underlying modeler body
+- `Material` - Body material
+- `SurfaceMaterial` - Surface appearance
+- `MassProperties` - Volume, mass, centroid
+- `Layer` - Layer assignment
+- `Style`, `FinishStyle`, `RenderingStyle` - Display styles
+- `IsLocked` - Prevent modification
+- `VolumeExtraction`, `Enclosure`, `MidSurface` - Special aspects
+- `CanSuppress`, `IsSuppressed` - Suppression state
+
+**Key Methods:**
+- `Create(Part, string, Modeler.Body)` - Create from modeler body
+- `GetDesignFace(Modeler.Face)` - Get design face wrapper
+- `GetDesignEdge(Modeler.Edge)` - Get design edge wrapper
+- `GetDesignBody(Modeler.Body)` - Static: get design body for modeler body
+- `IdentifyHoles(IdentifyHoleOptions)` - Find holes
+- `Save(BodySaveFormat, string)` - Save body to file
+- `GetTessellation(ICollection<Modeler.Face>)` - Get faceted display
+- `GetTessellationBoundingBox(Matrix, bool)` - Bounding box from tessellation
+- `Transform(Matrix)` - Apply transformation
+- `Scale(Frame, double, double, double)` - Non-uniform scaling
+
+---
+
+#### **DesignFace** (Surface element)
+A face on a design body with surface properties.
+
+**Key Properties:**
+- `Parent` - Parent design body
+- `Edges` - Boundary design edges
+- `AdjacentFaces` - Connected design faces
+- `Shape` - Underlying modeler face
+- `Area`, `Perimeter` - Geometric properties
+- `ExportIdentifier` - Export ID attribute
+- `SurfaceMaterial` - Surface appearance
+
+**Key Methods:**
+- None (most operations through parent body)
+
+---
+
+#### **DesignEdge** (Curve element)
+An edge on a face of a design body.
+
+**Key Properties:**
+- `Parent` - Parent design body
+- `Faces` - Adjacent design faces
+- `Shape` - Underlying modeler edge
+- `ExportIdentifier` - Export ID
+
+---
+
+#### **DesignCurve** (Standalone curve)
+Construction or sketch curve not part of a body.
+
+**Key Properties:**
+- `Parent` - Parent part or datum plane
+- `Shape` - Underlying curve geometry
+- `IsConstruction` - Sketch vs. construction
+- `Layer` - Layer assignment
+- `IsLocked` - Prevent modification
+
+**Key Methods:**
+- `Create(IDesignCurveParent, ITrimmedCurve)` - Create design curve
+- `Copy()` - Duplicate curve
+- `GetLineWeight(IAppearanceContext)` / `SetLineWeight(...)` - Line appearance
+- `GetLineStyle(IAppearanceContext)` / `SetLineStyle(...)` - Line style
+- `GetColor(IAppearanceContext)` / `SetColor(...)` - Color
+- `Transform(Matrix)` - Apply transformation
+- `Scale(Frame, double, double, double)` - Scale
+
+---
+
+#### **CoordinateSystem**
+Reference frame with origin and XYZ axes.
+
+**Key Properties:**
+- `Frame` - Origin and axes
+- `Axes` - X, Y, Z directions
+- `IsReadOnly` - Cannot modify
+- `IsLeftHanded` - Display as left-handed
+- `IsLocked` - Prevent modification
+
+**Key Methods:**
+- `Create(Part, string, Frame)` - Create coordinate system
+- `GetAxis(AxisType)` - Get specific axis
+- `Transform(Matrix)` - Apply transformation
+
+---
+
+### 3. MODELER CLASSES (Low-level geometry)
+
+#### **Modeler.Body** (Geometric shape)
+Underlying geometry kernel body (Parasolid/ACIS).
+
+**Key Properties:**
+- `IsClosed` - Solid vs. open
+- `IsManifold` - Manifold topology
+- `PieceCount` - Number of disjoint pieces
+
+**Key Methods:**
+- `Copy()` / `Copy(IDictionary<Face,Face>, IDictionary<Edge,Edge>)` - Deep copy
+- `CopyFaces(ICollection<Face>)` - Copy specific faces
+- `SeparatePieces()` - Separate disjoint pieces
+- `SeparateNonManifold()` - Separate non-manifold portions
+- `CombinePieces(ICollection<Body>)` - Combine disjoint bodies
+- **Boolean Operations:**
+  - `Unite(ICollection<Body>)` - Union
+  - `Subtract(ICollection<Body>)` - Difference
+  - `Intersect(ICollection<Body>)` - Intersection
+- `Fuse(ICollection<Body>, bool, Tracker)` - Topological fusion (no trimming)
+- `Imprint(Body)` - Imprint intersection edges
+- `ImprintCurves(ICollection<ITrimmedCurve>, ICollection<Face>)` - Create edges from curves
+- `GetIntersections(Body)` - Get intersection geometry
+- `GetTessellation(ICollection<Face>, TessellationOptions)` - Faceted representation
+- `RoundEdges(ICollection<KeyValuePair<Edge, EdgeRound>>)` - Fillet/round edges
+- `GetNormal(Point, out Direction)` - Surface normal at point
+- `Save(BodySaveFormat, string)` - Save to file
+- **Static methods:**
+  - `CreatePlanarBody(Plane, ICollection<ITrimmedCurve>)` - Flat profile from curves
+  - `CreateBox(Frame, double, double, double)` - Box primitive
+  - `CreateSphere(Point, double)` - Sphere primitive
+  - `CreateCylinder(Frame, double, double)` - Cylinder primitive
+  - `CreateCone(Frame, double, double, double)` - Cone primitive
+  - `CreateTorus(Frame, double, double)` - Torus primitive
+
+---
+
+#### **Modeler.Face** (Surface)
+Surface boundary with loops and edges.
+
+**Key Properties:**
+- `Edges` - Boundary edges
+- `Loops` - Edge loops (outer and inner)
+- `AdjacentFaces` - Connected faces
+- `Shell` - Parent shell
+- `Area`, `Perimeter` - Geometric properties
+- `Geometry` - Surface curve (Plane, Cylinder, Cone, Sphere, Torus, Spline, etc.)
+- `BoxUV` - Parameter space bounds
+- `IsReversed` - Opposite surface normal sense
+
+**Key Methods:**
+- `GetAdjacentFace(Edge)` - Face on other side of edge
+- `ProjectPoint(Point)` - Project point to surface
+- `ContainsParam(PointUV)` - Point in parameter space
+- `IntersectCurve(ITrimmedCurve)` - Curve-surface intersection
+- `IntersectCurves(IList<ITrimmedCurve>)` - Multiple curve intersections
+- `ImprintCurves(ICollection<ITrimmedCurve>)` - Create edges from curves
+- `GetClosestSeparation(ITrimmedGeometry)` - Minimum distance
+- `GetBoundingBox(Matrix, bool)` - Bounding box
+
+---
+
+#### **Modeler.Edge** (Curve segment)
+Boundary curve between vertices.
+
+**Key Properties:**
+- `Faces` - Adjacent faces (1 or 2)
+- `Fins` - Face-edge associations
+- `StartVertex`, `EndVertex` - Endpoints (open/closed/ring)
+- `StartPoint`, `EndPoint` - Point positions
+- `Shell` - Parent shell
+- `Length` - Curve length
+- `Bounds` - Parameter interval
+- `Geometry` - Curve type (Line, Circle, Ellipse, Spline, etc.)
+- `IsSmooth` - Tangent continuous between faces
+- `IsConcave` - Concave vs. convex
+- `IsReversed` - Opposite curve direction
+- `Precision` - Tolerance (if tolerant edge)
+
+**Key Methods:**
+- `ProjectPoint(Point)` - Project point to curve
+- `IntersectCurve(ITrimmedCurve)` - Curve-curve intersection
+- `Offset(Plane, double)` - Offset curve
+- `OffsetChain(...)` - Offset chain of curves
+- `GetPolyline(PolylineOptions)` - Polyline approximation
+- `GetClosestSeparation(ITrimmedGeometry)` - Minimum distance
+
+---
+
+#### **Modeler.Vertex** (Point)
+3D point in topology.
+
+**Key Properties:**
+- `Position` - 3D coordinates
+- `Faces` - Adjacent faces
+- `Edges` - Incident edges
+- `Shell` - Parent shell
+- `Precision` - Tolerance
+
+---
+
+#### **Modeler.Loop**
+Connected boundary of a face.
+
+**Key Properties:**
+- `Face` - Parent face
+- `Fins` - Oriented edges
+- `Edges` - All edges
+- `Vertices` - All vertices
+- `IsOuter` - Outer vs. inner loop
+
+---
+
+#### **Modeler.Shell**
+Collection of connected faces.
+
+**Key Properties:**
+- `Faces` - All faces
+- `Edges` - All edges
+- `Vertices` - All vertices
+- `Type` - Outer/Inner/General
+
+---
+
+### 4. GEOMETRY CLASSES
+
+#### **Geometry.Point**
+3D point coordinates.
+
+**Key Methods:**
+- `Distance(Point)` - Distance between points
+- `Plus(Vector)` - Point + vector
+- `Minus(Point)` - Point difference (vector)
+- `Minus(Vector)` - Point - vector
+
+---
+
+#### **Geometry.Direction**
+Unit direction vector.
+
+**Key Properties:**
+- `IsZero` - Indeterminate direction
+- `UnitVector` - Normalized direction
+- `ArbitraryPerpendicular` - Perpendicular direction
+
+**Key Methods:**
+- `Cross(Direction, Direction)` - Cross product
+- Constructor operators for creating directions
+
+---
+
+#### **Geometry.Vector**
+Displacement vector.
+
+**Key Methods:**
+- Magnitude, arithmetic operations
+- Dot product, cross product
+
+---
+
+#### **Geometry.Frame**
+Local coordinate system (origin + XYZ axes).
+
+**Key Properties:**
+- `Origin` - Position
+- `DirX`, `DirY`, `DirZ` - Axis directions
+
+**Key Methods:**
+- `Create(Point, Direction, Direction)` - From origin and X,Y directions
+- `Create(Point, Direction)` - From origin and Z direction (auto X,Y)
+
+---
+
+#### **Geometry.Line**
+Infinite line.
+
+**Key Properties:**
+- `Origin` - Reference point
+- `Direction` - Line direction
+
+**Key Methods:**
+- `Create(Point, Direction)` - From origin and direction
+- `CreateThroughPoints(Point, Point)` - Through two points
+- `CreateTangentToTwo(Plane, CurveParam, CurveParam)` - Tangent to two curves
+- `CreateTangentToOne(...)` - Tangent to one curve
+
+---
+
+#### **Geometry.Curve**
+3D curve (abstract base for all curves).
+
+**Key Properties:**
+- `Parameterization` - Parameter bounds and periodicity
+- `IsPeriodic` - Closed/periodic curve
+
+**Key Methods:**
+- `Evaluate(double)` - Point and tangent at parameter
+- `ProjectPoint(Point)` - Closest point
+- `GetLength(Interval)` - Arc length
+- `GetPolyline(Interval, PolylineOptions)` - Discretized points
+- `IntersectCurve(Curve)` - Intersection points
+- `ContainsParam(double)` - Valid parameter
+- `AsSpline(Interval)` - NURBS approximation
+- `op_Multiply(Matrix, Curve)` - Transform
+
+**Concrete types:**
+- **Line** - Infinite straight line
+- **Circle** - Circular arc
+- **Ellipse** - Elliptical arc
+- **Spline** - NURBS curve
+
+---
+
+#### **Geometry.Matrix**
+4x4 transformation matrix (pre-multiplication).
+
+**Key Properties:**
+- `IsIdentity`, `HasTranslation`, `HasScale`, `HasRotation`, `IsMirror`
+- `Translation` - Translation component
+- `Scale` - Scale factor
+- `Rotation` - Rotation component
+
+**Key Methods:**
+- `CreateTranslation(Vector)` - Translation matrix
+- `CreateScale(double)` / `CreateScale(double, Point)` - Scaling
+- `CreateRotation(Line, double)` - Rotation about axis
+- `CreateMapping(Frame)` - Transform to frame
+- `Decompose(...)` - Extract T, S, R components
+- Arithmetic operations (multiply, inverse)
+
+---
+
+#### **Geometry.Plane**
+Infinite plane with origin and normal.
+
+**Key Properties:**
+- `Origin` - Point on plane
+- `Normal` - Surface normal direction
+- `Frame` - Full coordinate system on plane
+
+---
+
+#### **Geometry.ITrimmedCurve**
+Bounded curve segment with endpoints.
+
+**Key Properties:**
+- `Geometry` - Underlying curve
+- `StartPoint`, `EndPoint` - Endpoints
+- `Length` - Arc length
+- `Bounds` - Parameter interval
+- `IsReversed` - Reversed sense
+
+**Key Methods:**
+- `ProjectPoint(Point)` - Project point
+- `IntersectCurve(ITrimmedCurve)` - Intersection
+- `Offset(Plane, double)` - Offset distance
+- `Offset(Plane, CurveParam)` - Offset by parameter
+- `OffsetChain(...)` - Offset multiple curves
+- `GetPolyline(PolylineOptions)` - Discretization
+- `IsCoincident(ITrimmedCurve)` - Coincident test
+- `ProjectToPlane(Plane)` - Project to plane
+
+**Concrete type:**
+- **CurveSegment** - Line, arc, spline segment
+
+---
+
+### 5. INTERACTION AND SELECTION
+
+#### **InteractionContext**
+Scene interaction state (selection, preselection, etc.).
+
+**Key Properties:**
+- `Selection` - Currently selected objects
+- `Preselection` - Highlighted object (mouse hover)
+- `Scene` - Current part or sheet
+
+**Key Methods:**
+- `SelectObjects(ICollection<DocObject>)` - Set selection
+- `ClearSelection()` - Deselect all
+
+---
+
+#### **SelectionHandler<T>**
+Custom selection behavior for object type T.
+
+**Key Methods:**
+- Handle selection of custom types
+
+---
+
+### 6. KEY ENUMS & CONSTANTS
+
+**SelectionFilterType**
+- `Smart`, `All`, `Parts`, `Bodies`, `Faces`, `Edges`, `Vertices`, `Curves`, `Points`, `Annotations`, `References`
+- Combine with bitwise OR
+
+**Panel** (Built-in panels)
+- `Properties`, `Structure`, `Resources`, `Notes`, `Assembly`, `UnusedBodies`, `References`
+
+**PartExportFormat**
+- `Parasolid`, `IGES`, `STEP`, `ACIS`, `DXF`, `STL`, `SAT`, `PDF`
+
+**BodySaveFormat**
+- `Text`, `Binary`
+
+**WindowExportFormat**
+- `Png`, `Jpg`, `Bmp`, `Tiff`, `Pdf`
+
+---
+
+### 7. COMMON WORKFLOW PATTERNS
+
+**Access the SpaceClaim API:**
+```csharp
+// From IExtensibility.Connect()
+SpaceClaim.Api.V242.Application app = connection.Application;
+SpaceClaim.Api.V242.Document doc = app.ActiveDocument;
+SpaceClaim.Api.V242.Window win = app.ActiveWindow;
+InteractionContext context = win.ActiveContext;
+```
+
+**Create geometry:**
+```csharp
+Part part = Part.Create(doc, "MyPart");
+Point pt = Point.Create(0, 0, 0);
+Direction dir = Direction.Create(1, 0, 0);
+Line line = Line.Create(pt, dir);
+ITrimmedCurve segment = CurveSegment.Create(pt, Point.Create(10, 0, 0));
+Modeler.Body box = Modeler.Body.CreateBox(Frame.Create(pt, Direction.Create(1,0,0), Direction.Create(0,1,0)), 5, 5, 5);
+DesignBody body = DesignBody.Create(part, "Box", box);
+```
+
+**Boolean operations:**
+```csharp
+Modeler.Body target = /* source body */;
+Modeler.Body tool = /* tool body */;
+target.Unite(new[] { tool }); // Union
+target.Subtract(new[] { tool }); // Difference
+target.Intersect(new[] { tool }); // Intersection
+```
+
+---
+
+This covers the essential SpaceClaim V242 API for AddIn development, focusing on the structures and operations most commonly used for frame generation, fasteners, connectors, and structural modeling features.

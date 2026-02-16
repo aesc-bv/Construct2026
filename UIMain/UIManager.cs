@@ -1,11 +1,11 @@
 ﻿/*
- UIManager centralizes registration and localization of Construct25 sidebar commands
+ UIManager centralizes registration and localization of Construct2026 sidebar commands
  and manages their hosting either as docked SpaceClaim panels or in a floating WPF window.
 */
 
-using AESCConstruct25.FrameGenerator.UI;
-using AESCConstruct25.Licensing;
-using AESCConstruct25.UI;
+using AESCConstruct2026.FrameGenerator.UI;
+using AESCConstruct2026.Licensing;
+using AESCConstruct2026.UI;
 using SpaceClaim.Api.V242;
 using System;
 using System.Drawing;
@@ -29,7 +29,7 @@ using WpfControlTemplate = System.Windows.Controls.ControlTemplate;
 
 
 
-namespace AESCConstruct25.UIMain
+namespace AESCConstruct2026.UIMain
 {
     public static class UIManager
     {
@@ -50,15 +50,15 @@ namespace AESCConstruct25.UIMain
         private static ConnectorControl _connectorControl;
 
         // Command names
-        public const string ProfileCommand = "AESCConstruct25.ProfileSidebar";
-        public const string SettingsCommand = "AESCConstruct25.SettingsSidebar";
-        public const string PlateCommand = "AESCConstruct25.Plate";
-        public const string FastenerCommand = "AESCConstruct25.Fastener";
-        public const string RibCutOutCommand = "AESCConstruct25.RibCutOut";
-        public const string CustomPropertiesCommand = "AESCConstruct25.CustomProperties";
-        public const string EngravingCommand = "AESCConstruct25.EngravingControl";
-        public const string ConnectorCommand = "AESCConstruct25.ConnectorSidebar";
-        public const string DockToggleCommand = "AESCConstruct25.DockCmd";
+        public const string ProfileCommand = "AESCConstruct2026.ProfileSidebar";
+        public const string SettingsCommand = "AESCConstruct2026.SettingsSidebar";
+        public const string PlateCommand = "AESCConstruct2026.Plate";
+        public const string FastenerCommand = "AESCConstruct2026.Fastener";
+        public const string RibCutOutCommand = "AESCConstruct2026.RibCutOut";
+        public const string CustomPropertiesCommand = "AESCConstruct2026.CustomProperties";
+        public const string EngravingCommand = "AESCConstruct2026.EngravingControl";
+        public const string ConnectorCommand = "AESCConstruct2026.ConnectorSidebar";
+        public const string DockToggleCommand = "AESCConstruct2026.DockCmd";
 
         private static Thread _floatingThread;
         private static Dispatcher _floatingDispatcher;

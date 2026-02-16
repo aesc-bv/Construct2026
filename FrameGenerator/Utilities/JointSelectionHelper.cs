@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class JointSelectionHelper
     {

@@ -8,7 +8,7 @@ using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class ProfileSelectionHelper
     {

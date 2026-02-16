@@ -4,7 +4,7 @@
  that is enabled when a SpaceClaim document window is active.
 */
 
-using AESCConstruct25.UI;                         // for RibCutOutControl
+using AESCConstruct2026.UI;                         // for RibCutOutControl
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;          // for CommandCapsule, ExecutionContext
 using System.Drawing;                             // for Rectangle
@@ -13,11 +13,11 @@ using System.Windows.Forms.Integration;           // for ElementHost
 using Application = SpaceClaim.Api.V242.Application;
 using Panel = SpaceClaim.Api.V242.Panel;
 
-namespace AESCConstruct25.RibCutout.Commands
+namespace AESCConstruct2026.RibCutout.Commands
 {
     class KruisRibCmd : CommandCapsule
     {
-        public const string CommandName = "AESCConstruct25.RibCutOut.KruisRib";
+        public const string CommandName = "AESCConstruct2026.RibCutOut.KruisRib";
 
         private RibCutOutControl _ribCutControl;
         private ElementHost _ribCutHost;

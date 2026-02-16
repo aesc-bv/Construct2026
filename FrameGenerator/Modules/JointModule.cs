@@ -8,7 +8,7 @@
  - Providing joint-specific reset logic (per half/side) used by miter and straight joints.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -20,7 +20,7 @@ using Application = SpaceClaim.Api.V242.Application;
 using Component = SpaceClaim.Api.V242.Component;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
-namespace AESCConstruct25.FrameGenerator.Modules
+namespace AESCConstruct2026.FrameGenerator.Modules
 {
     public static class JointModule
     {

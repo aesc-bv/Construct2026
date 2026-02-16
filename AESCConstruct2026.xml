@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <AddIns>
   <AddIn
-    name="AESC Construct 25"
+    name="AESC Construct 2026"
     description="A custom add-in for SpaceClaim."
-    assembly="AESCConstruct25.dll"
-    typename="AESCConstruct25.Construct25"
+    assembly="AESCConstruct2026.dll"
+    typename="AESCConstruct2026.Construct2026"
     host="NewAppDomain" />
 </AddIns>

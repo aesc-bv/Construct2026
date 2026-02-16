@@ -1,9 +1,9 @@
 ﻿using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
-using AESCConstruct25.FrameGenerator.Utilities; // Logger.Log
+using AESCConstruct2026.FrameGenerator.Utilities; // Logger.Log
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public class UProfile : ProfileBase
     {
@@ -312,7 +312,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 //using SpaceClaim.Api.V242.Geometry;
 //using System.Collections.Generic;
 
-//namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+//namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 //{
 //    public class UProfile : ProfileBase
 //    {
@@ -338,7 +338,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
 //            this.offsetY = offsetY;
 //            this.isUPN = isUPN;
 
-//            // Logger.Log($"AESCConstruct25: Generating U Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+//            // Logger.Log($"AESCConstruct2026: Generating U Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
 //        }
 
 //        public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)

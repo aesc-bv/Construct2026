@@ -1,7 +1,7 @@
 ﻿using SpaceClaim.Api.V242.Geometry;
 using System.Collections.Generic;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public class HProfile : ProfileBase
     {
@@ -25,7 +25,7 @@ namespace AESCConstruct25.FrameGenerator.Modules.Profiles
             this.offsetX = offsetX;
             this.offsetY = offsetY;
 
-            // Logger.Log($"AESCConstruct25: Generating H Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
+            // Logger.Log($"AESCConstruct2026: Generating H Profile {width}x{height}, Web: {webThickness}, Flange: {flangeThickness}, InnerRadius: {innerCornerRadius}, OuterRadius: {outerCornerRadius}\n");
         }
 
         public override ICollection<ITrimmedCurve> GetProfileCurves(Plane profilePlane)

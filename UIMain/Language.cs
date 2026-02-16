@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace AESCConstruct25.Localization
+namespace AESCConstruct2026.Localization
 {
     public static class Language
     {

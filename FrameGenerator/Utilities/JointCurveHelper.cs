@@ -31,7 +31,7 @@ using System.Linq;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class JointCurveHelper
     {

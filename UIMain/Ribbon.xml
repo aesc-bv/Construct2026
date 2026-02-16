@@ -5,18 +5,18 @@
 	<!-- xsi:schemaLocation="http://schemas.spaceclaim.com/customui http://schemas.spaceclaim.com/customui/SpaceClaimCustomUI.V242.xsd"> -->
 	<ribbon>
 		<tabs>
-			<tab id="AESCConstruct25.Tab" label="AESC Construct">
+			<tab id="AESCConstruct2026.Tab" label="AESC Construct">
 				<!-- Frame Generator group -->
-				<group id="AESCConstruct25.Group" getLabel="GetRibbonLabel" verticalAlign="top">
+				<group id="AESCConstruct2026.Group" getLabel="GetRibbonLabel" verticalAlign="top">
 					<!--label="Frame Generator"-->
-					<button id="AESCConstruct25.ProfileSidebarBtn"
-							command="AESCConstruct25.ProfileSidebar"
+					<button id="AESCConstruct2026.ProfileSidebarBtn"
+							command="AESCConstruct2026.ProfileSidebar"
 							getLabel="GetRibbonLabel"
 							size="large"
 							Enabled="False"/>
 				</group>
 
-				<group id="AESCConstruct25.ToolsGroup" getLabel="GetRibbonLabel">
+				<group id="AESCConstruct2026.ToolsGroup" getLabel="GetRibbonLabel">
 					<container id="AESC.Construct.SketchToolGroupContainer"
 					   layoutOrientation="horizontal"
 					   isGroup="false">
@@ -65,96 +65,96 @@
 							style="imageOnly"/>
 				</group>
 
-				<group id="AESCConstruct25.ExportGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.ExportSTEPBtn"
-							command="AESCConstruct25.ExportSTEP"
+				<group id="AESCConstruct2026.ExportGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.ExportSTEPBtn"
+							command="AESCConstruct2026.ExportSTEP"
 							getLabel="GetRibbonLabel"
 							size="large"
 							style="imageandtext"/>
-					<button id="AESCConstruct25.CompareBodiesBtn"
-							  command="AESCConstruct25.CompareBodies"
+					<button id="AESCConstruct2026.CompareBodiesBtn"
+							  command="AESCConstruct2026.CompareBodies"
 							  getLabel="GetRibbonLabel"
 							  size="large"
 							  style="imageandtext"/>
-					<button id="AESCConstruct25.ExportBOMBtn"
-							command="AESCConstruct25.ExportBOM"
+					<button id="AESCConstruct2026.ExportBOMBtn"
+							command="AESCConstruct2026.ExportBOM"
 							getLabel="GetRibbonLabel"
 							size="large"
 							style="imageandtext"/>
 					<button style=""
-							id="AESCConstruct25.BOMMenu">
-						<button id="AESCConstruct25.UpdateBOM"
-								command="AESCConstruct25.UpdateBOM"
+							id="AESCConstruct2026.BOMMenu">
+						<button id="AESCConstruct2026.UpdateBOM"
+								command="AESCConstruct2026.UpdateBOM"
 								getLabel="GetRibbonLabel"
 								size="large"
 								showLabel="true"/>
-						<button id="AESCConstruct25.ExportExcelBtn"
-								command="AESCConstruct25.ExportExcel"
+						<button id="AESCConstruct2026.ExportExcelBtn"
+								command="AESCConstruct2026.ExportExcel"
 								getLabel="GetRibbonLabel"
 								size="large"
 								style="imageandtext"/>
 					</button>
 				</group>
 
-				<group id="AESCConstruct25.PlateGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.Plate"
-							command="AESCConstruct25.Plate"
+				<group id="AESCConstruct2026.PlateGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.Plate"
+							command="AESCConstruct2026.Plate"
 							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.FastenerGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.Fastener"
-							command="AESCConstruct25.Fastener"
+				<group id="AESCConstruct2026.FastenerGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.Fastener"
+							command="AESCConstruct2026.Fastener"
 							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.ConnectorGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.ConnectorSidebarBtn"
-							command="AESCConstruct25.ConnectorSidebar"
+				<group id="AESCConstruct2026.ConnectorGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.ConnectorSidebarBtn"
+							command="AESCConstruct2026.ConnectorSidebar"
 							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.RibCutOutGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.RibCutOut"
-							command="AESCConstruct25.RibCutOut"
+				<group id="AESCConstruct2026.RibCutOutGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.RibCutOut"
+							command="AESCConstruct2026.RibCutOut"
 							getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.Engraving" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.EngravingBtn"
-							command="AESCConstruct25.EngravingControl"
+				<group id="AESCConstruct2026.Engraving" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.EngravingBtn"
+							command="AESCConstruct2026.EngravingControl"
 							getLabel="GetEngravingLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.CustomProperties" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.CustomPropertiesBtn"
-							command="AESCConstruct25.CustomProperties"
+				<group id="AESCConstruct2026.CustomProperties" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.CustomPropertiesBtn"
+							command="AESCConstruct2026.CustomProperties"
 							getLabel="GetCustomPropertiesLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.ToolGroup" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.SettingsSidebarBtn"
-							command="AESCConstruct25.SettingsSidebar"
+				<group id="AESCConstruct2026.ToolGroup" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.SettingsSidebarBtn"
+							command="AESCConstruct2026.SettingsSidebar"
 							 getLabel="GetRibbonLabel"
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.UI" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.DockBtn"
-						command="AESCConstruct25.DockCmd"
+				<group id="AESCConstruct2026.UI" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.DockBtn"
+						command="AESCConstruct2026.DockCmd"
 						getLabel="GetRibbonLabel"
 						size="large"/>
 				</group>
 
-				<group id="AESCConstruct25.Network" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct25.ActivateNetworkBtn"
-						command="AESCConstruct25.ActivateNetwork"
+				<group id="AESCConstruct2026.Network" getLabel="GetRibbonLabel">
+					<button id="AESCConstruct2026.ActivateNetworkBtn"
+						command="AESCConstruct2026.ActivateNetwork"
 						getLabel="GetRibbonLabel"
 						size="large"/>
 				</group>

@@ -1,4 +1,4 @@
-﻿using AESCConstruct25.Properties;     // Settings.Default
+﻿using AESCConstruct2026.Properties;     // Settings.Default
 using SpaceClaim.Api.V242;           // Component
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class CompNameHelper
     {

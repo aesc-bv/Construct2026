@@ -3,7 +3,7 @@
  for engravings or cut-outs, and delegates the actual operations to EngravingService.
 */
 
-using AESCConstruct25.UIMain;
+using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -12,7 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class EngravingControl : UserControl
     {

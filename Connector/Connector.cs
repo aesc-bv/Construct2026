@@ -1,5 +1,5 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.UI;
+﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.UI;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;

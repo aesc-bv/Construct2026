@@ -1,7 +1,7 @@
 ﻿using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Modeler;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Joints
+namespace AESCConstruct2026.FrameGenerator.Modules.Joints
 {
     public abstract class JointBase
     {

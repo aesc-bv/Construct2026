@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace AESCConstruct25.Properties {
+namespace AESCConstruct2026.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

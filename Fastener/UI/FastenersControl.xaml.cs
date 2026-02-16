@@ -3,8 +3,8 @@
  (bolts, washers, nuts, and optional custom parts) and delegates geometry creation to FastenerModule.
 */
 
-using AESCConstruct25.Fastener.Module;
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.Fastener.Module;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -20,7 +20,7 @@ using Application = SpaceClaim.Api.V242.Application;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class FastenersControl : UserControl, INotifyPropertyChanged
     {
@@ -38,7 +38,7 @@ namespace AESCConstruct25.UI
             }
         }
 
-        const string ImagesFolderPath = @"/AESCConstruct25;component/Fastener/UI/images/";
+        const string ImagesFolderPath = @"/AESCConstruct2026;component/Fastener/UI/images/";
 
         private string _boltImageSource;
         public string BoltImageSource
@@ -134,7 +134,7 @@ namespace AESCConstruct25.UI
                 selectedPath = dlg.FileName;
             }
 
-            // Logger.Log($"AESCConstruct25: Selected custom fastener file – {selectedPath}");
+            // Logger.Log($"AESCConstruct2026: Selected custom fastener file – {selectedPath}");
 
             // Copy into the Custom folder
             var customDir = Path.Combine(

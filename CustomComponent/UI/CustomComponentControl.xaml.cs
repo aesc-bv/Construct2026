@@ -3,8 +3,8 @@
  properties in SpaceClaim based on CSV templates, for both the active document and components.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Properties;
+using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Properties;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
@@ -19,7 +19,7 @@ using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class CustomComponentControl : UserControl
     {

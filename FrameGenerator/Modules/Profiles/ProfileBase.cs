@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Application = SpaceClaim.Api.V242.Application;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Profiles
+namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
     public abstract class ProfileBase
     {

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo view:*)",
+      "Bash(gh auth:*)",
+      "Bash(cd:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git mv:*)",
+      "Bash(done)",
+      "Bash(for file in packages/BetterFolderBrowser.1.2.0/lib/BetterFolderBrowser.dll packages/DocumentFormat.OpenXml.3.3.0/lib/net46/DocumentFormat.OpenXml.dll packages/System.Buffers.4.5.1/lib/net461/System.Buffers.dll)",
+      "Bash(do echo \"Checking: $file\")",
+      "Bash(test:*)",
+      "Bash(python3:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" AESCConstruct2026.sln)",
+      "Bash(powershell -Command \"Get-Item ''C:\\\\Users\\\\dirkv\\\\OneDrive - AESC\\\\Addins\\\\Construct26\\\\packages\\\\DocumentFormat.OpenXml.3.3.0\\\\lib\\\\net46\\\\DocumentFormat.OpenXml.dll'' | Select-Object Name, Length, Attributes\")",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell.exe -NoProfile:*)",
+      "Bash(dotnet nuget:*)",
+      "Bash(curl:*)",
+      "Bash(./nuget.exe restore:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(python:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

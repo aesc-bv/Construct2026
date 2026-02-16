@@ -5,20 +5,20 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows;
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Utilities;
 
-namespace AESCConstruct25.Licensing
+namespace AESCConstruct2026.Licensing
 {
     /// <summary>
     /// Central license integration. Network licenses are considered "valid" only when checked-out.
     /// </summary>
     public static class ConstructLicenseSpot
     {
-        private sealed class Construct25Anchor { }
+        private sealed class Construct2026Anchor { }
         public static bool IsDebugMode { get; set; } = false;
         private static void Debug(string m) { if (IsDebugMode) MessageBox.Show(m, "License Debug"); }
 
-        private static readonly Type AnchorType = typeof(Construct25Anchor);
+        private static readonly Type AnchorType = typeof(Construct2026Anchor);
         private static ExtendedLicense _license;
         public static ExtendedLicense CurrentLicense => _license;
 
@@ -32,7 +32,7 @@ namespace AESCConstruct25.Licensing
         // Preferred license file
         private static readonly string ProgramData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
         private static readonly string BaseDir = Path.Combine(ProgramData, "IPManager");
-        public static readonly string LicenseFilePath = Path.Combine(BaseDir, "AESC_License_Construct25.lic");
+        public static readonly string LicenseFilePath = Path.Combine(BaseDir, "AESC_License_Construct2026.lic");
 
         static Bitmap _active = new Bitmap(new MemoryStream(Resources.Network_Active));
         static Bitmap _inactive = new Bitmap(new MemoryStream(Resources.Network_Inactive));
@@ -281,7 +281,7 @@ namespace AESCConstruct25.Licensing
         {
             try
             {
-                var cmd = Command.GetCommand("AESCConstruct25.ActivateNetwork");
+                var cmd = Command.GetCommand("AESCConstruct2026.ActivateNetwork");
                 if (cmd == null) return;
 
                 var lic = _license;

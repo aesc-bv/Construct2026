@@ -8,9 +8,9 @@
  - Provides helper predicates to detect connectivity and point-on-segment relationships in world space.
 */
 
-using AESCConstruct25.FrameGenerator.Modules;
-using AESCConstruct25.FrameGenerator.Modules.Joints;
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Modules;
+using AESCConstruct2026.FrameGenerator.Modules.Joints;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -20,11 +20,11 @@ using System.Linq;
 using Application = SpaceClaim.Api.V242.Application;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
-namespace AESCConstruct25.FrameGenerator.Commands
+namespace AESCConstruct2026.FrameGenerator.Commands
 {
     class ExecuteJointCommand
     {
-        public const string CommandName = "AESCConstruct25.ExecuteJoint";
+        public const string CommandName = "AESCConstruct2026.ExecuteJoint";
 
         // Validates that the current selection contains at least one target profile and one cutter face, otherwise reports a warning.
         private static bool ValidateTrimSelectionOrAlert(Window window)

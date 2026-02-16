@@ -4,7 +4,7 @@
  and passes validated parameters to PlatesModule.CreatePlateFromUI to build geometry in SpaceClaim.
 */
 
-using AESCConstruct25.Plates.Modules;
+using AESCConstruct2026.Plates.Modules;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.Generic;
@@ -16,9 +16,9 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Application = SpaceClaim.Api.V242.Application;
-using Settings = AESCConstruct25.Properties.Settings;
+using Settings = AESCConstruct2026.Properties.Settings;
 
-namespace AESCConstruct25.UI
+namespace AESCConstruct2026.UI
 {
     public partial class PlatesControl : UserControl, INotifyPropertyChanged
     {
@@ -276,7 +276,7 @@ namespace AESCConstruct25.UI
                 _ => "1"
             };
 
-            SelectedImageSource = $"/AESCConstruct25;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
+            SelectedImageSource = $"/AESCConstruct2026;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
         }
 
         // Parses a string to double using invariant culture, returning 0 on failure.

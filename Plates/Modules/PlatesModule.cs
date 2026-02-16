@@ -4,7 +4,7 @@
  and inserts them as components on selected planar faces in the active SpaceClaim document.
 */
 
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using DocumentFormat.OpenXml.Wordprocessing;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
@@ -20,7 +20,7 @@ using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.Plates.Modules
+namespace AESCConstruct2026.Plates.Modules
 {
     internal class PlatesModule
     {

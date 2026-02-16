@@ -1,4 +1,4 @@
-﻿using AESCConstruct25.FrameGenerator.Utilities;
+﻿using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Unsupported;  // for ScriptEnvironment
@@ -12,7 +12,7 @@ using System.Text;
 using Application = SpaceClaim.Api.V242.Application;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 
-namespace AESCConstruct25.UIMain
+namespace AESCConstruct2026.UIMain
 {
 
     public static class EngravingService
@@ -230,7 +230,7 @@ namespace AESCConstruct25.UIMain
         //}
         private static void RunPythonScriptFromString(string logicalName, string scriptBody)
         {
-            var tempRoot = Path.Combine(Path.GetTempPath(), "AESCConstruct25", "Scripts");
+            var tempRoot = Path.Combine(Path.GetTempPath(), "AESCConstruct2026", "Scripts");
             Directory.CreateDirectory(tempRoot);
 
             var scriptPath = Path.Combine(tempRoot, logicalName);

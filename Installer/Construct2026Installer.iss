@@ -1,13 +1,13 @@
-; AESCConstruct25_Installer.iss
+; AESCConstruct2026_Installer.iss
 
 [Setup]
-AppName=AESC Construct 25
-AppVersion=2025.1.5
-DefaultDirName={autopf}\AESCConstruct25_Installer
+AppName=AESC Construct 2026
+AppVersion=2026.1.0
+DefaultDirName={autopf}\AESCConstruct2026_Installer
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 Uninstallable=no
-OutputBaseFilename=AESCConstruct25_Installer
+OutputBaseFilename=AESCConstruct2026_Installer
 Compression=lzma2/ultra64
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -17,8 +17,8 @@ SetupIconFile=icons\AESC_Logo.ico
 WizardSmallImageFile=icons\AESCLogo.bmp
 
 ; Current temporary destinations:
-//C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\AESCConstruct25.dll
-#define DestPlugin "C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25"
+//C:\ProgramData\SpaceClaim\AddIns\AESCConstruct2026\AESCConstruct2026.dll
+#define DestPlugin "C:\ProgramData\SpaceClaim\AddIns\AESCConstruct2026"
 #define DestData   "C:\ProgramData\AESCConstruct"
 
 [Languages]
@@ -31,7 +31,7 @@ Name: "{#DestPlugin}"; Flags: uninsneveruninstall
 Name: "{#DestData}";   Permissions: users-full; Flags: uninsneveruninstall
 
 [Files]
-Source: "C:\ProgramData\SpaceClaim\AddIns\AESCConstruct25\*"; DestDir: "{#DestPlugin}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "C:\ProgramData\SpaceClaim\AddIns\AESCConstruct2026\*"; DestDir: "{#DestPlugin}"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "C:\ProgramData\AESCConstruct\*";   DestDir: "{#DestData}";   Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Run]

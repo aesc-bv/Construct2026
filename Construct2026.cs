@@ -1,13 +1,13 @@
 ﻿/*
- Construct25 SpaceClaim add-in entry point.
- Initializes the SpaceClaim API and licensing, registers all Construct25 ribbon commands,
+ Construct2026 SpaceClaim add-in entry point.
+ Initializes the SpaceClaim API and licensing, registers all Construct2026 ribbon commands,
  and provides helpers for DXF import/export, BOM/STEP/Excel export, and license UI state.
 */
 
-using AESCConstruct25.FrameGenerator.Commands;
-using AESCConstruct25.FrameGenerator.Utilities;
-using AESCConstruct25.Licensing;
-using AESCConstruct25.UIMain;
+using AESCConstruct2026.FrameGenerator.Commands;
+using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Licensing;
+using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
 using System;
@@ -22,10 +22,10 @@ using Clipboard = System.Windows.Forms.Clipboard;
 using Image = System.Drawing.Image;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25
+namespace AESCConstruct2026
 {
     [Serializable]
-    public class Construct25 : MarshalByRefObject, IExtensibility, IRibbonExtensibility
+    public class Construct2026 : MarshalByRefObject, IExtensibility, IRibbonExtensibility
     {
         private static bool isCommandRegistered = false;
 
@@ -67,7 +67,7 @@ namespace AESCConstruct25
                         set3DConstruct.Shortcuts = new[] { altD };
 
                     // Export to Excel
-                    var exportExcel = Command.Create("AESCConstruct25.ExportExcel");
+                    var exportExcel = Command.Create("AESCConstruct2026.ExportExcel");
                     exportExcel.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
                     exportExcel.Hint = "Export frame data to an Excel file.";
                     exportExcel.Image = loadImg(Resources.ExcelLogo);
@@ -76,7 +76,7 @@ namespace AESCConstruct25
                     exportExcel.KeepAlive(true);
 
                     // Export BOM
-                    var exportBOM = Command.Create("AESCConstruct25.ExportBOM");
+                    var exportBOM = Command.Create("AESCConstruct2026.ExportBOM");
                     exportBOM.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
                     exportBOM.Hint = "Create a bill-of-materials.";
                     exportBOM.Image = loadImg(Resources.BOMLogo);
@@ -85,7 +85,7 @@ namespace AESCConstruct25
                     exportBOM.KeepAlive(true);
 
 
-                    var updateBOM = Command.Create("AESCConstruct25.UpdateBOM");
+                    var updateBOM = Command.Create("AESCConstruct2026.UpdateBOM");
                     updateBOM.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
                     updateBOM.Hint = "Update an existing bill-of-materials.";
                     updateBOM.Image = loadImg(Resources.Icon_Update);
@@ -94,7 +94,7 @@ namespace AESCConstruct25
                     updateBOM.KeepAlive(true);
 
                     // Export STEP
-                    var exportSTEP = Command.Create("AESCConstruct25.ExportSTEP");
+                    var exportSTEP = Command.Create("AESCConstruct2026.ExportSTEP");
                     exportSTEP.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
                     exportSTEP.Hint = "Export frame as a STEP file.";
                     exportSTEP.Image = loadImg(Resources.STEPLogo);
@@ -106,35 +106,35 @@ namespace AESCConstruct25
                     //
 
                     // 1) Import DXF Contours
-                    var importDxfContours = Command.Create("AESCConstruct25.ImportDXFContours");
+                    var importDxfContours = Command.Create("AESCConstruct2026.ImportDXFContours");
                     importDxfContours.Text = "Import DXF Contours";
                     importDxfContours.Hint = "Load DXF contours into the active document.";
                     importDxfContours.Executing += ImportDXFContours_Execute;
                     importDxfContours.KeepAlive(true);
 
                     // 2) Convert (open) DXF → Profile
-                    var dxfToProfile = Command.Create("AESCConstruct25.DXFToProfile");
+                    var dxfToProfile = Command.Create("AESCConstruct2026.DXFToProfile");
                     dxfToProfile.Text = "DXF → Profile";
                     dxfToProfile.Hint = "Convert an open DXF window into a profile string and preview image.";
                     dxfToProfile.Executing += DXFtoProfile_Execute;
                     dxfToProfile.KeepAlive(true);
 
                     // 3) Save DXFProfile list to CSV
-                    var saveDxfCsv = Command.Create("AESCConstruct25.SaveDXFProfileCsv");
+                    var saveDxfCsv = Command.Create("AESCConstruct2026.SaveDXFProfileCsv");
                     saveDxfCsv.Text = "Save DXFProfile CSV";
                     saveDxfCsv.Hint = "Save all collected DXFProfile objects to a CSV file.";
                     saveDxfCsv.Executing += SaveDXFProfiles_Execute;
                     saveDxfCsv.KeepAlive(true);
 
                     // 4) Load DXFProfile list from CSV
-                    var loadDxfCsv = Command.Create("AESCConstruct25.LoadDXFProfileCsv");
+                    var loadDxfCsv = Command.Create("AESCConstruct2026.LoadDXFProfileCsv");
                     loadDxfCsv.Text = "Load DXFProfile CSV";
                     loadDxfCsv.Hint = "Load DXFProfile objects from a CSV file.";
                     loadDxfCsv.Executing += LoadDXFProfiles_Execute;
                     loadDxfCsv.KeepAlive(true);
 
                     // 5)Compare bodies in document
-                    var CompareCmd = Command.Create("AESCConstruct25.CompareBodies");
+                    var CompareCmd = Command.Create("AESCConstruct2026.CompareBodies");
                     CompareCmd.Text = "Compare";
                     CompareCmd.Hint = "Compare bodies to look for duplicates";
                     CompareCmd.Image = loadImg(Resources.compare);
@@ -156,7 +156,7 @@ namespace AESCConstruct25
                         ExecuteJointCommand.ExecuteJoint(Window.ActiveWindow, 0.0, "Miter", false);
 
                     // Network license toggle — create the command BEFORE the ribbon needs it
-                    var cmdNet = Command.Create("AESCConstruct25.ActivateNetwork");
+                    var cmdNet = Command.Create("AESCConstruct2026.ActivateNetwork");
                     cmdNet.IsEnabled = true;                 // let UpdateNetworkButtonUI refine this later
                     cmdNet.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
                     cmdNet.KeepAlive(true);                  // IMPORTANT: prevent GC
@@ -255,11 +255,11 @@ namespace AESCConstruct25
         {
             bool valid = ConstructLicenseSpot.IsValid;
 
-            SetEnabled("AESCConstruct25.ExportExcel", valid);
-            SetEnabled("AESCConstruct25.ExportBOM", valid);
-            SetEnabled("AESCConstruct25.UpdateBOM", valid);
-            SetEnabled("AESCConstruct25.ExportSTEP", valid);
-            SetEnabled("AESCConstruct25.CompareBodies", valid);
+            SetEnabled("AESCConstruct2026.ExportExcel", valid);
+            SetEnabled("AESCConstruct2026.ExportBOM", valid);
+            SetEnabled("AESCConstruct2026.UpdateBOM", valid);
+            SetEnabled("AESCConstruct2026.ExportSTEP", valid);
+            SetEnabled("AESCConstruct2026.CompareBodies", valid);
 
             UIManager.RefreshLicenseUI();
             UpdateCommandTexts();
@@ -268,19 +268,19 @@ namespace AESCConstruct25
         // Refreshes localized button texts for all registered ribbon commands.
         public static void UpdateCommandTexts()
         {
-            var cmd = Command.GetCommand("AESCConstruct25.ExportExcel");
+            var cmd = Command.GetCommand("AESCConstruct2026.ExportExcel");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
 
-            cmd = Command.GetCommand("AESCConstruct25.ExportBOM");
+            cmd = Command.GetCommand("AESCConstruct2026.ExportBOM");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
 
-            cmd = Command.GetCommand("AESCConstruct25.UpdateBOM");
+            cmd = Command.GetCommand("AESCConstruct2026.UpdateBOM");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
 
-            cmd = Command.GetCommand("AESCConstruct25.ExportSTEP");
+            cmd = Command.GetCommand("AESCConstruct2026.ExportSTEP");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
 
-            cmd = Command.GetCommand("AESCConstruct25.ActivateNetwork");
+            cmd = Command.GetCommand("AESCConstruct2026.ActivateNetwork");
             if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetworkBtn");
         }
 
@@ -314,7 +314,7 @@ namespace AESCConstruct25
         {
             try
             {
-                string resourceName = "AESCConstruct25.UIMain.Ribbon.xml";
+                string resourceName = "AESCConstruct2026.UIMain.Ribbon.xml";
 
                 using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
                 {
@@ -441,35 +441,35 @@ namespace AESCConstruct25
             // Map only button IDs (you said groups don’t need translation)
             switch (controlId)
             {
-                case "AESCConstruct25.ProfileSidebarBtn":
+                case "AESCConstruct2026.ProfileSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.FrameGenerator");
 
-                case "AESCConstruct25.ExportSTEPBtn":
+                case "AESCConstruct2026.ExportSTEPBtn":
                     return Localization.Language.Translate("Ribbon.Button.ExportSTEP");
-                case "AESCConstruct25.ExportBOMBtn":
+                case "AESCConstruct2026.ExportBOMBtn":
                     return Localization.Language.Translate("Ribbon.Button.GenerateBOM");
-                case "AESCConstruct25.UpdateBOM":
+                case "AESCConstruct2026.UpdateBOM":
                     return Localization.Language.Translate("Ribbon.Button.UpdateBOM");
-                case "AESCConstruct25.ExportExcelBtn":
+                case "AESCConstruct2026.ExportExcelBtn":
                     return Localization.Language.Translate("Ribbon.Button.ExportExcel");
 
-                case "AESCConstruct25.Plate":
+                case "AESCConstruct2026.Plate":
                     return Localization.Language.Translate("Ribbon.Button.Plate");
-                case "AESCConstruct25.Fastener":
+                case "AESCConstruct2026.Fastener":
                     return Localization.Language.Translate("Ribbon.Button.Fastener");
-                case "AESCConstruct25.RibCutOut":
+                case "AESCConstruct2026.RibCutOut":
                     return Localization.Language.Translate("Ribbon.Button.RibCutOut");
-                case "AESCConstruct25.SettingsSidebarBtn":
+                case "AESCConstruct2026.SettingsSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Settings");
-                case "AESCConstruct25.ConnectorSidebarBtn":
+                case "AESCConstruct2026.ConnectorSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Connector");
-                case "AESCConstruct25.ActivateNetworkBtn":
+                case "AESCConstruct2026.ActivateNetworkBtn":
                     return Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
 
-                case "AESCConstruct25.DockBtn":
+                case "AESCConstruct2026.DockBtn":
                     // Reflect current toggle state by reading the command’s Text,
                     // which UIManager already sets to a translated string.
-                    var dockCmd = Command.GetCommand("AESCConstruct25.DockCmd");
+                    var dockCmd = Command.GetCommand("AESCConstruct2026.DockCmd");
                     if (dockCmd != null && !string.IsNullOrWhiteSpace(dockCmd.Text))
                         return dockCmd.Text;
                     // Fallback if command isn’t created yet:

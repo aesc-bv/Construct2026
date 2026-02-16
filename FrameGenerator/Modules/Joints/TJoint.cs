@@ -1,5 +1,5 @@
-﻿using AESCConstruct25.FrameGenerator.Commands;
-using AESCConstruct25.FrameGenerator.Utilities;
+﻿using AESCConstruct2026.FrameGenerator.Commands;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -7,7 +7,7 @@ using System.Linq;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Vector = SpaceClaim.Api.V242.Geometry.Vector;
 
-namespace AESCConstruct25.FrameGenerator.Modules.Joints
+namespace AESCConstruct2026.FrameGenerator.Modules.Joints
 {
     public sealed class TJoint : JointBase
     {

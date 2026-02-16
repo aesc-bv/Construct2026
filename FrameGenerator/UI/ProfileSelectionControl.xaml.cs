@@ -10,9 +10,9 @@
  - Delete generated Construct profile components and restore their original driving curves.
 */
 
-using AESCConstruct25.Commands;
-using AESCConstruct25.FrameGenerator.Commands;
-using AESCConstruct25.FrameGenerator.Utilities;  // alias our DXFProfile class
+using AESCConstruct2026.Commands;
+using AESCConstruct2026.FrameGenerator.Commands;
+using AESCConstruct2026.FrameGenerator.Utilities;  // alias our DXFProfile class
 using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
 using SpaceClaim.Api.V242.Geometry;               // for ITrimmedCurve, Point, etc.
 using System;
@@ -26,18 +26,18 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;               // if you ever need WPF BitmapImage
 using Application = SpaceClaim.Api.V242.Application;
 using Document = SpaceClaim.Api.V242.Document;
-using DXFProfile = AESCConstruct25.FrameGenerator.Utilities.DXFProfile;
+using DXFProfile = AESCConstruct2026.FrameGenerator.Utilities.DXFProfile;
 using Image = System.Windows.Controls.Image;
 using Matrix = SpaceClaim.Api.V242.Geometry.Matrix;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using Orientation = System.Windows.Controls.Orientation;
 using Path = System.IO.Path;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
-using Settings = AESCConstruct25.Properties.Settings;
+using Settings = AESCConstruct2026.Properties.Settings;
 using UserControl = System.Windows.Controls.UserControl;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.FrameGenerator.UI
+namespace AESCConstruct2026.FrameGenerator.UI
 {
     public partial class ProfileSelectionControl : UserControl
     {
@@ -123,8 +123,8 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (GenerateProfileButtonIcon != null)
             {
                 var uriString = profileSelected
-                    ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
-                    : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
+                    ? "/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
+                    : "/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Generate.png";
 
                 GenerateProfileButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
@@ -145,8 +145,8 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (GenerateJointButtonIcon != null)
             {
                 var uriString = jointSelected
-                    ? "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
-                    : "/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Generate.png";
+                    ? "/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Generate_Active.png"
+                    : "/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Generate.png";
                 GenerateJointButtonIcon.Source =
                     new BitmapImage(new Uri(uriString, UriKind.RelativeOrAbsolute));
             }
@@ -403,7 +403,7 @@ namespace AESCConstruct25.FrameGenerator.UI
             if (SizeComboBox.SelectedIndex >= 0 && SizeComboBox.SelectedIndex < csvDataRows.Count)
             {
                 string[] selectedValues = csvDataRows[SizeComboBox.SelectedIndex];
-                // Logger.Log($"AESCConstruct25: Loading Size Values: {string.Join(", ", selectedValues)}\n");
+                // Logger.Log($"AESCConstruct2026: Loading Size Values: {string.Join(", ", selectedValues)}\n");
 
                 for (int i = 0; i < csvFieldNames.Count; i++)
                 {
@@ -432,7 +432,7 @@ namespace AESCConstruct25.FrameGenerator.UI
 
             if (csvFieldNames.Count == 0)
             {
-                // Logger.Log($"AESCConstruct25: ERROR - No valid fields found for {selectedProfile}!\n");
+                // Logger.Log($"AESCConstruct2026: ERROR - No valid fields found for {selectedProfile}!\n");
                 return;
             }
 
@@ -514,11 +514,11 @@ namespace AESCConstruct25.FrameGenerator.UI
                 ProfilePreviewImage.Visibility = Visibility.Collapsed;
                 return;
             }
-            var uri = new Uri($"/AESCConstruct25;component/FrameGenerator/UI/Images/Img_Measures_Frame_{imgKey}.png", UriKind.Relative);
+            var uri = new Uri($"/AESCConstruct2026;component/FrameGenerator/UI/Images/Img_Measures_Frame_{imgKey}.png", UriKind.Relative);
             ProfilePreviewImage.Source = new BitmapImage(uri);
             ProfilePreviewImage.Visibility = Visibility.Visible;
 
-            var uri2 = new Uri($"/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Frame_{imgKey}_BG.png", UriKind.Relative);
+            var uri2 = new Uri($"/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Frame_{imgKey}_BG.png", UriKind.Relative);
             PlacementFrame.Source = new BitmapImage(uri2);
         }
 
@@ -816,7 +816,7 @@ namespace AESCConstruct25.FrameGenerator.UI
                     {
                         Width = 12,
                         Height = 12,
-                        Source = new BitmapImage(new Uri("/AESCConstruct25;component/FrameGenerator/UI/Images/Icon_Delete.png", UriKind.Relative))
+                        Source = new BitmapImage(new Uri("/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Delete.png", UriKind.Relative))
                     };
 
                     // Set image as content

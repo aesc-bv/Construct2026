@@ -7,8 +7,8 @@
  Optionally it also updates the BOM after all extrusions are created.
 */
 
-using AESCConstruct25.FrameGenerator.Modules;
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Modules;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
 using SpaceClaim.Api.V242.Geometry;
@@ -17,12 +17,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Application = SpaceClaim.Api.V242.Application; // MessageBox
 
-namespace AESCConstruct25.FrameGenerator.Commands
+namespace AESCConstruct2026.FrameGenerator.Commands
 {
     class ExtrudeProfileCommand : CommandCapsule
     {
         // Registers the "Extrude Profile" command with SpaceClaim and sets its label/description.
-        public const string CommandName = "AESCConstruct25.ExtrudeProfile";
+        public const string CommandName = "AESCConstruct2026.ExtrudeProfile";
 
         public ExtrudeProfileCommand()
             : base(CommandName, "Extrude Profile", null, "Extrudes a selected profile along selected lines or edges") { }

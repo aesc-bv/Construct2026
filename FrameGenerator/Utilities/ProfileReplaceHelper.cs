@@ -14,7 +14,7 @@ using Document = SpaceClaim.Api.V242.Document;
 using Point = SpaceClaim.Api.V242.Geometry.Point;
 using Window = SpaceClaim.Api.V242.Window;
 
-namespace AESCConstruct25.FrameGenerator.Utilities
+namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class ProfileReplaceHelper
     {

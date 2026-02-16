@@ -15,13 +15,13 @@
 //////using System;
 //////using System.Collections.Generic;
 //////using System.Linq;
-//////using AESCConstruct25.FrameGenerator.Modules;
-//////using AESCConstruct25.FrameGenerator.Utilities;
+//////using AESCConstruct2026.FrameGenerator.Modules;
+//////using AESCConstruct2026.FrameGenerator.Utilities;
 //////using SpaceClaim.Api.V242;
 //////using SpaceClaim.Api.V242.Geometry;
 //////using SpaceClaim.Api.V242.Modeler;
 
-//////namespace AESCConstruct25.Commands
+//////namespace AESCConstruct2026.Commands
 //////{
 //////    public static class RotateComponentCommand
 //////    {
@@ -95,7 +95,7 @@
 //////        }
 //////    }
 //////}
-using AESCConstruct25.FrameGenerator.Utilities;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -103,7 +103,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace AESCConstruct25.Commands
+namespace AESCConstruct2026.Commands
 {
     public static class RotateComponentCommand
     {
@@ -320,7 +320,7 @@ namespace AESCConstruct25.Commands
 
 //// ^^^ rotation around local axis instead of component axis
 
-//using AESCConstruct25.FrameGenerator.Utilities;
+//using AESCConstruct2026.FrameGenerator.Utilities;
 //using SpaceClaim.Api.V242;
 //using SpaceClaim.Api.V242.Geometry;
 //using SpaceClaim.Api.V242.Modeler;
@@ -329,7 +329,7 @@ namespace AESCConstruct25.Commands
 //using System.Globalization;
 //using System.Linq;
 
-//namespace AESCConstruct25.FrameGenerator.Commands
+//namespace AESCConstruct2026.FrameGenerator.Commands
 //{
 //    public static class RotateComponentCommand
 //    {
