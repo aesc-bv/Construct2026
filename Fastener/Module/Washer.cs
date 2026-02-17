@@ -1,16 +1,17 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 namespace AESCConstruct2026.Fastener.Module
 {
 
+    /// <summary>Represents washer dimension data parsed from a CSV row.</summary>
     public class Washer
     {
-        public string type { get; set; }
+        public string Type { get; set; }
         public string Name { get; set; }
-        public string size { get; set; }
-        public double d1 { get; set; }
-        public double d2 { get; set; }
-        public double s { get; set; }
+        public string Size { get; set; }
+        public double D1 { get; set; }
+        public double D2 { get; set; }
+        public double S { get; set; }
 
         public static Washer FromCsv(string csvLine)
         {
@@ -20,12 +21,12 @@ namespace AESCConstruct2026.Fastener.Module
 
             Washer profile = new Washer
             {
-                type = values.Length > 0 ? values[0] : string.Empty,
+                Type = values.Length > 0 ? values[0] : string.Empty,
                 Name = values.Length > 1 ? values[1] : string.Empty,
-                size = values.Length > 2 ? values[2] : string.Empty,
-                d1 = values.Length > 3 && double.TryParse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double d1Val) ? d1Val : 0,
-                d2 = values.Length > 4 && double.TryParse(values[4], NumberStyles.Any, CultureInfo.InvariantCulture, out double d2Val) ? d2Val : 0,
-                s = values.Length > 5 && double.TryParse(values[5], NumberStyles.Any, CultureInfo.InvariantCulture, out double sVal) ? sVal : 0
+                Size = values.Length > 2 ? values[2] : string.Empty,
+                D1 = values.Length > 3 && double.TryParse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double d1Val) ? d1Val : 0,
+                D2 = values.Length > 4 && double.TryParse(values[4], NumberStyles.Any, CultureInfo.InvariantCulture, out double d2Val) ? d2Val : 0,
+                S = values.Length > 5 && double.TryParse(values[5], NumberStyles.Any, CultureInfo.InvariantCulture, out double sVal) ? sVal : 0
             };
 
             return profile;

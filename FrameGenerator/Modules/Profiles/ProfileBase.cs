@@ -7,6 +7,7 @@ using Application = SpaceClaim.Api.V242.Application;
 
 namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
 {
+    /// <summary>Abstract base class for all profile types (Rectangular, H, L, T, U, Circular, DXF, CSV).</summary>
     public abstract class ProfileBase
     {
         public virtual string FilePath { get; } = null; // Allow file path for DXF profiles

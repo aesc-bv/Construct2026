@@ -24,6 +24,104 @@ namespace AESCConstruct2026.FrameGenerator.Modules
 {
     public static class JointModule
     {
+        // Holds the metadata parsed from a component's custom properties.
+        private struct ComponentMetadata
+        {
+            public string ProfileType;
+            public bool IsHollow;
+            public double OffsetX;
+            public double OffsetY;
+            public string DxfPath;
+            public string RawCsv;
+            public Dictionary<string, string> ProfileData;
+        }
+
+        // Reads profile metadata (type, hollow, offsets, DXF/CSV paths, Construct_ properties) from a component's template.
+        private static bool TryReadComponentMetadata(Component component, out ComponentMetadata meta)
+        {
+            meta = default;
+            var template = component.Template;
+            if (template == null) return false;
+
+            string profileType = null;
+            bool isHollow = false;
+            double offsetX = 0, offsetY = 0;
+            string dxfPath = null;
+            string rawCsv = null;
+            var profileData = new Dictionary<string, string>();
+
+            foreach (var prop in template.CustomProperties)
+            {
+                var key = prop.Key;
+                var val = prop.Value.Value?.ToString();
+                switch (key)
+                {
+                    case "Type":
+                        profileType = val;
+                        break;
+                    case "Hollow":
+                        isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                        break;
+                    case "offsetX":
+                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX);
+                        break;
+                    case "offsetY":
+                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY);
+                        break;
+                    case "DXFPath":
+                        dxfPath = val;
+                        break;
+                    case "RawCSV":
+                        rawCsv = val;
+                        break;
+                    default:
+                        if (key.StartsWith("Construct_"))
+                            profileData[key.Substring("Construct_".Length)] = val;
+                        break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(profileType)) return false;
+
+            meta = new ComponentMetadata
+            {
+                ProfileType = profileType,
+                IsHollow = isHollow,
+                OffsetX = offsetX,
+                OffsetY = offsetY,
+                DxfPath = dxfPath,
+                RawCsv = rawCsv,
+                ProfileData = profileData
+            };
+            return true;
+        }
+
+        // Resolves DXF/CSV contours from metadata, returning null for built-in profile types.
+        private static List<ITrimmedCurve> ResolveContours(ComponentMetadata meta, out bool failed)
+        {
+            failed = false;
+            List<ITrimmedCurve> contours = null;
+
+            if (string.Equals(meta.ProfileType, "DXF", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(meta.DxfPath))
+            {
+                if (!DXFImportHelper.ImportDXFContours(meta.DxfPath, out contours))
+                {
+                    failed = true;
+                    return null;
+                }
+            }
+            else if (string.Equals(meta.ProfileType, "CSV", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(meta.RawCsv))
+            {
+                contours = new List<ITrimmedCurve>();
+                foreach (var loop in meta.RawCsv.Split('&'))
+                    foreach (var chunk in loop.Trim().Split(' '))
+                        if (!string.IsNullOrEmpty(chunk))
+                            contours.Add(DXFImportHelper.CurveFromString(chunk));
+            }
+
+            return contours;
+        }
+
         // Convenience overload that resets component geometry using a default up-vector and inferred construction curves.
         public static void ResetComponentGeometryOnly(List<Component> components)
         {
@@ -52,53 +150,13 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                     {
                         try
                         {
-                            var template = component.Template;
-                            if (template == null) continue;
+                            if (!TryReadComponentMetadata(component, out var meta)) continue;
 
-                            string profileType = null;
-                            bool isHollow = false;
-                            double offsetX = 0, offsetY = 0;
-                            string dxfPath = null;
-                            string rawCsv = null;
-                            var profileData = new Dictionary<string, string>();
-
-                            foreach (var prop in template.CustomProperties)
-                            {
-                                var key = prop.Key;
-                                var val = prop.Value.Value?.ToString();
-                                switch (key)
-                                {
-                                    case "Type":
-                                        profileType = val;
-                                        break;
-                                    case "Hollow":
-                                        isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
-                                        break;
-                                    case "offsetX":
-                                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX);
-                                        break;
-                                    case "offsetY":
-                                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY);
-                                        break;
-                                    case "DXFPath":
-                                        dxfPath = val;
-                                        break;
-                                    case "RawCSV":
-                                        rawCsv = val;
-                                        break;
-                                    default:
-                                        if (key.StartsWith("Construct_"))
-                                            profileData[key.Substring("Construct_".Length)] = val;
-                                        break;
-                                }
-                            }
-                            if (string.IsNullOrEmpty(profileType)) continue;
-
-                            var storedDc = template.Curves.OfType<DesignCurve>().FirstOrDefault();
+                            var storedDc = component.Template.Curves.OfType<DesignCurve>().FirstOrDefault();
                             if (storedDc?.Shape is not CurveSegment segOrig) continue;
 
-                            var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
-                            var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
+                            var origStart = Point.Create(segOrig.StartPoint.X + meta.OffsetX, segOrig.StartPoint.Y + meta.OffsetY, segOrig.StartPoint.Z);
+                            var origEnd = Point.Create(segOrig.EndPoint.X + meta.OffsetX, segOrig.EndPoint.Y + meta.OffsetY, segOrig.EndPoint.Z);
                             var delta = origStart;
                             var originSeg = CurveSegment.Create(
                                 Point.Create(0, 0, 0),
@@ -113,31 +171,19 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                             else if (Math.Abs(Vector.Dot(localUp, WX)) > tol && Vector.Dot(localUp, WX) < 0) localUp = -localUp;
                             else if (Math.Abs(Vector.Dot(localUp, WZ)) > tol && Vector.Dot(localUp, WZ) < 0) localUp = -localUp;
 
-                            List<ITrimmedCurve> contours = null;
-                            if (string.Equals(profileType, "DXF", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(dxfPath))
-                            {
-                                if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
-                                    continue;
-                            }
-                            else if (string.Equals(profileType, "CSV", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(rawCsv))
-                            {
-                                contours = new List<ITrimmedCurve>();
-                                foreach (var loop in rawCsv.Split('&'))
-                                    foreach (var chunk in loop.Trim().Split(' '))
-                                        if (!string.IsNullOrEmpty(chunk))
-                                            contours.Add(DXFImportHelper.CurveFromString(chunk));
-                            }
+                            var contours = ResolveContours(meta, out bool contourFailed);
+                            if (contourFailed) continue;
 
                             ProfileModule.ExtrudeProfile(
                                 Window.ActiveWindow,
-                                profileType,
+                                meta.ProfileType,
                                 originSeg,
-                                isHollow,
-                                profileData,
-                                offsetX,
-                                offsetY,
+                                meta.IsHollow,
+                                meta.ProfileData,
+                                meta.OffsetX,
+                                meta.OffsetY,
                                 localUp,
-                                dxfFilePath: profileType == "DXF" ? dxfPath : null,
+                                dxfFilePath: meta.ProfileType == "DXF" ? meta.DxfPath : null,
                                 dxfContours: contours,
                                 reuseComponent: component
                             );
@@ -166,7 +212,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             try
             {
                 const double tol = 1e-6;
-                const double extendAmount = 200.0;
+                const double extendAmount = 200.0; // mm
 
                 if (allCurves == null)
                     allCurves = components
@@ -177,44 +223,15 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 {
                     try
                     {
-                        var template = component.Template;
-                        if (template == null) continue;
+                        if (!TryReadComponentMetadata(component, out var meta)) continue;
 
-                        string profileType = null;
-                        bool isHollow = false;
-                        double offsetX = 0, offsetY = 0;
-                        string dxfPath = null;
-                        string rawCsv = null;
-                        var profileData = new Dictionary<string, string>();
-
-                        foreach (var prop in template.CustomProperties)
-                        {
-                            var key = prop.Key;
-                            var val = prop.Value.Value?.ToString();
-                            switch (key)
-                            {
-                                case "Type": profileType = val; break;
-                                case "Hollow": isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase); break;
-                                case "offsetX": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX); break;
-                                case "offsetY": double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY); break;
-                                case "DXFPath": dxfPath = val; break;
-                                case "RawCSV": rawCsv = val; break;
-                                default:
-                                    if (key.StartsWith("Construct_"))
-                                        profileData[key.Substring("Construct_".Length)] = val;
-                                    break;
-                            }
-                        }
-                        if (string.IsNullOrEmpty(profileType))
-                            continue;
-
-                        var storedDc = template.Curves.OfType<DesignCurve>()
+                        var storedDc = component.Template.Curves.OfType<DesignCurve>()
                                           .FirstOrDefault(dc => dc.Shape is CurveSegment);
                         if (storedDc?.Shape is not CurveSegment segOrig)
                             continue;
 
-                        var origStart = Point.Create(segOrig.StartPoint.X + offsetX, segOrig.StartPoint.Y + offsetY, segOrig.StartPoint.Z);
-                        var origEnd = Point.Create(segOrig.EndPoint.X + offsetX, segOrig.EndPoint.Y + offsetY, segOrig.EndPoint.Z);
+                        var origStart = Point.Create(segOrig.StartPoint.X + meta.OffsetX, segOrig.StartPoint.Y + meta.OffsetY, segOrig.StartPoint.Z);
+                        var origEnd = Point.Create(segOrig.EndPoint.X + meta.OffsetX, segOrig.EndPoint.Y + meta.OffsetY, segOrig.EndPoint.Z);
 
                         Vector segDir = (origEnd - origStart).Direction.ToVector();
                         var newStart = origStart - segDir * extendAmount;
@@ -224,31 +241,19 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                         Vector localUp = forcedLocalUp.Magnitude > tol ? forcedLocalUp : Vector.Create(0, 1, 0);
                         if (Math.Abs(Vector.Dot(localUp, Vector.Create(0, 1, 0))) > tol && Vector.Dot(localUp, Vector.Create(0, 1, 0)) < 0) localUp = -localUp;
 
-                        List<ITrimmedCurve> contours = null;
-                        if (profileType == "DXF" && !string.IsNullOrEmpty(dxfPath))
-                        {
-                            if (!DXFImportHelper.ImportDXFContours(dxfPath, out contours))
-                                continue;
-                        }
-                        else if (profileType == "CSV" && !string.IsNullOrEmpty(rawCsv))
-                        {
-                            contours = new List<ITrimmedCurve>();
-                            foreach (var loop in rawCsv.Split('&'))
-                                foreach (var chunk in loop.Trim().Split(' '))
-                                    if (!string.IsNullOrEmpty(chunk))
-                                        contours.Add(DXFImportHelper.CurveFromString(chunk));
-                        }
+                        var contours = ResolveContours(meta, out bool contourFailed);
+                        if (contourFailed) continue;
 
                         ProfileModule.ExtrudeProfile(
                             Window.ActiveWindow,
-                            profileType,
+                            meta.ProfileType,
                             segThis,
-                            isHollow,
-                            profileData,
-                            offsetX,
-                            offsetY,
+                            meta.IsHollow,
+                            meta.ProfileData,
+                            meta.OffsetX,
+                            meta.OffsetY,
                             localUp,
-                            dxfFilePath: profileType == "DXF" ? dxfPath : null,
+                            dxfFilePath: meta.ProfileType == "DXF" ? meta.DxfPath : null,
                             dxfContours: contours,
                             reuseComponent: component
                         );
@@ -485,7 +490,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 Plane plane = Plane.Create(frame);
 
                 // big square loop
-                double half = 200.0;
+                double half = 200.0; // mm, half-size of splitting square
                 Vector vx = plane.Frame.DirX.ToVector() * half;
                 Vector vy = plane.Frame.DirY.ToVector() * half;
                 var loop = new List<ITrimmedCurve> {

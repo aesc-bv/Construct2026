@@ -10,6 +10,8 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
 {
     public static class CompNameHelper
     {
+        private static readonly Regex NameTokenRegex = new Regex(@"\[(name|w|h|t|s|length)\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         /// <summary>
         /// Renames the component according to the user’s template and type-name overrides,
         /// and writes the Construct_Length property (meters).
@@ -111,12 +113,11 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
 
         private static string ApplyNameTemplate(string template, IDictionary<string, string> values)
         {
-            // Matches tokens like [name], [w], [h], [t], [s], [length] in any casing
-            return Regex.Replace(template, @"\[(name|w|h|t|s|length)\]", m =>
+            return NameTokenRegex.Replace(template, m =>
             {
                 var key = m.Groups[1].Value;
                 return values.TryGetValue(key, out var val) ? (val ?? "") : "";
-            }, RegexOptions.IgnoreCase);
+            });
         }
 
         private static string FormatMm(double valueMm)

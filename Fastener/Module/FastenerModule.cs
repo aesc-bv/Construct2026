@@ -13,6 +13,7 @@ using Settings = AESCConstruct2026.Properties.Settings;
 
 namespace AESCConstruct2026.Fastener.Module
 {
+    /// <summary>Manages fastener data (bolts, washers, nuts) and creates fastener assemblies from user selections.</summary>
     internal class FastenerModule
     {
         // backing lists
@@ -40,15 +41,15 @@ namespace AESCConstruct2026.Fastener.Module
         public IEnumerable<string> NutNames => _nuts.Select(n => n.Name).Distinct();
 
         public string GetBoltTypeByName(string name) =>
-        _bolts.FirstOrDefault(b => b.Name == name)?.type
+        _bolts.FirstOrDefault(b => b.Name == name)?.Type
         ?? throw new InvalidOperationException($"Unknown bolt name '{name}'");
 
         public string GetWasherTopTypeByName(string name) =>
-        _washers.FirstOrDefault(w => w.Name == name)?.type
+        _washers.FirstOrDefault(w => w.Name == name)?.Type
         ?? throw new InvalidOperationException($"Unknown washer name '{name}'");
 
         public string GetNutTypeByName(string name) =>
-        _nuts.FirstOrDefault(n => n.Name == name)?.type
+        _nuts.FirstOrDefault(n => n.Name == name)?.Type
         ?? throw new InvalidOperationException($"Unknown nut name '{name}'");
 
         static string boltDisplayName, washerTopDisplayName, washerBottomDisplayName, nutDisplayName;
@@ -63,22 +64,22 @@ namespace AESCConstruct2026.Fastener.Module
         {
             // find all underlying types for that name
             var types = _bolts.Where(b => b.Name == selectedName)
-                              .Select(b => b.type)
+                              .Select(b => b.Type)
                               .Distinct();
             // aggregate sizes across all matching types
-            return _bolts.Where(b => types.Contains(b.type))
-                         .Select(b => b.size)
+            return _bolts.Where(b => types.Contains(b.Type))
+                         .Select(b => b.Size)
                          .Distinct();
         }
         public IEnumerable<string> WasherSizesFor(string selectedName)
         {
-            var types = _washers.Where(w => w.Name == selectedName).Select(w => w.type).Distinct();
-            return _washers.Where(w => types.Contains(w.type)).Select(w => w.size).Distinct();
+            var types = _washers.Where(w => w.Name == selectedName).Select(w => w.Type).Distinct();
+            return _washers.Where(w => types.Contains(w.Type)).Select(w => w.Size).Distinct();
         }
         public IEnumerable<string> NutSizesFor(string selectedName)
         {
-            var types = _nuts.Where(n => n.Name == selectedName).Select(n => n.type).Distinct();
-            return _nuts.Where(n => types.Contains(n.type)).Select(n => n.size).Distinct();
+            var types = _nuts.Where(n => n.Name == selectedName).Select(n => n.Type).Distinct();
+            return _nuts.Where(n => types.Contains(n.Type)).Select(n => n.Size).Distinct();
         }
 
         double parBoltL = 20;
@@ -131,7 +132,7 @@ namespace AESCConstruct2026.Fastener.Module
                 washerPart = Part.Create(doc, name);
                 component = Component.Create(fastenersPart, washerPart);
 
-                Body body = createFasteners.createWasher(washer.d1 * 0.001, washer.d2 * 0.001, washer.s * 0.001);
+                Body body = FastenerGeometry.CreateWasher(washer.D1 * 0.001, washer.D2 * 0.001, washer.S * 0.001);
                 DesignBody db = DesignBody.Create(washerPart, name, body);
 
                 // First time: lock according to current toggle
@@ -323,6 +324,7 @@ namespace AESCConstruct2026.Fastener.Module
             };
         }
 
+        /// <summary>Creates bolt, washer, and nut components on the selected circular edges in the active document.</summary>
         public void CreateFasteners()
         {
             // Check selection
@@ -367,7 +369,7 @@ namespace AESCConstruct2026.Fastener.Module
 
                     foreach (Bolt bolt in listBolt)
                     {
-                        if (bolt.type == boltType && bolt.size == boltSize)
+                        if (bolt.Type == boltType && bolt.Size == boltSize)
                         {
                             _bolt = bolt;
                         }
@@ -375,7 +377,7 @@ namespace AESCConstruct2026.Fastener.Module
 
                     foreach (Bolt bolt in listBolt)
                     {
-                        if (bolt.type == boltType && bolt.size == boltSize)
+                        if (bolt.Type == boltType && bolt.Size == boltSize)
                         {
                             _bolt = bolt;
 
@@ -387,14 +389,14 @@ namespace AESCConstruct2026.Fastener.Module
 
                     foreach (Washer washer in listWasherBottom)
                     {
-                        if (washer.type == washerBottomType && washer.size == washerBottomSize)
+                        if (washer.Type == washerBottomType && washer.Size == washerBottomSize)
                         {
                             _washerBottom = washer;
                         }
                     }
                     foreach (Washer washer in listWasherTop)
                     {
-                        if (washer.type == washerTopType && washer.size == washerTopSize)
+                        if (washer.Type == washerTopType && washer.Size == washerTopSize)
                         {
                             _washerTop = washer;
                         }
@@ -402,7 +404,7 @@ namespace AESCConstruct2026.Fastener.Module
                     Nut _nut = listNut.First();
                     foreach (Nut nut in listNut)
                     {
-                        if (nut.type == nutType && nut.size == nutSize)
+                        if (nut.Type == nutType && nut.Size == nutSize)
                         {
                             _nut = nut;
                         }
@@ -446,12 +448,12 @@ namespace AESCConstruct2026.Fastener.Module
                             // Logger.Log($"[CreateFasteners] Inserting TOP washer 'name' at {PD.Origin} dir={PD.Direction}");
                             Part washerPart = GetWasherPart(doc, washerTopName, _washerTop, out Component componentWasherTop);
                             // Logger.Log($"[CreateFasteners] Transforming TOP washer component...");
-                            matrixBolt = matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, _washerTop.s * 0.001));
+                            matrixBolt = matrixMapping * Matrix.CreateTranslation(Vector.Create(0, 0, _washerTop.S * 0.001));
                             //if (_overwriteDistance)
                             //{
                             //    // parDistance is in mm; convert to m (×0.001)
                             //    matrixBolt = matrixMapping
-                            //        * Matrix.CreateTranslation(Vector.Create(0, 0, (parDistance + _washerTop.s) * 0.001));
+                            //        * Matrix.CreateTranslation(Vector.Create(0, 0, (parDistance + _washerTop.S) * 0.001));
                             //}
                             // Logger.Log($"[CreateFasteners] Transform COMPLETE for TOP washer");
                             componentWasherTop.Transform(matrixMapping);
@@ -520,7 +522,7 @@ namespace AESCConstruct2026.Fastener.Module
                         //{
                         //    Part washerPart = GetWasherPart(doc, washerBottomName, _washerBottom, out Component componentWasherBottom);
 
-                        //    displacementZ += -0.001 * _washerBottom.s;
+                        //    displacementZ += -0.001 * _washerBottom.S;
 
                         //    // Apply overwrite distance shift (downwards) in addition to normal displacement
                         //    componentWasherBottom.Transform(
@@ -533,7 +535,7 @@ namespace AESCConstruct2026.Fastener.Module
                         //{
                         //    Part nutPart = GetNutPart(doc, nutName, nutType, _nut, out Component componentNut);
 
-                        //    displacementZ += -0.001 * _nut.h;
+                        //    displacementZ += -0.001 * _nut.H;
 
                         //    // Apply overwrite distance shift (downwards) here as well
                         //    componentNut.Transform(
@@ -547,7 +549,7 @@ namespace AESCConstruct2026.Fastener.Module
                         // Compute the "bottom of top washer" reference (if you have a top washer)
                         // If you don’t have a top washer, this becomes the top face (0).
                         double zBottomOfTopWasher =
-                            this.includeWasherTop ? -(0.001 * _washerTop.s) : 0.0;
+                            this.includeWasherTop ? -(0.001 * _washerTop.S) : 0.0;
 
                         // -----------------------------
                         // Bottom washer placement
@@ -558,7 +560,7 @@ namespace AESCConstruct2026.Fastener.Module
 
                             if (_overwriteDistance)
                             {
-                                double zWasherBottom = (zBottomOfTopWasher - overwriteDistM);// - (0.001 * _washerBottom.s);
+                                double zWasherBottom = (zBottomOfTopWasher - overwriteDistM);// - (0.001 * _washerBottom.S);
 
                                 componentWasherBottom.Transform(
                                     matrixMapping *
@@ -568,7 +570,7 @@ namespace AESCConstruct2026.Fastener.Module
                             else
                             {
                                 // original (non-overwrite) behavior: stack from PD.Depth
-                                displacementZ += -0.001 * _washerBottom.s;
+                                displacementZ += -0.001 * _washerBottom.S;
                                 componentWasherBottom.Transform(
                                     matrixMapping *
                                     Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ))
@@ -586,8 +588,8 @@ namespace AESCConstruct2026.Fastener.Module
                             if (_overwriteDistance)
                             {
                                 double zNut = (zBottomOfTopWasher - overwriteDistM)
-                                              //- (0.001 * _washerBottom.s) // sits directly under bottom washer
-                                              - (0.001 * _nut.h);         // drop the nut body below its top face
+                                              //- (0.001 * _washerBottom.S) // sits directly under bottom washer
+                                              - (0.001 * _nut.H);         // drop the nut body below its top face
 
                                 componentNut.Transform(
                                     matrixMapping *
@@ -596,7 +598,7 @@ namespace AESCConstruct2026.Fastener.Module
                             }
                             else
                             {
-                                displacementZ += -0.001 * _nut.h;
+                                displacementZ += -0.001 * _nut.H;
                                 componentNut.Transform(
                                     matrixMapping *
                                     Matrix.CreateTranslation(Vector.Create(0, 0, displacementZ))
@@ -641,7 +643,7 @@ namespace AESCConstruct2026.Fastener.Module
                 boltPart = Part.Create(doc, name);
                 component = Component.Create(fastenersPart, boltPart);
 
-                Body bodyBolt = createFasteners.Create_Bolt(boltType, _bolt, parBoltL);
+                Body bodyBolt = FastenerGeometry.CreateBolt(boltType, _bolt, parBoltL);
                 DesignBody dbBolt = DesignBody.Create(boltPart, name, bodyBolt);
 
                 // First time: lock according to current toggle
@@ -700,7 +702,7 @@ namespace AESCConstruct2026.Fastener.Module
                 part = Part.Create(doc, name);
                 component = Component.Create(fastenersPart, part);
 
-                Body body = createFasteners.Create_Nut(boltType, nut);
+                Body body = FastenerGeometry.CreateNut(boltType, nut);
                 DesignBody designBody = DesignBody.Create(part, name, body);
 
                 // First time: lock according to current toggle

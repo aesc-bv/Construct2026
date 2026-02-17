@@ -1,4 +1,4 @@
-﻿using SpaceClaim.Api.V242;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
@@ -8,71 +8,17 @@ using System.Diagnostics;
 namespace AESCConstruct2026.Fastener.Module
 {
 
-    class createFasteners
+    class FastenerGeometry
     {
-
-        public static Body Create_Bolt(string boltType, Bolt _bolt, double parBoltL = 0)
+        // Creates a hexagonal boundary loop centered at the origin on the XY plane.
+        private static List<ITrimmedCurve> CreateHexagonBoundary(double s)
         {
-            Body bodyBolt = null;
-            if (boltType.StartsWith("DIN931") || boltType.StartsWith("DIN933"))
-            {
-                bodyBolt = createFasteners.createBolt(_bolt.d * 0.001, _bolt.c * 0.001, _bolt.k * 0.001, _bolt.s * 0.001, parBoltL * 0.001);
-            }
-            else if (boltType.StartsWith("DIN84") || boltType.StartsWith("DIN85"))
-            {
-                bodyBolt = createFasteners.createBolt84(_bolt.d * 0.001, _bolt.c * 0.001, _bolt.k * 0.001, _bolt.s * 0.001, parBoltL * 0.001, _bolt.t * 0.001, boltType.StartsWith("DIN85"));
-            }
-            else if (boltType.StartsWith("DIN912") || boltType.Contains("ISO7380"))
-            {
-                bodyBolt = createFasteners.createBolt912(_bolt.d * 0.001, _bolt.c * 0.001, _bolt.k * 0.001, _bolt.s * 0.001, parBoltL * 0.001, _bolt.t * 0.001, boltType.StartsWith("DIN912"));
-            }
-            else if (boltType.StartsWith("DIN7991"))
-            {
-                bodyBolt = createFasteners.createBolt7991(_bolt.d * 0.001, _bolt.c * 0.001, _bolt.k * 0.001, _bolt.s * 0.001, parBoltL * 0.001, _bolt.t * 0.001);
-            }
-            else
-            {
-                bodyBolt = createFasteners.createBolt(_bolt.d * 0.001, _bolt.c * 0.001, _bolt.k * 0.001, _bolt.s * 0.001, parBoltL * 0.001);
-            }
-            return bodyBolt;
-        }
-
-
-        public static Body Create_Nut(string type, Nut _nut)
-        {
-            Body body = null;
-            if (type.StartsWith("DIN982"))
-            {
-                body = createFasteners.createNut982(_nut.d * 0.001, _nut.s * 0.001, _nut.e * 0.001, _nut.h * 0.001, _nut.k * 0.001);
-            }
-            else
-            {
-                body = createFasteners.createNut(_nut.d * 0.001, _nut.s * 0.001, _nut.e * 0.001, _nut.h * 0.001);
-            }
-            return body;
-        }
-
-        private static Body createBolt(double d, double c, double k, double s, double l) //DIN931 or DIN933
-        {
-            Part mainPart = Window.ActiveWindow.Document.MainPart;
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
             Direction dirY = Direction.DirY;
-            Direction dirZ = Direction.DirZ;
-            Body body = null;
 
-
-
-            body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d), -l);
-
-            Body cyl2 = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.99 * s / 2), c);
-
-            body.Unite(cyl2);
-
-            // Calculate the length of each side of the hexagon based on the pitch
             double sideLength = s / Math.Sqrt(3);
 
-            // Calculate the corners of the hexagon
             Point p0 = point + 0.5 * s * dirY + 0.5 * sideLength * dirX;
             Point p1 = point + 0.5 * s * dirY - 0.5 * sideLength * dirX;
             Point p2 = point - 0.5 * s * dirY + 0.5 * sideLength * dirX;
@@ -80,29 +26,72 @@ namespace AESCConstruct2026.Fastener.Module
             Point p4 = point + (point - p3).Magnitude * dirX;
             Point p5 = point - (point - p3).Magnitude * dirX;
 
+            return new List<ITrimmedCurve>
+            {
+                CurveSegment.Create(p1, p0),
+                CurveSegment.Create(p0, p4),
+                CurveSegment.Create(p4, p2),
+                CurveSegment.Create(p2, p3),
+                CurveSegment.Create(p3, p5),
+                CurveSegment.Create(p5, p1)
+            };
+        }
 
-            // Create a list to store the boundary segments
-            List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
+        public static Body CreateBolt(string boltType, Bolt _bolt, double parBoltL = 0)
+        {
+            Body bodyBolt = null;
+            if (boltType.StartsWith("DIN931") || boltType.StartsWith("DIN933"))
+            {
+                bodyBolt = CreateBoltHex(_bolt.D * 0.001, _bolt.C * 0.001, _bolt.K * 0.001, _bolt.S * 0.001, parBoltL * 0.001);
+            }
+            else if (boltType.StartsWith("DIN84") || boltType.StartsWith("DIN85"))
+            {
+                bodyBolt = CreateBolt84(_bolt.D * 0.001, _bolt.C * 0.001, _bolt.K * 0.001, _bolt.S * 0.001, parBoltL * 0.001, _bolt.T * 0.001, boltType.StartsWith("DIN85"));
+            }
+            else if (boltType.StartsWith("DIN912") || boltType.Contains("ISO7380"))
+            {
+                bodyBolt = CreateBolt912(_bolt.D * 0.001, _bolt.C * 0.001, _bolt.K * 0.001, _bolt.S * 0.001, parBoltL * 0.001, _bolt.T * 0.001, boltType.StartsWith("DIN912"));
+            }
+            else if (boltType.StartsWith("DIN7991"))
+            {
+                bodyBolt = CreateBolt7991(_bolt.D * 0.001, _bolt.C * 0.001, _bolt.K * 0.001, _bolt.S * 0.001, parBoltL * 0.001, _bolt.T * 0.001);
+            }
+            else
+            {
+                bodyBolt = CreateBoltHex(_bolt.D * 0.001, _bolt.C * 0.001, _bolt.K * 0.001, _bolt.S * 0.001, parBoltL * 0.001);
+            }
+            return bodyBolt;
+        }
 
 
-            // Create and store the boundary segments
-            boundary.Add(CurveSegment.Create(p1, p0));
-            boundary.Add(CurveSegment.Create(p0, p4));
-            boundary.Add(CurveSegment.Create(p4, p2));
-            boundary.Add(CurveSegment.Create(p2, p3));
-            boundary.Add(CurveSegment.Create(p3, p5));
-            boundary.Add(CurveSegment.Create(p5, p1));
+        public static Body CreateNut(string type, Nut _nut)
+        {
+            Body body = null;
+            if (type.StartsWith("DIN982"))
+            {
+                body = CreateNut982(_nut.D * 0.001, _nut.S * 0.001, _nut.E * 0.001, _nut.H * 0.001, _nut.K * 0.001);
+            }
+            else
+            {
+                body = CreateNutStandard(_nut.D * 0.001, _nut.S * 0.001, _nut.E * 0.001, _nut.H * 0.001);
+            }
+            return body;
+        }
 
-            //foreach (ITrimmedCurve itc in boundary)
-            //    DesignCurve.Create(mainPart, itc);
+        private static Body CreateBoltHex(double d, double c, double k, double s, double l) //DIN931 or DIN933
+        {
+            Point point = Point.Origin;
+            Direction dirX = Direction.DirX;
+            Direction dirY = Direction.DirY;
+            Direction dirZ = Direction.DirZ;
 
-            //DatumPoint.Create(mainPart, "point", point);
-            //DatumPoint.Create(mainPart, "p0", p0);
-            //DatumPoint.Create(mainPart, "p1", p1);
-            //DatumPoint.Create(mainPart, "p2", p2);
-            //DatumPoint.Create(mainPart, "p3", p3);
-            //DatumPoint.Create(mainPart, "p4", p4);
-            //DatumPoint.Create(mainPart, "p5", p5);
+            Body body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d), -l);
+
+            Body cyl2 = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.99 * s / 2), c);
+
+            body.Unite(cyl2);
+
+            var boundary = CreateHexagonBoundary(s);
 
             Body bodyHead = Body.ExtrudeProfile(new Profile(Plane.PlaneXY, boundary), k - c);
             bodyHead.Transform(Matrix.CreateTranslation(c * dirZ));
@@ -111,8 +100,7 @@ namespace AESCConstruct2026.Fastener.Module
             body.Unite(bodyHead);
 
             // round edges head
-            Body bodyRound = createRoundBody(point, k, s, dirX, dirY, dirZ);
-            //DesignBody.Create(mainPart, "bodyRound", bodyRound);
+            Body bodyRound = CreateRoundBody(point, k, s, dirX, dirY, dirZ);
             body.Subtract(bodyRound);
 
             // round edges bottom
@@ -142,7 +130,7 @@ namespace AESCConstruct2026.Fastener.Module
                         new RadiusPoint(bounds[0.5], radius)
                     });
                         }
-                        // Break the loop if a matching point is found, 
+                        // Break the loop if a matching point is found,
                         // assuming you don't want to add more rounds for the same edge.
                         break;
                     }
@@ -151,20 +139,14 @@ namespace AESCConstruct2026.Fastener.Module
             body.RoundEdges(edgeRounds);
         }
 
-        private static Body createBolt84(double d, double c, double k, double s, double l, double t, bool is85) //DIN84 or DIN85
+        private static Body CreateBolt84(double d, double c, double k, double s, double l, double t, bool is85) //DIN84 or DIN85
         {
-            Part mainPart = Window.ActiveWindow.Document.MainPart;
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
             Direction dirY = Direction.DirY;
             Direction dirZ = Direction.DirZ;
-            Body body = null;
 
-
-
-            body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d), -l);
-
-
+            Body body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d), -l);
 
             // Calculate the corners of the head
             Point p0 = point + 0.5 * s * dirX;
@@ -202,7 +184,7 @@ namespace AESCConstruct2026.Fastener.Module
 
             // remove slot
 
-            // Curves removeBody            
+            // Curves removeBody
             p0 = point + k * dirZ + 0.5 * c * dirX;
             p1 = p0 - c * dirX;
             p2 = p1 - t * dirZ;
@@ -226,9 +208,8 @@ namespace AESCConstruct2026.Fastener.Module
         }
 
 
-        private static Body createBolt7991(double d, double c, double k, double s, double l, double t) // ISO 7991
+        private static Body CreateBolt7991(double d, double c, double k, double s, double l, double t) // ISO 7991
         {
-            Part mainPart = Window.ActiveWindow.Document.MainPart;
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
             Direction dirY = Direction.DirY;
@@ -259,31 +240,8 @@ namespace AESCConstruct2026.Fastener.Module
 
             body.Unite(bodyTop);
 
-
-            //// Create hexagon cutout
-            // Calculate the length of each side of the hexagon based on the pitch
-            double sideLength = c / Math.Sqrt(3);
-
-            // Calculate the corners of the hexagon
-            p0 = point + 0.5 * c * dirY + 0.5 * sideLength * dirX;
-            p1 = point + 0.5 * c * dirY - 0.5 * sideLength * dirX;
-            p2 = point - 0.5 * c * dirY + 0.5 * sideLength * dirX;
-            Point p3 = point - 0.5 * c * dirY - 0.5 * sideLength * dirX;
-            Point p4 = point + (point - p3).Magnitude * dirX;
-            Point p5 = point - (point - p3).Magnitude * dirX;
-
-            // Create a list to store the boundary segments
-            boundary = new List<ITrimmedCurve> { };
-
-
-            // Create and store the boundary segments
-            boundary.Add(CurveSegment.Create(p1, p0));
-            boundary.Add(CurveSegment.Create(p0, p4));
-            boundary.Add(CurveSegment.Create(p4, p2));
-            boundary.Add(CurveSegment.Create(p2, p3));
-            boundary.Add(CurveSegment.Create(p3, p5));
-            boundary.Add(CurveSegment.Create(p5, p1));
-
+            // Create hexagon cutout
+            boundary = CreateHexagonBoundary(c);
 
             Body bodyRemove = Body.ExtrudeProfile(new Profile(Plane.PlaneXY, boundary), -t);
             body.Subtract(bodyRemove);
@@ -301,47 +259,22 @@ namespace AESCConstruct2026.Fastener.Module
             return body;
 
         }
-        private static Body createBolt912(double d, double c, double k, double s, double l, double t, bool is912) //DIN912
+        private static Body CreateBolt912(double d, double c, double k, double s, double l, double t, bool is912) //DIN912
         {
-            Part mainPart = Window.ActiveWindow.Document.MainPart;
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
-            Direction dirY = Direction.DirY;
             Direction dirZ = Direction.DirZ;
 
             Body body = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * d), -l);
             Body bodyHead = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, 0.5 * s), k);
             body.Unite(bodyHead);
 
-            //// Create hexagon cutout
-            // Calculate the length of each side of the hexagon based on the pitch
-            double sideLength = c / Math.Sqrt(3);
-
-            // Calculate the corners of the hexagon
-            Point p0 = point + 0.5 * c * dirY + 0.5 * sideLength * dirX;
-            Point p1 = point + 0.5 * c * dirY - 0.5 * sideLength * dirX;
-            Point p2 = point - 0.5 * c * dirY + 0.5 * sideLength * dirX;
-            Point p3 = point - 0.5 * c * dirY - 0.5 * sideLength * dirX;
-            Point p4 = point + (point - p3).Magnitude * dirX;
-            Point p5 = point - (point - p3).Magnitude * dirX;
-
-            // Create a list to store the boundary segments
-            List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
-
-
-            // Create and store the boundary segments
-            boundary.Add(CurveSegment.Create(p1, p0));
-            boundary.Add(CurveSegment.Create(p0, p4));
-            boundary.Add(CurveSegment.Create(p4, p2));
-            boundary.Add(CurveSegment.Create(p2, p3));
-            boundary.Add(CurveSegment.Create(p3, p5));
-            boundary.Add(CurveSegment.Create(p5, p1));
-
+            // Create hexagon cutout
+            var boundary = CreateHexagonBoundary(c);
 
             Body bodyRemove = Body.ExtrudeProfile(new Profile(Plane.PlaneXY, boundary), t - k);
             bodyRemove.Transform(Matrix.CreateTranslation(k * dirZ));
 
-            //DesignBody.Create(mainPart, "bodyRemove", bodyRemove);
             body.Subtract(bodyRemove);
 
             // round edges bottom and top
@@ -356,7 +289,7 @@ namespace AESCConstruct2026.Fastener.Module
             AddRounds(body, listPoints, rad);
             return body;
         }
-        public static Body createWasher(double d1, double d2, double s)
+        public static Body CreateWasher(double d1, double d2, double s)
         {
             Body outer = Body.ExtrudeProfile(
                 new CircleProfile(Plane.PlaneXY, 0.5 * d2),
@@ -377,7 +310,7 @@ namespace AESCConstruct2026.Fastener.Module
             return outer;
         }
 
-        public static Body createNut(double d, double s, double e, double h)
+        public static Body CreateNutStandard(double d, double s, double e, double h)
         {
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
@@ -386,47 +319,14 @@ namespace AESCConstruct2026.Fastener.Module
 
             Body cyl2 = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, d / 2), h);
 
-
-            // Calculate the length of each side of the hexagon based on the pitch
-            double sideLength = s / Math.Sqrt(3);
-
-            // Calculate the corners of the hexagon
-            Point p0 = point + 0.5 * s * dirY + 0.5 * sideLength * dirX;
-            Point p1 = point + 0.5 * s * dirY - 0.5 * sideLength * dirX;
-            Point p2 = point - 0.5 * s * dirY + 0.5 * sideLength * dirX;
-            Point p3 = point - 0.5 * s * dirY - 0.5 * sideLength * dirX;
-            Point p4 = point + (point - p3).Magnitude * dirX;
-            Point p5 = point - (point - p3).Magnitude * dirX;
-
-            // Create a list to store the boundary segments
-            List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
-
-            // Create and store the boundary segments
-            boundary.Add(CurveSegment.Create(p1, p0));
-            boundary.Add(CurveSegment.Create(p0, p4));
-            boundary.Add(CurveSegment.Create(p4, p2));
-            boundary.Add(CurveSegment.Create(p2, p3));
-            boundary.Add(CurveSegment.Create(p3, p5));
-            boundary.Add(CurveSegment.Create(p5, p1));
-
-            //Part mainPart = Window.ActiveWindow.Document.MainPart;
-            //foreach (ITrimmedCurve itc in boundary)
-            //    DesignCurve.Create(mainPart, itc);
-
-            //DatumPoint.Create(mainPart, "point", point);
-            //DatumPoint.Create(mainPart, "p0", p0);
-            //DatumPoint.Create(mainPart, "p1", p1);
-            //DatumPoint.Create(mainPart, "p2", p2);
-            //DatumPoint.Create(mainPart, "p3", p3);
-            //DatumPoint.Create(mainPart, "p4", p4);
-            //DatumPoint.Create(mainPart, "p5", p5);
+            var boundary = CreateHexagonBoundary(s);
 
             Body body = Body.ExtrudeProfile(new Profile(Plane.PlaneXY, boundary), h);
             body.Subtract(cyl2);
 
-            Body bodyRound = createRoundBody(point, h, s, dirX, dirY, dirZ);
+            Body bodyRound = CreateRoundBody(point, h, s, dirX, dirY, dirZ);
             body.Subtract(bodyRound);
-            bodyRound = createRoundBody(point, 0, s, dirX, dirY, -dirZ);
+            bodyRound = CreateRoundBody(point, 0, s, dirX, dirY, -dirZ);
             body.Subtract(bodyRound);
 
             return body;
@@ -434,7 +334,7 @@ namespace AESCConstruct2026.Fastener.Module
         }
 
 
-        public static Body createNut982(double d, double s, double e, double h, double k)
+        public static Body CreateNut982(double d, double s, double e, double h, double k)
         {
             Point point = Point.Origin;
             Direction dirX = Direction.DirX;
@@ -443,36 +343,14 @@ namespace AESCConstruct2026.Fastener.Module
 
             Body cyl2 = Body.ExtrudeProfile(new CircleProfile(Plane.PlaneXY, d / 2), h);
 
-
-            // Calculate the length of each side of the hexagon based on the pitch
-            double sideLength = s / Math.Sqrt(3);
-
-            // Calculate the corners of the hexagon
-            Point p0 = point + 0.5 * s * dirY + 0.5 * sideLength * dirX;
-            Point p1 = point + 0.5 * s * dirY - 0.5 * sideLength * dirX;
-            Point p2 = point - 0.5 * s * dirY + 0.5 * sideLength * dirX;
-            Point p3 = point - 0.5 * s * dirY - 0.5 * sideLength * dirX;
-            Point p4 = point + (point - p3).Magnitude * dirX;
-            Point p5 = point - (point - p3).Magnitude * dirX;
-
-            // Create a list to store the boundary segments
-            List<ITrimmedCurve> boundary = new List<ITrimmedCurve> { };
-
-            // Create and store the boundary segments
-            boundary.Add(CurveSegment.Create(p1, p0));
-            boundary.Add(CurveSegment.Create(p0, p4));
-            boundary.Add(CurveSegment.Create(p4, p2));
-            boundary.Add(CurveSegment.Create(p2, p3));
-            boundary.Add(CurveSegment.Create(p3, p5));
-            boundary.Add(CurveSegment.Create(p5, p1));
-
+            var boundary = CreateHexagonBoundary(s);
 
             Body body = Body.ExtrudeProfile(new Profile(Plane.PlaneXY, boundary), h);
             body.Subtract(cyl2);
 
-            Body bodyRound = createRoundBody(point, h, s, dirX, dirY, dirZ);
+            Body bodyRound = CreateRoundBody(point, h, s, dirX, dirY, dirZ);
             body.Subtract(bodyRound);
-            bodyRound = createRoundBody(point, 0, s, dirX, dirY, -dirZ);
+            bodyRound = CreateRoundBody(point, 0, s, dirX, dirY, -dirZ);
             body.Subtract(bodyRound);
 
             //add ring
@@ -485,7 +363,7 @@ namespace AESCConstruct2026.Fastener.Module
 
         }
 
-        public static Body createRoundBody(Point point, double k, double s, Direction dirX, Direction dirY, Direction dirZ)
+        public static Body CreateRoundBody(Point point, double k, double s, Direction dirX, Direction dirY, Direction dirZ)
         {
             // add rounding top
             List<ITrimmedCurve> boundaryTop = new List<ITrimmedCurve> { };
@@ -500,7 +378,6 @@ namespace AESCConstruct2026.Fastener.Module
             boundaryTop.Add(CurveSegment.Create(pTop3, pTop1));
             Plane planeRoundZX = Plane.Create(Frame.Create(point, dirZ, dirX));
             Plane planeRoundXY = Plane.Create(Frame.Create(point, dirX, dirY));
-            //Body bodyTop = Body.CreatePlanarBody(planeRound,boundaryTop);
             Profile profile_round = new Profile(planeRoundZX, boundaryTop);
 
             Body bodyRound = Body.SweepProfile(profile_round, new CircleProfile(planeRoundXY, 0.01).Boundary);

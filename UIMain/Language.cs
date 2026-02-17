@@ -3,6 +3,7 @@
  It loads translations from languageConstruct.csv and applies them to WPF controls based on Tag identifiers.
 */
 
+using AESCConstruct2026.FrameGenerator.Utilities;
 using System;
 using System.Data;
 using System.IO;
@@ -52,7 +53,7 @@ namespace AESCConstruct2026.Localization
                     for (int i = 0; i < _columns.Length; i++)
                         row[i] = i < cells.Length ? cells[i] : string.Empty;
 
-                    try { _translations.Rows.Add(row); } catch { }
+                    try { _translations.Rows.Add(row); } catch (Exception ex) { Logger.Log($"[Language] Duplicate row at line {rowNum}: {ex.Message}"); }
                     rowNum++;
                 }
             }

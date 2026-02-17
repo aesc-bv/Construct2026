@@ -55,7 +55,7 @@ Each feature module follows the pattern: `Module/` (business logic), `UI/` (XAML
 All runtime data (profile CSVs, fastener CSVs, language files, connector properties) stored under `%ProgramData%\AESCConstruct\`. Paths configured in `Properties/Settings.settings` and `app.config`.
 
 ### Logging
-`Utilities/Logger.cs` writes to `%ProgramData%\AESCConstruct\AESCConstruct2026_Log.txt`. Status messages shown in SpaceClaim via `Application.ReportStatus()`.
+`Utilities/Logger.cs` (namespace `AESCConstruct2026.FrameGenerator.Utilities`) writes to `%ProgramData%\AESCConstruct\AESCConstruct2026_Log.txt`. Status messages shown in SpaceClaim via `Application.ReportStatus()`.
 
 ## Command Naming Convention
 
@@ -69,7 +69,9 @@ Inno Setup script at `Installer/Construct2026Installer.iss`. Outputs to `Install
 
 - `AESCConstruct2026` — root, entry point, resources
 - `AESCConstruct2026.FrameGenerator` — profiles, joints, commands, utilities
+- `AESCConstruct2026.FrameGenerator.Utilities` — Logger, DXFImportHelper, CompNameHelper (files in `Utilities/`)
 - `AESCConstruct2026.Fastener` — fastener module and UI
-- `AESCConstruct2026.UIMain` — ribbon, panel management, settings, localization
+- `AESCConstruct2026.Connector` — TubeLocker connector module
+- `AESCConstruct2026.UIMain` — ribbon, panel management, settings. Note: `Engraving/EngravingService.cs` also uses this namespace despite residing in the Engraving folder.
+- `AESCConstruct2026.Localization` — language/translation support (`UIMain/Language.cs`)
 - `AESCConstruct2026.Licensing` — license validation
-- `AESCConstruct2026.Utilities` — shared helpers (Logger, DXFImportHelper, CompNameHelper)

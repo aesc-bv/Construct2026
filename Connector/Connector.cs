@@ -9,6 +9,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
+namespace AESCConstruct2026.Connector
+{
+/// <summary>Builds TubeLocker-style connector geometry with optional fillets, chamfers, and cylindrical cutouts.</summary>
 public class Connector
 {
     public double Width1 { get; set; }        // TubeLockWidth
@@ -74,7 +77,7 @@ public class Connector
         ConnectorStraight = connectorStraight;
     }
 
-    // Simplified method to create a Connector instance using the FormConnector
+    /// <summary>Parses the WPF connector form fields and returns a new <see cref="Connector"/> instance, or null on failure.</summary>
     public static Connector CreateConnector(ConnectorControl form)
     {
         // correlation id to tie UI parse → geometry creation → unite/propagation
@@ -146,11 +149,12 @@ public class Connector
         catch (Exception ex)
         {
             sw.Stop();
+            Logger.Log($"[CreateConnector] Failed after {sw.ElapsedMilliseconds}ms: {ex}");
             return null;
         }
     }
 
-    public double GetDynamicHeigth(
+    public double GetDynamicHeight(
         Part part,
         Direction dirX,
         Direction dirY,
@@ -159,7 +163,7 @@ public class Connector
         double height,
         double thickness)
     {
-        double DynamicHeigth = 0;
+        double dynamicHeight = 0;
         var boundary = new List<ITrimmedCurve>();
 
         // Convert parameters into meters
@@ -185,7 +189,7 @@ public class Connector
             new Profile(Plane.Create(Frame.Create(center, dirX, dirZ)), boundary),
             thickness);
 
-        // check direction of thicknening
+        // check direction of thickening
         int sign1 = 1;
         if (body.ContainsPoint(center + (0.99 * thickness) * dirY))
         {
@@ -194,9 +198,6 @@ public class Connector
                 new Profile(Plane.Create(Frame.Create(center, dirX, dirZ)), boundary),
                 sign1 * thickness);
         }
-
-        List<IDesignBody> _listIDB = part.Document.MainPart.GetDescendants<IDesignBody>().ToList();
-        DesignBody.Create(part.Document.MainPart, "checkDynHeightBody", body.Copy());
 
         return height;
     }
@@ -207,18 +208,18 @@ public class Connector
         Direction dirZ,
         Point center,
         double widthDiff,
-        double bottomHeigth,
+        double bottomHeight,
         double dynHeightVal)
     {
         var boundary = new List<ITrimmedCurve>();
 
         // -------- inputs (mm → m conversions inline too) --------
-        Point pCenter = center - bottomHeigth * dirZ;
+        Point pCenter = center - bottomHeight * dirZ;
 
         double halfWidth1 = ((Width1 - widthDiff * 1000.0) * 0.5) / 1000.0; // m
         double halfWidth2 = ((Width2 - widthDiff * 1000.0) * 0.5) / 1000.0; // m
         double r = (Radius) / 1000.0;                                       // m
-        double h = DynamicHeight ? dynHeightVal : (Height / 1000.0) + bottomHeigth; // m
+        double h = DynamicHeight ? dynHeightVal : (Height / 1000.0) + bottomHeight; // mm to meters conversion
 
         // Bottom and top references (X only at top)
         Point p1 = pCenter - halfWidth1 * dirX;        // bottom-left
@@ -243,7 +244,7 @@ public class Connector
         }
 
         // -------- fillet/chamfer path --------
-        const double EPSM = 1e-9;
+        const double EPSM = 1e-9; // geometric tolerance in meters
         double dxAbs = Math.Abs(halfWidth2 - halfWidth1);
         double sideLen = Math.Sqrt(dxAbs * dxAbs + h * h);
         double alpha = (dxAbs < EPSM) ? (Math.PI * 0.5) : Math.Atan(h / dxAbs);
@@ -345,10 +346,9 @@ public class Connector
             boundary.Add(CurveSegment.Create(p4, p5));
         }
 
-        boundary.Add(CurveSegment.Create(p5, p6)); //Logger.Log("[CreateBoundary] seg p5→p6");
-        boundary.Add(CurveSegment.Create(p6, p1)); //Logger.Log("[CreateBoundary] seg p6→p1");
+        boundary.Add(CurveSegment.Create(p5, p6));
+        boundary.Add(CurveSegment.Create(p6, p1));
 
-        //Logger.Log($"[CreateBoundary] EXIT segments={boundary.Count}");
         return boundary;
     }
 
@@ -381,6 +381,7 @@ public class Connector
         return returnBody;
     }
 
+    /// <summary>Creates the connector body, rectangular cut body, collision body, and optional cylindrical cutters.</summary>
     public void CreateGeometry(
         Part part,
         Direction dirX,
@@ -397,7 +398,7 @@ public class Connector
         bool drawBodies = true,
         double? cutHeightOverride = null,
         bool rectangularCut = false,
-        bool allowCornerFeatures = true) // << NEW optional flag
+        bool allowCornerFeatures = true)
     {
         // ========= DEBUG UTILITIES =========
         const bool DEBUG = false; // flip to false to silence logs/visuals (keeps drawBodies behavior)
@@ -413,8 +414,9 @@ public class Connector
                 cyl.Unite(cyn);
                 DesignBody.Create(prt, $"DBG_Point_{name}", cyl);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log($"[DrawPoint] {name}: {ex.Message}");
             }
         }
 
@@ -433,8 +435,9 @@ public class Connector
                 rodA.Unite(rodB);
                 DesignBody.Create(prt, $"DBG_Line_{name}_A", rodA);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log($"[DrawLine] {name}: {ex.Message}");
             }
         }
 
@@ -451,15 +454,16 @@ public class Connector
                     CurveSegment.Create(loop[2], loop[3]),
                     CurveSegment.Create(loop[3], loop[0])
                 });
-                // wafer-thin extrude so it’s visible in shaded display
+                // wafer-thin extrude so it's visible in shaded display
                 var wafer = Body.ExtrudeProfile(prof, 0.0004);
                 if (wafer.ContainsPoint(loop[0] + 0.00039 * dirY))
                     wafer = Body.ExtrudeProfile(prof, -0.0004);
                 DesignBody.Create(prt, $"DBG_Wire_{name}", wafer.Copy());
                 return wafer;
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log($"[DrawWireBox] {name}: {ex.Message}");
                 return null;
             }
         }
@@ -837,4 +841,5 @@ public class Connector
         // Wireframe of the rectangle used for cut/collision
         var wire = DrawWireBox(part, "RectLoop", new[] { p1, pTopL, pTopR, p6 });
     }
+}
 }

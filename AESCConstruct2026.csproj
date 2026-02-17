@@ -122,7 +122,7 @@
       <DependentUpon>EngravingControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Fastener\Module\Bolt.cs" />
-    <Compile Include="Fastener\Module\createFasteners.cs" />
+    <Compile Include="Fastener\Module\CreateFasteners.cs" />
     <Compile Include="Fastener\Module\FastenerModule.cs" />
     <Compile Include="Fastener\Module\Nut.cs" />
     <Compile Include="Fastener\Module\PlacementData.cs" />

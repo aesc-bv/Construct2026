@@ -199,9 +199,9 @@ namespace AESCConstruct2026
 
                             // Toggle
                             if (lic.IsValidConnection())
-                                ConstructLicenseSpot.licenseCheckIn();
+                                ConstructLicenseSpot.LicenseCheckIn();
                             else
-                                ConstructLicenseSpot.licenseCheckOut();
+                                ConstructLicenseSpot.LicenseCheckOut();
 
                             // Refresh UI after the operation
                             RefreshLicenseUI();
@@ -268,7 +268,8 @@ namespace AESCConstruct2026
 
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString());
+                Logger.Log("[Construct2026] setMode3D failed: " + ex.ToString());
+                Application.ReportStatus("SetMode3D error: " + ex.Message, StatusMessageType.Error, null);
             }
         }
 
@@ -349,8 +350,9 @@ namespace AESCConstruct2026
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Log("[Construct2026] GetCustomUI failed: " + ex.Message);
                 return "";
             }
         }
@@ -403,8 +405,8 @@ namespace AESCConstruct2026
             {
                 byte[] bytes = Convert.FromBase64String(profile.ImgString);
                 using (var ms = new MemoryStream(bytes))
+                using (var bmp = new Bitmap(ms))
                 {
-                    var bmp = new Bitmap(ms);
                     var frm = new Form
                     {
                         Text = "DXF Preview: " + profile.Name,
@@ -426,7 +428,8 @@ namespace AESCConstruct2026
         private void SaveDXFProfiles_Execute(object sender, EventArgs e)
         {
             var profiles = DXFImportHelper.SessionProfiles;
-            if (profiles == null || profiles.Count() == 0)
+            var profileCount = profiles?.Count() ?? 0;
+            if (profileCount == 0)
             {
                 Application.ReportStatus("No DXF profiles available to save.", StatusMessageType.Information, null);
                 return;
@@ -449,7 +452,7 @@ namespace AESCConstruct2026
             {
                 DXFImportHelper.DXFProfileCsvHandler.SaveDXFProfiles(csvPath, profiles);
 
-                Application.ReportStatus($"Saved {profiles.Count()} profiles to:\n{csvPath}", StatusMessageType.Information, null);
+                Application.ReportStatus($"Saved {profileCount} profiles to:\n{csvPath}", StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {

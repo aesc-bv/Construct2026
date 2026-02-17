@@ -5,7 +5,6 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
-using DocumentFormat.OpenXml.Wordprocessing;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;

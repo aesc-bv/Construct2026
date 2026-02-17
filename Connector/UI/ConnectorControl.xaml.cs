@@ -6,9 +6,6 @@
 
 // SpaceClaim APIs
 using AESCConstruct2026.FrameGenerator.Utilities;
-using DocumentFormat.OpenXml.Drawing.Charts;
-using DocumentFormat.OpenXml.Office2010.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -24,13 +21,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Application = SpaceClaim.Api.V242.Application;
 using Body = SpaceClaim.Api.V242.Modeler.Body;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Color = System.Drawing.Color;
 using Component = SpaceClaim.Api.V242.Component;
-using ConnectorModel = global::Connector;
+using ConnectorModel = AESCConstruct2026.Connector.Connector;
 using Frame = SpaceClaim.Api.V242.Geometry.Frame;
 using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using Line = SpaceClaim.Api.V242.Geometry.Line;

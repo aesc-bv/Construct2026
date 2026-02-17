@@ -4,6 +4,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.UI;
+using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Licensing;
 using AESCConstruct2026.UI;
 using SpaceClaim.Api.V242;
@@ -210,7 +211,7 @@ namespace AESCConstruct2026.UIMain
 
                 // translated label: Dock when floating, Float when docked
                 DockToggleCommandHolder.Text = Localization.Language.Translate(
-                    _floatingMode ? "Ribbon.Button.Float" : "Ribbon.Button.Float"
+                    _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
                 );
             }
 
@@ -722,7 +723,7 @@ namespace AESCConstruct2026.UIMain
         private static Image LoadImage(byte[] bytes)
         {
             try { return new Bitmap(new MemoryStream(bytes)); }
-            catch { return null; }
+            catch (Exception ex) { Logger.Log("[UIManager] LoadImage failed: " + ex.Message); return null; }
         }
     }
 }

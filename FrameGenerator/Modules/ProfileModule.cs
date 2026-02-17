@@ -46,17 +46,9 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             List<DesignCurve> createdCurves = null
         )
         {
-            //Logger.Log($"ExtrudeProfile started for {profileType}");
-
-            if (reuseComponent != null)
-            {
-                //Logger.Log($" → reuseComponent provided: '{reuseComponent.Name}' with existing Placement:\n    {MatrixToString(reuseComponent.Placement)}");
-            }
-
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                //Logger.Log("ERROR - No valid document");
                 return;
             }
 
@@ -89,7 +81,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // Build the world frame and placement
             Frame worldFrame = Frame.Create(shiftedStart, xDir, yDir);
             Matrix compPlacement = Matrix.CreateMapping(worldFrame);
-            //Logger.Log($"Computed new compPlacement (world-frame) for extrusion:\n    {MatrixToString(compPlacement)}");
 
             // 4) In-part (local) always sketch on pure XY plane
             Frame localFrame;
@@ -114,19 +105,13 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // 5) Build profile loops in that localPlane
             string[] args = GetArgs(profileType, profileData);
 
-            // Logger.Log($"args {args}");
-            // Logger.Log($"args length {args.Length}");
-            //foreach (var arg in args)
-            // Logger.Log($"arg {arg}");
             var profile = ProfileBase.CreateProfile(
                 profileType, args, isHollow,
                 offsetX, offsetY,
                 dxfFilePath, dxfContours
             );
-            // Logger.Log($"profile{profile}");
             if (profile == null)
             {
-                // Logger.Log($"ERROR – CreateProfile returned null for {profileType}");
                 return;
             }
             var outerLoop = profile.GetProfileCurves(localPlane).ToList();
@@ -138,7 +123,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             var outerBody = Body.ExtrudeProfile(new Profile(localPlane, outerLoop), length);
             if (outerBody == null)
             {
-                //Logger.Log($"ERROR – failed to extrude outer for {profileType}");
                 return;
             }
             if (innerLoop?.Count > 0)
@@ -222,12 +206,10 @@ namespace AESCConstruct2026.FrameGenerator.Modules
              && profileData.TryGetValue("Name", out var nm)
              && !string.IsNullOrWhiteSpace(nm))
             {
-                // Logger.Log($"[GetProfileName] returning Name = \"{nm}\"");
                 return nm;
             }
             else
             {
-                // Logger.Log("[GetProfileName] no \"Name\" key found or value was empty");
                 return string.Empty;
             }
         }
@@ -355,7 +337,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                         CreateCustomProperty(part, "DXFPath", dxfFilePath);
                         break;
                     case "CSV":
-                        // Logger.Log(dxfContourVal.ToString());
                         CreateCustomProperty(part, "RawCSV", csvProfileString);
                         break;
                     default:
@@ -365,7 +346,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                         if (w == 0.0) w = GetNum("D");
                         break;
                 }
-                //Logger.Log($"Width from profiledata: {w}.");
                 if (w > 0.0)
                 {
                     // store in profileData in millimetres
@@ -378,7 +358,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // write out all Construct_ properties
             foreach (var kv in profileData)
             {
-                // Logger.Log($"Construct_{kv.Key}, {kv.Value}");
                 CreateCustomProperty(part, "Construct_" + kv.Key, kv.Value);
             }
 

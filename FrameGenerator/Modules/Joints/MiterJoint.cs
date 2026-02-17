@@ -123,7 +123,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
 
             // build local cutter‐frame & loop
             var (planeLocal, loopLocal) = JointModule.BuildDebugCutterFrameAndLoop(
-                inLoc, outLoc, upLocal, 500.0
+                inLoc, outLoc, upLocal, 500.0 // mm, cutter size
             );
             if (planeLocal == null)
             {
@@ -134,7 +134,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             // pick forward/back in local
             var (fwd, back) = JointCurveHelper.PickDirection(
                 planeLocal, comp, startConnected, endConnected,
-                longLen: 200.0, shortLen: spacing / 2.0
+                longLen: 200.0 /* mm, extrusion length */, shortLen: spacing / 2.0
             );
 
             // extrude

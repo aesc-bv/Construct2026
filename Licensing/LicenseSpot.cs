@@ -229,7 +229,7 @@ namespace AESCConstruct2026.Licensing
 
         // ── Network toggles wired to the ribbon ──────────────────────────────
 
-        public static void licenseCheckOut()
+        public static void LicenseCheckOut()
         {
             Logger.Log("[License] CheckOut requested");
             if (_license == null || !_license.IsNetwork)
@@ -255,7 +255,7 @@ namespace AESCConstruct2026.Licensing
             UpdateNetworkButtonUI();
         }
 
-        public static void licenseCheckIn()
+        public static void LicenseCheckIn()
         {
             if (_license == null || !_license.IsNetwork) return;
 
@@ -295,14 +295,14 @@ namespace AESCConstruct2026.Licensing
                  cmd.Image = connected ? _active
                                        : _inactive;
             }
-            catch { /* ignore */ }
+            catch (Exception ex) { Logger.Log("[License] UpdateNetworkButtonUI failed: " + ex.Message); }
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────
 
         private static void EnsureProgramDataFolder()
         {
-            try { Directory.CreateDirectory(BaseDir); } catch { }
+            try { Directory.CreateDirectory(BaseDir); } catch (Exception ex) { Logger.Log("[License] EnsureProgramDataFolder failed: " + ex.Message); }
         }
 
         private static ExtendedLicense OpenStrict(string filePath)
@@ -312,8 +312,9 @@ namespace AESCConstruct2026.Licensing
                 var vinfo = new LicenseValidationInfo { LicenseFile = new LicenseFile(filePath) };
                 return ExtendedLicenseManager.GetLicense(AnchorType, instance: null, info: vinfo, publicKey: _keyPair) as ExtendedLicense;
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log("[License] OpenStrict failed: " + ex.Message);
                 return null;
             }
         }

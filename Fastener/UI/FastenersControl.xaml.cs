@@ -12,7 +12,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
@@ -161,7 +160,7 @@ namespace AESCConstruct2026.UI
             SelectedCustomFile = Path.GetFileName(selectedPath);
             OnPropertyChanged(nameof(SelectedCustomFile));
 
-            Application.ReportStatus("Custom fastener imported successfully.", StatusMessageType.Error, null);
+            Application.ReportStatus("Custom fastener imported successfully.", StatusMessageType.Information, null);
         }
 
         // Raises INotifyPropertyChanged for bound properties.

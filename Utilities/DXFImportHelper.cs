@@ -130,7 +130,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
 
             // Ensure SpaceClaim API is initialized
             if (Api.Session == null)
-                initializeSC();
+                InitializeSC();
 
             var window = Window.ActiveWindow;
             if (window == null)
@@ -183,7 +183,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     DesignBody db = DesignBody.Create(docImg.MainPart, "ProfileBody", body);
                     Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
                     db.SetColor(null, myCustomColor);
-                    string imgString = getImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
+                    string imgString = GetImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
 
                     // 4) Build the DXFProfile object
                     dxfProfile = new DXFProfile
@@ -428,29 +428,41 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         /// Create a hidden SpaceClaim window, render <paramref name="part"/> at size (sizeX×sizeY),
         /// using the given viewFrame, and return a Base64-encoded PNG string.
         /// </summary>
-        public static string getImgBase64(Part part, int sizeX, int sizeY, Frame viewFrame)
+        public static string GetImgBase64(Part part, int sizeX, int sizeY, Frame viewFrame)
         {
+            Window _window = null;
             try
             {
                 var imageSize = new Size(sizeX, sizeY);
-                var _window = Window.Create(part, false);
+                _window = Window.Create(part, false);
                 _window.SetProjection(Matrix.CreateMapping(viewFrame), true, false);
                 _window.InteractionMode = InteractionMode.Solid;
 
                 Bitmap bmp = _window.CreateBitmap(imageSize);
-                bmp.MakeTransparent();
-
-                using (var ms = new MemoryStream())
+                try
                 {
-                    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    byte[] bytes = ms.ToArray();
-                    return Convert.ToBase64String(bytes);
+                    bmp.MakeTransparent();
+
+                    using (var ms = new MemoryStream())
+                    {
+                        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                        byte[] bytes = ms.ToArray();
+                        return Convert.ToBase64String(bytes);
+                    }
+                }
+                finally
+                {
+                    bmp.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"getImgBase64 error:\n{ex}", StatusMessageType.Error, null);
+                Application.ReportStatus($"GetImgBase64 error:\n{ex}", StatusMessageType.Error, null);
                 return "";
+            }
+            finally
+            {
+                try { _window?.Close(); } catch { }
             }
         }
 
@@ -522,7 +534,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         //
         // ─── 9) ENSURE SPACECLAIM API IS INITIALIZED ─────────────────────────────────────
         //
-        private static void initializeSC()
+        private static void InitializeSC()
         {
             Api.Initialize();
         }

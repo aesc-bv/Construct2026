@@ -39,6 +39,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 {
     public static class ExportCommands
     {
+        private static readonly Regex TrailingParenRegex = new Regex(@"\(\d+\)$", RegexOptions.Compiled);
+
         // Builds a BOM from all frame components and writes it as a table onto a drawing sheet (and clipboard text), honoring material/unit settings.
         public static void ExportBOM(Window window, bool update)
         {
@@ -120,7 +122,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             bool includeMaterial = matSetting && anyMaterial;
 
             var bomRows = comps
-                .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
+                .GroupBy(c => TrailingParenRegex.Replace(c.Template.Name, ""))
                 .Select(g =>
                 {
                     var first = g.First();
@@ -281,7 +283,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             bool includeMaterial = matExcelSetting && anyMaterial;
 
             var bomRows = comps
-                .GroupBy(c => Regex.Replace(c.Template.Name, @"\(\d+\)$", ""))
+                .GroupBy(c => TrailingParenRegex.Replace(c.Template.Name, ""))
                 .Select(g =>
                 {
                     var first = g.First();

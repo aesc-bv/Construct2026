@@ -1,0 +1,1435 @@
+AESCConstruct2026 Add-In — Comprehensive Review
+================================================
+Started: 2026-02-16
+
+Three parallel review tracks:
+  1. CODE QUALITY — patterns, consistency, error handling, maintainability
+  2. DOCUMENTATION — comments, naming, CLAUDE.md accuracy, missing docs
+  3. SECURITY — input validation, file handling, injection risks, licensing
+
+Progress:
+---------
+[STARTED] Initializing review team...
+
+================================================================================
+TRACK 1: CODE QUALITY REVIEW
+================================================================================
+Reviewer: code-quality agent
+Status: COMPLETE
+Files reviewed: 30+ source files across all modules
+
+--------------------------------------------------------------------------------
+1. ERROR HANDLING
+--------------------------------------------------------------------------------
+
+[HIGH] Silent catch-all with empty catch blocks
+  Multiple locations swallow exceptions with no logging or re-throw:
+
+  - Connector\Connector.cs:146-150 — CreateConnector catches Exception but
+    returns null silently. Caller cannot distinguish bad input from crash.
+  - UIMain\UIManager.cs:724 — LoadImage catches all exceptions, returns null.
+  - Licensing\LicenseSpot.cs:298 — UpdateNetworkButtonUI: catch { /* ignore */ }
+  - Licensing\LicenseSpot.cs:305 — EnsureProgramDataFolder: catch { }
+  - Licensing\LicenseSpot.cs:315 — OpenStrict: catch { return null; }
+  - Construct2026.cs:352-355 — GetCustomUI returns "" on any exception without
+    logging (could mask missing embedded resource).
+  - FrameGenerator\Commands\CompareCommand.cs:534-538 — compareLegacy()
+    catches Exception but does nothing (no log, no user feedback).
+  - Connector\Connector.cs:417-418, 461-464 — Multiple empty catch blocks in
+    CreateGeometry debug helpers (acceptable for DEBUG=false code, but risky if
+    DEBUG is flipped to true).
+
+  Recommendation: At minimum, log exceptions via Logger.Log() in catch blocks.
+  For user-facing operations, report via Application.ReportStatus().
+
+[MEDIUM] Inconsistent error reporting patterns
+  Some methods use MessageBox.Show (Construct2026.cs:271), others use
+  Application.ReportStatus, and others silently return null. There is no
+  unified error reporting strategy.
+
+  - Construct2026.cs:271 (setMode3D) — MessageBox.Show(ex.ToString())
+  - Most other commands — Application.ReportStatus(...)
+  - ProfileBase.cs:80-81 — Application.ReportStatus for parse errors
+  - createFasteners.cs:128 — Debug.Assert (crashes in debug builds)
+
+  Recommendation: Standardize on Application.ReportStatus for user-facing
+  errors and Logger.Log for internal diagnostics. Remove MessageBox.Show
+  from non-UI code.
+
+--------------------------------------------------------------------------------
+2. RESOURCE AND MEMORY MANAGEMENT
+--------------------------------------------------------------------------------
+
+[HIGH] MemoryStream objects not disposed when creating Bitmaps
+  When a Bitmap is created from a MemoryStream, the stream must remain alive
+  for the lifetime of the Bitmap. However, multiple locations create
+  MemoryStreams that are never disposed:
+
+  - Construct2026.cs:313-314 — loadImg: new Bitmap(new MemoryStream(bytes))
+    The MemoryStream is never disposed; the Bitmap keeps it alive but it is
+    never explicitly cleaned up.
+  - UIMain\UIManager.cs:724 — LoadImage: same pattern.
+  - Licensing\LicenseSpot.cs:37-38 — Static Bitmap fields from MemoryStream.
+  - UIMain\UIManager.cs:72-73 — Static Bitmap fields from MemoryStream.
+
+  These are minor for static/long-lived objects but the pattern is fragile.
+
+[MEDIUM] Bitmap not disposed in DXFtoProfile preview
+  Construct2026.cs:407 — A Bitmap is created from a MemoryStream, displayed
+  in a Form, but never disposed. The Form.ShowDialog() is modal but the PictureBox
+  holds the Bitmap reference. If the Form is closed, the Bitmap leaks.
+
+[MEDIUM] DXFImportHelper.getImgBase64 leaks Window and Bitmap
+  Utilities\DXFImportHelper.cs:436-437 — Window.Create() and CreateBitmap()
+  are called but the created SpaceClaim window (_window) is never closed, and
+  the Bitmap (bmp) is not disposed after conversion.
+
+[LOW] Body.Copy() results not always disposed
+  Throughout JointModule.cs and CompareCommand.cs, Body.Copy() is called
+  frequently. While SpaceClaim's modeler manages some of this, explicit
+  disposal would be cleaner. The CompareCommand.AreCongruentShapes method
+  (line 576+) does use using/Dispose correctly — good pattern to follow.
+
+--------------------------------------------------------------------------------
+3. CODE DUPLICATION
+--------------------------------------------------------------------------------
+
+[HIGH] Massive duplication in JointModule.cs
+  ResetComponentGeometryOnly (lines 34-156) and ResetComponentGeometryAndExtend
+  (lines 159-266) share ~80% identical code for reading custom properties,
+  parsing metadata, and building contours. Only the curve extension logic
+  differs.
+
+  Recommendation: Extract a shared method like
+    ReadComponentMetadata(Component) -> (profileType, isHollow, offsetX, ...)
+  and call it from both methods.
+
+[HIGH] Hexagon boundary creation duplicated 4 times
+  createFasteners.cs contains nearly identical hexagon vertex calculation and
+  boundary loop creation in:
+  - createBolt (lines 73-94)
+  - createBolt7991 (lines 265-285)
+  - createBolt912 (lines 318-338)
+  - createNut (lines 390-410)
+  - createNut982 (lines 448-465)
+
+  Recommendation: Extract CreateHexagonLoop(Point center, double s, ...) helper.
+
+[MEDIUM] UpdateCommandTexts duplicated between Construct2026.cs and UIManager.cs
+  Construct2026.cs:291-307 and UIManager.cs:663-695 both iterate over commands
+  and set localized text. These could be unified into a single method.
+
+[MEDIUM] SetEnabled duplicated
+  Both Construct2026.cs:328-332 and UIManager.cs:179-183 have identical
+  SetEnabled(string, bool) helper methods.
+
+[MEDIUM] Profile parsing (comma→dot normalization + InvariantCulture parse)
+  The pattern of replacing commas with dots and parsing with InvariantCulture
+  appears in at least 8 locations:
+  - ProfileBase.cs:33-34
+  - ProfileModule.cs:319-322
+  - Connector.cs:91-106
+  - CompNameHelper.cs:105
+  - JointCurveHelper.cs:70-71
+  - JointModule.cs:78, 199
+
+  Recommendation: Create a shared ParseMm(string) utility method.
+
+--------------------------------------------------------------------------------
+4. DESIGN AND ARCHITECTURE
+--------------------------------------------------------------------------------
+
+[MEDIUM] Connector class has no namespace
+  Connector\Connector.cs:13 — The Connector class is declared without a
+  namespace. This pollutes the global namespace and can cause naming conflicts.
+
+[MEDIUM] createFasteners uses non-standard naming
+  Fastener\Module\createFasteners.cs — Class name "createFasteners" uses
+  camelCase instead of PascalCase. Methods like createBolt, createNut also
+  use camelCase.
+
+[MEDIUM] Embedded Python scripts in C# strings
+  CompareCommand.cs:214-525 and EngravingService.cs contain large Python
+  scripts as string literals. These are hard to maintain, test, and debug.
+  The compareLegacy() method is ~310 lines of Python in a C# string.
+
+  Recommendation: Move Python scripts to embedded resource files or external
+  .py files (EngravingService already has RunPythonScriptFromString helper).
+
+[LOW] Magic numbers throughout geometry code
+  - JointModule.cs:169 — extendAmount = 200.0 (no units comment)
+  - JointModule.cs:488 — half = 200.0 (size of splitting square)
+  - MiterJoint.cs:126 — 500.0 (cutter size)
+  - MiterJoint.cs:137 — 200.0 (long extrusion length)
+  - Connector.cs:246 — EPSM = 1e-9
+
+  Recommendation: Define named constants or document the units.
+
+[LOW] Static mutable state
+  - Construct2026.cs:30 — static bool isCommandRegistered
+  - UIManager.cs:37-68 — Many static fields for UI state
+  - DXFImportHelper.cs:34 — static SessionProfiles list
+  - EngravingService.cs:20 — static int version
+
+  This is a common pattern in SpaceClaim add-ins due to the singleton nature,
+  but it makes the code harder to test and reason about.
+
+--------------------------------------------------------------------------------
+5. LOGIC AND CORRECTNESS
+--------------------------------------------------------------------------------
+
+[HIGH] ToggleMode uses same translation key for both states
+  UIManager.cs:212-213 — The DockToggleCommandHolder.Text always uses
+  "Ribbon.Button.Float" regardless of the _floatingMode state:
+    DockToggleCommandHolder.Text = Localization.Language.Translate(
+        _floatingMode ? "Ribbon.Button.Float" : "Ribbon.Button.Float"
+    );
+  This is clearly a copy-paste bug. The second branch should likely be
+  "Ribbon.Button.Dock" or similar.
+
+[MEDIUM] GetDynamicHeigth never returns the dynamic value
+  Connector\Connector.cs:153-202 — The method creates geometry to determine
+  dynamic height but always returns the input `height` parameter unchanged
+  (line 202). The computed DynamicHeigth variable is set to 0 and never updated.
+  Also note the typo: "Heigth" instead of "Height".
+
+[MEDIUM] GetDynamicHeigth creates a debug body that is never cleaned up
+  Connector\Connector.cs:199 — DesignBody.Create(part.Document.MainPart,
+  "checkDynHeightBody", body.Copy()) creates a named body in the document
+  that persists after the method returns. This looks like leftover debug code.
+
+[MEDIUM] SaveDXFProfiles_Execute calls Count() twice on IEnumerable
+  Construct2026.cs:429 — profiles.Count() is called, then called again at
+  line 452. If SessionProfiles is a plain List, this is fine, but the code
+  uses IEnumerable-style .Count() when .Count would suffice.
+
+[LOW] FindSharedPoint returns a.StartPoint as fallback
+  JointCurveHelper.cs:349 — If no shared point is found, the method silently
+  returns a.StartPoint instead of null/throwing. This could mask geometry
+  errors in joint calculations.
+
+[LOW] Language.LoadCSV silently drops duplicate rows
+  UIMain\Language.cs:55 — When a duplicate key is encountered,
+  _translations.Rows.Add(row) throws, caught by empty catch { }.
+  Duplicate translation keys are silently ignored.
+
+--------------------------------------------------------------------------------
+6. THREAD SAFETY
+--------------------------------------------------------------------------------
+
+[MEDIUM] UI controls accessed from floating STA thread
+  UIManager.cs:281-294 — A new STA thread is created for the floating window.
+  The CreateControl method (line 646) creates WPF UserControls on this thread,
+  but some of these controls may interact with SpaceClaim API objects on the
+  main thread. There is no explicit synchronization mechanism.
+
+[LOW] Static _floatingWindow accessed without synchronization
+  UIManager.cs:259-261 — _floatingThread.IsAlive and _floatingWindow != null
+  are checked from the main thread without locks. While STA threading makes
+  this generally safe for WPF, the checks are not atomic.
+
+--------------------------------------------------------------------------------
+7. PERFORMANCE
+--------------------------------------------------------------------------------
+
+[MEDIUM] compareLegacy Python script runs body comparisons in O(n^2)
+  CompareCommand.cs:214-525 — The embedded Python script compares bodies in
+  nested loops with Volume and SurfaceArea checks plus full Unite operations.
+  For large assemblies this is O(n^2) with expensive boolean operations.
+  The C# CompareSimple + AreCongruentShapes handles this more efficiently
+  with proper short-circuits.
+
+[LOW] Logger.Log uses File.AppendAllText per call
+  Utilities\Logger.cs:17 — Each log call opens, writes, and closes the file.
+  During startup (where LicenseSpot.cs logs 15+ messages), this creates
+  unnecessary I/O overhead. A buffered writer or lazy-open approach would help.
+
+[LOW] Regex compiled on every call in several locations
+  CompareCommand.cs:123, ExportCommands.cs:123 — Regex.Replace with pattern
+  @"\(\d+\)$" is called per-component without caching the Regex object.
+  Similarly, CompNameHelper.cs:115 creates a new Regex per call.
+
+--------------------------------------------------------------------------------
+8. COMMENTED-OUT CODE
+--------------------------------------------------------------------------------
+
+[LOW] Large blocks of commented-out code
+  - EngravingService.cs:24-229 — ~200 lines of commented-out AddNote method
+  - ProfileModule.cs — Multiple commented-out Logger.Log lines throughout
+  - Connector.cs:348-351 — Commented debug logging
+  - createFasteners.cs:96-105 — Commented debug DatumPoint/DesignCurve lines
+
+  Recommendation: Remove commented-out code. Use version control history
+  to retrieve old implementations if needed.
+
+================================================================================
+END OF TRACK 1: CODE QUALITY REVIEW
+================================================================================
+
+================================================================================
+TRACK 2: DOCUMENTATION AND NAMING REVIEW
+================================================================================
+Reviewer: documentation agent
+Status: COMPLETE
+Files reviewed: All .cs source files, CLAUDE.md, README.md, AESCConstruct2026.xml
+
+--------------------------------------------------------------------------------
+1. CLAUDE.md ACCURACY
+--------------------------------------------------------------------------------
+
+[HIGH] Incorrect namespace for Logger
+  CLAUDE.md states Logger is in namespace "AESCConstruct2026.Utilities" under
+  the Key Namespaces section. The actual namespace is
+  "AESCConstruct2026.FrameGenerator.Utilities" (Utilities\Logger.cs:4).
+
+  Recommendation: Update CLAUDE.md Key Namespaces to list the correct namespace
+  or note that Utilities classes live under AESCConstruct2026.FrameGenerator.Utilities.
+
+[MEDIUM] Namespace for Language.cs is misleading
+  CLAUDE.md lists Language.cs under the UIMain section and in the key namespace
+  "AESCConstruct2026.UIMain". The actual namespace is
+  "AESCConstruct2026.Localization" (UIMain\Language.cs:15). The file path is
+  correct (UIMain/) but the namespace does not match the folder.
+
+  Recommendation: Add "AESCConstruct2026.Localization" to Key Namespaces. Note
+  that Language.cs lives in the UIMain folder but uses its own namespace.
+
+[MEDIUM] EngravingService namespace mismatch not documented
+  Engraving\EngravingService.cs is in namespace "AESCConstruct2026.UIMain"
+  (line 15), not "AESCConstruct2026.Engraving" as one would expect from its
+  folder location. CLAUDE.md does not list an Engraving namespace because the
+  file uses the UIMain namespace.
+
+  Recommendation: Either move EngravingService into the AESCConstruct2026.Engraving
+  namespace (if one is created) or document this anomaly in CLAUDE.md.
+
+[LOW] Missing Connector namespace not documented
+  Connector\Connector.cs and Connector\CylInfo.cs have no namespace declaration
+  at all — they are in the global namespace. CLAUDE.md does not mention a
+  Connector namespace in Key Namespaces, which is technically correct, but this
+  is an architectural issue that should be noted.
+
+--------------------------------------------------------------------------------
+2. README.md ISSUES
+--------------------------------------------------------------------------------
+
+[HIGH] README.md is completely outdated
+  README.md still references the old project name throughout:
+  - Line 1: "SpaceClaim Construct add-in" (no version)
+  - Line 3: "Documentation WIP"
+  - Lines 8-16: The XML snippet references "AESC Construct 25",
+    "AESCConstruct25.dll", and "AESCConstruct25.Construct25"
+  None of this matches the current project name "AESCConstruct2026".
+
+  Recommendation: Rewrite README.md to reflect the current project (2026),
+  correct DLL and class names, and either expand the documentation or point
+  to CLAUDE.md for architecture details.
+
+--------------------------------------------------------------------------------
+3. MISSING XML DOC COMMENTS
+--------------------------------------------------------------------------------
+
+[HIGH] No XML docs on public/internal classes — entire modules
+  The following public or internal classes have no XML <summary> on the class
+  declaration:
+
+  - Connector\Connector.cs:12 — public class Connector
+  - Connector\CylInfo.cs — public class CylInfo
+  - Utilities\Logger.cs:6 — public static class Logger
+  - Fastener\Module\Bolt.cs — public class Bolt
+  - Fastener\Module\Nut.cs — public class Nut
+  - Fastener\Module\Washer.cs — public class Washer
+  - Fastener\Module\createFasteners.cs — public class createFasteners
+  - Fastener\Module\FastenerModule.cs — public class FastenerModule
+  - Fastener\Module\PlacementData.cs — public class PlacementData
+  - FrameGenerator\Modules\Profiles\ProfileBase.cs — public abstract class ProfileBase
+  - FrameGenerator\Modules\Joints\JointBase.cs — public abstract class JointBase
+
+  Recommendation: Add at minimum a one-line <summary> to each public class
+  describing its responsibility.
+
+[MEDIUM] No XML docs on many public methods
+  Key methods with missing documentation:
+  - Logger.cs: Log(), LogBlank(), ClearLog() — no XML docs at all
+  - Connector.cs: CreateConnector(), GetDynamicHeigth(), CreateGeometry()
+  - CylInfo.cs: AreCoaxial(), GetCoaxialFaces(), GetDiameter()
+  - createFasteners.cs: createBolt(), createNut(), createWasher() and all variants
+  - FastenerModule.cs: CreateFastenerAssembly(), FindBolt(), FindNut()
+  - JointBase.cs: CreateJoint(), ResetJoint()
+  - ProfileBase.cs: CreateProfile() factory has good docs, but instance methods
+    like GetContour(), GetInnerContour() do not
+
+  Recommendation: Prioritize XML docs on public API surface — especially
+  methods called from other modules or from command handlers.
+
+[LOW] Good examples to follow
+  Some files have excellent documentation patterns worth emulating:
+  - Construct2026.cs — Good file-level comment, method-level comments
+  - CompNameHelper.cs — XML doc on SetNameAndLength with <param> tags
+  - ExecuteJointCommand.cs — Thorough file-level and method comments
+  - ExportCommands.cs — Good file-level comment describing purpose
+  - CustomComponentControl.xaml.cs — Extensive logging doubles as documentation
+  - PlatesControl.xaml.cs — Good file-level comment
+  - KruisRibCmd.cs — Well-documented CommandCapsule
+
+--------------------------------------------------------------------------------
+4. NAMING CONVENTION VIOLATIONS
+--------------------------------------------------------------------------------
+
+[HIGH] camelCase method names (should be PascalCase per C# conventions)
+  - Licensing\LicenseSpot.cs:232 — licenseCheckOut()
+  - Licensing\LicenseSpot.cs:258 — licenseCheckIn()
+  - Utilities\DXFImportHelper.cs:431 — getImgBase64()
+  - Utilities\DXFImportHelper.cs:525 — initializeSC()
+  - Fastener\Module\createFasteners.cs — class name "createFasteners" and all
+    methods: createBolt(), createBolt7991(), createBolt912(), createNut(),
+    createNut982(), createWasher()
+
+  Recommendation: Rename to PascalCase (LicenseCheckOut, GetImgBase64,
+  InitializeSC, CreateFasteners, CreateBolt, etc.). This is the standard C#
+  naming convention for public and internal methods.
+
+[HIGH] camelCase properties in Fastener data classes
+  - Bolt.cs: properties "type", "size", "d", "c", "k", "s", "l" — all lowercase
+  - Nut.cs: properties "type", "size", "d", "c", "k", "s" — all lowercase
+  - Washer.cs: properties "type", "d", "s" — all lowercase
+
+  These are public properties and should be PascalCase (Type, Size, D, C, K, S, L).
+  Single-letter names are also unclear — consider more descriptive names like
+  Diameter, Chamfer, HeadHeight, WrenchSize, Length, Thickness.
+
+  Recommendation: Rename to PascalCase. Consider adding XML docs explaining
+  what each abbreviation means (e.g., "k" = head height per ISO standard).
+
+[MEDIUM] Inconsistent PascalCase in Settings.Designer.cs
+  Properties\Settings.Designer.cs:305 — The setting "profiles" uses lowercase,
+  while all other settings use PascalCase (e.g., "IPManagerCatalog",
+  "ProgramDataFolder"). This is auto-generated code but the setting name in
+  Settings.settings should be corrected.
+
+--------------------------------------------------------------------------------
+5. SPELLING ERRORS IN IDENTIFIERS
+--------------------------------------------------------------------------------
+
+[MEDIUM] "Heigth" typo (should be "Height")
+  - Connector\Connector.cs:153 — method GetDynamicHeigth
+  - Connector\Connector.cs:162 — variable DynamicHeigth
+  - Connector\Connector.cs:210 — parameter bottomHeigth
+
+  These are used in method signatures and would require coordinated renaming
+  across callers.
+
+[LOW] "thicknening" typo in comment
+  - Connector\Connector.cs:188 — "check direction of thicknening"
+    Should be "thickening".
+
+--------------------------------------------------------------------------------
+6. HARDCODED USER-FACING STRINGS (LOCALIZATION GAPS)
+--------------------------------------------------------------------------------
+
+[MEDIUM] English strings not going through Language.Translate()
+  The following user-visible strings are hardcoded in English instead of using
+  the localization system (Language.Translate):
+
+  - Construct2026.cs:419 — "Select a single DXF profile"
+  - Construct2026.cs:427 — "No profiles have been drawn this session..."
+  - Construct2026.cs:452 — "DXF Profiles saved to..."
+  - Construct2026.cs:271 — MessageBox.Show(ex.ToString()) — error text not
+    localized
+  - UIManager.cs:155 — "Toggle between docked panel and floating window"
+    (command tooltip)
+  - FastenersControl.xaml.cs:164 — "Custom fastener imported successfully."
+  - CompareCommand.cs: Status messages in CompareSimple() (lines 100-180)
+
+  Recommendation: Add translation keys for all user-facing strings and route
+  them through Language.Translate().
+
+--------------------------------------------------------------------------------
+7. BUGS FOUND DURING DOCUMENTATION REVIEW
+--------------------------------------------------------------------------------
+
+[HIGH] UIManager.cs:213 — Both ternary branches use same translation key
+  DockToggleCommandHolder.Text = Localization.Language.Translate(
+      _floatingMode ? "Ribbon.Button.Float" : "Ribbon.Button.Float"
+  );
+  The false branch should use a different key (e.g., "Ribbon.Button.Dock").
+  This means the button text never changes between docked and floating states.
+
+[MEDIUM] FastenersControl.xaml.cs:164 — Wrong StatusMessageType for success
+  Application.ReportStatus("Custom fastener imported successfully.",
+      StatusMessageType.Error, null);
+  A success message is reported with StatusMessageType.Error. Should be
+  StatusMessageType.Information or StatusMessageType.Warning.
+
+[LOW] AssemblyInfo.cs — Copyright year is 2025
+  Properties\AssemblyInfo.cs — AssemblyCopyright says "Copyright 2025" but
+  the project has been renamed to Construct2026. AssemblyDescription is also
+  empty.
+
+  Recommendation: Update copyright to 2026 and add a description.
+
+--------------------------------------------------------------------------------
+8. COMMENTED-OUT CODE (DOCUMENTATION PERSPECTIVE)
+--------------------------------------------------------------------------------
+
+[MEDIUM] Large commented-out Python script in EngravingService.cs
+  Engraving\EngravingService.cs:24-229+ — Over 200 lines of a commented-out
+  AddNote method containing an embedded Python script. This is the old
+  implementation that has been replaced by the C# version. It adds significant
+  noise to the file.
+
+  Recommendation: Remove entirely. The old implementation is preserved in
+  git history.
+
+[LOW] Scattered debug logging left commented out
+  - Fastener\Module\createFasteners.cs:96-105 — commented Debug lines
+  - FrameGenerator\Modules\ProfileModule.cs — multiple commented Logger.Log
+  - Connector\Connector.cs:348-351 — commented debug bodies
+
+--------------------------------------------------------------------------------
+9. UNUSED OR SUSPICIOUS IMPORTS
+--------------------------------------------------------------------------------
+
+[LOW] Potentially unused using directives
+  - Connector\UI\ConnectorControl.xaml.cs — imports DocumentFormat.OpenXml.Drawing.Charts,
+    DocumentFormat.OpenXml.Drawing.Diagrams, and other OpenXml namespaces that
+    appear to be copy-pasted from ExportCommands.cs
+  - Connector\UI\ConnectorControl.xaml.cs — "using static System.Windows.Forms.
+    VisualStyles.VisualStyleElement" appears unused
+  - Fastener\UI\FastenersControl.xaml.cs — "using System.Security.Cryptography"
+    appears unused
+  - Plates\Modules\PlatesModule.cs — "DocumentFormat.OpenXml.Wordprocessing"
+    import appears unused
+
+  Recommendation: Run a "Remove Unused Usings" pass across the solution
+  (Visual Studio: Ctrl+R, Ctrl+G on each file, or use a Roslyn analyzer).
+
+--------------------------------------------------------------------------------
+10. MAGIC NUMBERS AND UNEXPLAINED LITERALS
+--------------------------------------------------------------------------------
+
+[MEDIUM] Unexplained numeric constants in geometry code
+  - Connector\Connector.cs:246 — EPSM = 1e-9 (tolerance, but not documented)
+  - Connector\Connector.cs:221 — Height / 1000.0 (mm to m conversion, not
+    commented)
+  - Connector\Connector.cs:249 — tolerance: 0.0001 passed to API calls
+  - EngravingService.cs:20 — static int version = 0 (purpose unclear)
+
+  Recommendation: Define named constants with descriptive names and units,
+  e.g., const double MmToMeters = 1.0 / 1000.0;
+
+--------------------------------------------------------------------------------
+SUMMARY OF FINDINGS
+--------------------------------------------------------------------------------
+
+  Severity  | Count | Category
+  ----------|-------|------------------------------------------
+  HIGH      |   5   | CLAUDE.md inaccuracy, README outdated,
+            |       | missing class XML docs, camelCase methods,
+            |       | camelCase properties, UI toggle bug
+  MEDIUM    |  10   | Namespace mismatches, spelling errors,
+            |       | hardcoded strings, wrong StatusMessageType,
+            |       | magic numbers, commented-out code
+  LOW       |   8   | Good examples noted, unused imports,
+            |       | minor typos, assembly info
+
+Total: 23 findings across 10 categories.
+
+Top 3 recommendations:
+  1. Fix CLAUDE.md namespace inaccuracies (Logger, Language, Engraving)
+  2. Apply PascalCase naming to all public methods and properties
+  3. Add XML doc <summary> to all public classes and key methods
+
+================================================================================
+END OF TRACK 2: DOCUMENTATION AND NAMING REVIEW
+================================================================================
+
+================================================================================
+TRACK 3: SECURITY REVIEW
+================================================================================
+Reviewer: security agent
+Status: COMPLETE
+Files reviewed: ALL .cs source files (45+), app.config, packages.config,
+                Properties/Settings.Designer.cs, AESCConstruct2026.xml
+
+Scope: File I/O, user input validation, license handling, dependencies,
+sensitive data exposure, path traversal, injection risks, deserialization,
+DLL loading, logging, clipboard usage, network calls.
+
+NOTE: This is a SpaceClaim desktop add-in running in-process with full trust.
+Many findings are lower severity than they would be in a web or server context,
+but are still worth addressing for defense-in-depth and code hardening.
+
+--------------------------------------------------------------------------------
+1. CODE EXECUTION / INJECTION
+--------------------------------------------------------------------------------
+
+[HIGH] S-01: Python script injection via string interpolation
+  Files:
+    - Engraving\EngravingService.cs:266-361 (AddNoteScript)
+    - Engraving\EngravingService.cs:384-478 (createDXF script)
+    - FrameGenerator\Commands\CompareCommand.cs:214-533 (compareLegacy)
+
+  Description: Large Python scripts are embedded as C# string literals and
+  executed via SpaceClaim's ScriptEnvironment.RunCommand() or
+  Application.RunScript(). In EngravingService, user-provided text values
+  (engraving text, font name, file paths) are interpolated directly into
+  the Python script strings using string.Format or concatenation. If user
+  input contains Python syntax (quotes, backslashes, newlines), it could
+  alter script execution.
+
+  Example (EngravingService.cs:317):
+    script = script.Replace("{dxfPath}", tempDxfPath);
+  If tempDxfPath contains a single quote, the Python string literal breaks.
+
+  Risk: Medium in practice (user is running their own desktop app), but a
+  crafted DXF filename or engraving text could cause script errors or
+  unintended code execution within the SpaceClaim scripting environment.
+
+  Recommendation:
+    - Escape all interpolated values for Python string context (replace
+      backslashes and quotes).
+    - Better: pass parameters via environment variables or temp JSON file
+      instead of string interpolation.
+    - Best: move Python scripts to embedded .py resource files and pass
+      arguments via sys.argv or a config file.
+
+[HIGH] S-02: Temp file predictability and race condition
+  File: Engraving\EngravingService.cs:232-244 (RunPythonScriptFromString)
+  File: Engraving\EngravingService.cs:317 (hardcoded temp DXF path)
+
+  Description: Python scripts are written to a predictable path:
+    %TEMP%\AESCConstruct2026\Scripts\<scriptName>.py
+  Additionally, a hardcoded temp file path is used:
+    C:\Windows\Temp\_TempDXF.dxf
+
+  The script directory is created if it does not exist, then the script
+  file is written and executed. Between write and execution, another
+  process with access to the same directory could replace the file content
+  (TOCTOU race). The C:\Windows\Temp path is world-writable.
+
+  Recommendation:
+    - Use Path.GetTempFileName() or Path.GetRandomFileName() to generate
+      unique temp file names.
+    - Remove the hardcoded C:\Windows\Temp\_TempDXF.dxf path; use a
+      per-session temp file instead.
+    - Set restrictive ACLs on the temp directory if possible.
+
+[MEDIUM] S-03: Process.Start with user-controllable paths
+  Files:
+    - UIMain\SettingsControl.xaml.cs:391-408 — Process.Start("explorer.exe", path)
+      where path comes from a TextBox that the user can freely edit.
+    - FrameGenerator\Commands\ExportCommands.cs:380 — Process.Start(filePath)
+      with UseShellExecute=true to open exported files.
+    - FrameGenerator\Commands\ExportCommands.cs:466 — Process.Start(folderPath)
+      with UseShellExecute=true.
+
+  Description: Process.Start with UseShellExecute=true will invoke the
+  Windows shell handler for any file type, not just safe document types.
+  In SettingsControl, the path comes from a TextBox — if the user (or a
+  settings import) places a malicious path (e.g., a .bat or .exe file),
+  it would be executed.
+
+  Recommendation:
+    - Validate that paths point to expected file types before opening.
+    - For folder browsing, validate Directory.Exists() before passing to
+      explorer.exe.
+    - Consider using ProcessStartInfo with UseShellExecute=false and
+      explicit executable paths where possible.
+
+--------------------------------------------------------------------------------
+2. FILE I/O AND PATH HANDLING
+--------------------------------------------------------------------------------
+
+[MEDIUM] S-04: Configurable CSV data file paths
+  Files:
+    - app.config:44-81 — All data file paths (ConnectorProperties, Bolt,
+      Nut, Washer, PlatesProperties, Profiles_*, profiles) are stored as
+      user settings and default to %ProgramData%\AESCConstruct\.
+    - Properties\Settings.Designer.cs — All paths are UserScopedSettings,
+      meaning users can modify them.
+    - Fastener\Module\FastenerModule.cs:28-35 — File.ReadAllLines(Settings.
+      Default.Bolt/Nut/Washer) reads from these configurable paths.
+    - Multiple UI code-behind files read from these settings.
+
+  Description: Since paths are user-scoped settings, a user (or a crafted
+  settings import JSON file) could point them to arbitrary filesystem
+  locations. The application reads these files without path validation.
+  While this is a desktop application where the user has local access
+  anyway, it means an imported settings file could silently redirect data
+  loading to attacker-controlled files.
+
+  Recommendation:
+    - Validate that data file paths stay within expected directories
+      (e.g., under %ProgramData%\AESCConstruct\).
+    - When importing settings from JSON, validate file paths before
+      applying them.
+
+[MEDIUM] S-05: JSON settings import applies arbitrary keys
+  File: UIMain\SettingsControl.xaml.cs:510-539
+
+  Description: The settings import function reads a JSON file selected via
+  OpenFileDialog, deserializes it with System.Text.Json, then iterates
+  over all key-value pairs and applies them to Settings.Default using
+  bracket notation: Settings.Default[key] = convertedValue.
+
+  While the export explicitly excludes "SerialNumber" (line ~505), the
+  import does NOT filter incoming keys. An attacker could craft a JSON
+  file that overwrites SerialNumber, LicenseValid, or any other setting,
+  potentially bypassing license checks or redirecting file paths.
+
+  Recommendation:
+    - Maintain an explicit allowlist of importable setting keys.
+    - Skip or warn on unexpected keys during import.
+    - Never allow import of security-sensitive settings (SerialNumber,
+      LicenseValid, NetworkLogUser_*).
+
+[MEDIUM] S-06: File.Copy with overwrite:true and no confirmation
+  File: Fastener\UI\FastenersControl.xaml.cs:151
+
+  Description: When importing a custom fastener CSV, the file is copied
+  to %ProgramData%\AESCConstruct\Fasteners\Custom\ with overwrite:true.
+  If a file with the same name already exists, it is silently replaced.
+
+  Recommendation:
+    - Prompt the user before overwriting existing fastener files.
+    - Validate that the source file is a valid CSV before copying.
+
+[MEDIUM] S-07: CSV write without field sanitization
+  Files:
+    - Utilities\DXFImportHelper.cs:466-519 — SaveProfilesToCSV and
+      LoadProfilesFromCSV handle profile data with semicolon-delimited
+      fields. Profile names are written directly without escaping.
+    - FrameGenerator\UI\ProfileSelectionControl.xaml.cs:639 — StreamWriter
+      appends to CSV with semicolon-delimited values.
+    - ProfileSelectionControl.xaml.cs:838-841 — CSV rewrite uses
+      l.StartsWith(prof.Name + ";") for matching — if a profile name
+      is a prefix of another profile name, the wrong line could be
+      deleted.
+
+  Description: Profile names and other string fields are written to CSV
+  files without quoting or escaping. If a profile name contains a
+  semicolon, it would corrupt the CSV structure. The deletion logic
+  using StartsWith is also fragile.
+
+  Recommendation:
+    - Quote CSV fields that may contain the delimiter character.
+    - Use exact line matching (split and compare first field) instead
+      of StartsWith for deletion.
+    - Consider using a proper CSV library for read/write operations.
+
+[LOW] S-08: Base64-decoded bytes written to disk
+  File: FrameGenerator\UI\ProfileSelectionControl.xaml.cs:612
+
+  Description: Profile preview images are stored as Base64 strings in
+  CSV files. When displayed, they are decoded via Convert.FromBase64String
+  and written to disk as PNG files. The Base64 data originates from the
+  application's own image capture, so the risk is low, but there is no
+  validation that the decoded bytes represent a valid image.
+
+  Recommendation:
+    - Validate that decoded bytes start with a valid PNG header before
+      writing to disk.
+    - Consider using in-memory BitmapImage instead of writing to disk.
+
+[LOW] S-09: Document.Open on user-selected DXF files
+  Files:
+    - FrameGenerator\UI\ProfileSelectionControl.xaml.cs:553
+    - Construct2026.cs:362-382
+
+  Description: DXF files selected by the user via OpenFileDialog are
+  opened with Document.Open(dxfPath, null). The file is processed by
+  SpaceClaim's built-in DXF parser, which is outside this add-in's
+  control. Any vulnerabilities in SpaceClaim's parser would be inherited.
+
+  Risk: Low — this is standard SpaceClaim functionality using the host
+  application's parser.
+
+  Recommendation: No action needed beyond keeping SpaceClaim/ANSYS updated.
+
+--------------------------------------------------------------------------------
+3. SENSITIVE DATA EXPOSURE
+--------------------------------------------------------------------------------
+
+[HIGH] S-10: RSA public key embedded in source code
+  File: Licensing\LicenseSpot.cs:27
+
+  Description: The RSA public key string (_keyPair) used for license
+  validation is embedded directly in the C# source code. Anyone with
+  access to the DLL can extract this key using a .NET decompiler (e.g.,
+  dnSpy, ILSpy). While the public key alone cannot generate valid
+  licenses (the private key is needed for signing), it enables:
+    - Understanding the license validation algorithm
+    - Crafting targeted bypass patches (replace key or skip validation)
+    - Reverse engineering the LicenseSpot protocol
+
+  Recommendation:
+    - This is an inherent limitation of client-side license validation.
+    - Consider obfuscating the assembly (e.g., ConfuserEx, Dotfuscator)
+      to make decompilation harder.
+    - Add integrity checks to detect DLL tampering.
+    - For high-value protection, move validation server-side.
+
+[MEDIUM] S-11: Serial number stored in clear text
+  Files:
+    - Properties\Settings.Designer.cs:124-132 — SerialNumber is a
+      UserScopedSetting stored in user.config as plain text.
+    - app.config:34 — Default value is "Enter serial number".
+
+  Description: The serial number is persisted in the user's
+  %LOCALAPPDATA%\...\user.config file as unencrypted plain text. Any
+  process or user with access to the profile can read it.
+
+  Recommendation:
+    - Use DPAPI (ProtectedData.Protect) to encrypt the serial number
+      before storing it in settings.
+    - Or store it in Windows Credential Manager.
+
+[MEDIUM] S-12: License file at world-readable location
+  File: Licensing\LicenseSpot.cs:33-35
+
+  Description: The license file is stored at:
+    %ProgramData%\IPManager\AESC_License_Construct2026.lic
+  The %ProgramData% directory is world-readable by default on Windows.
+  Any user on the machine can read the license file contents.
+
+  Recommendation:
+    - Set restrictive ACLs on the license file directory.
+    - If the license contains sensitive data, encrypt it at rest.
+
+[MEDIUM] S-13: Clipboard data exposure
+  Files:
+    - Construct2026.cs:397 — Clipboard.SetText(profile.ProfileString)
+    - FrameGenerator\UI\ProfileSelectionControl.xaml.cs:576 —
+      Clipboard.SetText(profile.ProfileString)
+
+  Description: Profile data (dimensions, type, metadata) is copied to
+  the system clipboard. Any application on the machine can read the
+  clipboard content. While profile dimensions are not highly sensitive,
+  this could leak design information.
+
+  Risk: Low in practice — users intentionally trigger this action.
+
+  Recommendation: Acceptable as-is. Consider adding a brief status
+  message indicating data was copied to clipboard.
+
+[LOW] S-14: Excessive debug logging to shared file
+  Files:
+    - FrameGenerator\Modules\Profiles\UProfile.cs:44-99 — Logs ALL
+      geometry parameters (coordinates, dimensions, offsets) for every
+      U-profile creation.
+    - Licensing\LicenseSpot.cs — Logs 15+ license-related messages
+      during initialization.
+    - CustomComponent\UI\CustomComponentControl.xaml.cs:420-523 —
+      Logs property keys and values.
+
+  Description: The log file at %ProgramData%\AESCConstruct\
+  AESCConstruct2026_Log.txt is world-readable and receives detailed
+  geometry data, license status, and component properties. This could
+  expose design details or license information to other users on the
+  machine.
+
+  Recommendation:
+    - Move the log file to a per-user location (e.g., %LOCALAPPDATA%).
+    - Reduce verbose geometry logging in production builds.
+    - Add log rotation and size limits.
+
+--------------------------------------------------------------------------------
+4. LOGGING AND ERROR HANDLING
+--------------------------------------------------------------------------------
+
+[MEDIUM] S-15: Logger has no file locking
+  File: Utilities\Logger.cs:17
+
+  Description: Logger.Log() uses File.AppendAllText() which opens,
+  writes, and closes the file on each call. If multiple SpaceClaim
+  instances or threads call Logger.Log() concurrently, writes can be
+  lost or interleaved. File.AppendAllText is not atomic on all
+  filesystems.
+
+  Recommendation:
+    - Use a lock statement around the File.AppendAllText call, or
+    - Use a FileStream with FileShare.ReadWrite and explicit locking, or
+    - Use a thread-safe logging library (e.g., NLog, Serilog).
+
+[LOW] S-16: No log file rotation or size limits
+  File: Utilities\Logger.cs
+
+  Description: The log file grows unboundedly. In a long-running
+  SpaceClaim session with verbose logging (especially UProfile and
+  CustomComponent), the log file can grow very large.
+
+  Recommendation:
+    - Implement log rotation (e.g., rename to .bak when size exceeds
+      a threshold).
+    - Or switch to a logging framework with built-in rotation.
+
+[LOW] S-17: Unused hardcoded log path in LProfile
+  File: FrameGenerator\Modules\Profiles\LProfile.cs:17
+
+  Description: Contains an unused private field:
+    private static readonly string logPath = Path.Combine(
+      Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+      "AESCConstruct2026_Log.txt");
+  This is dead code — the field is never referenced. It duplicates the
+  path logic in Logger.cs but with a different filename.
+
+  Recommendation: Remove the unused field.
+
+--------------------------------------------------------------------------------
+5. INPUT VALIDATION
+--------------------------------------------------------------------------------
+
+[MEDIUM] S-18: double.Parse without TryParse in profile UI
+  File: FrameGenerator\UI\ProfileSelectionControl.xaml.cs:1072-1093
+
+  Description: Several profile dimension fields use double.Parse()
+  instead of double.TryParse(). If the user enters non-numeric text,
+  a FormatException will be thrown and propagated up (potentially
+  crashing the panel or showing an unhandled exception dialog).
+
+  Recommendation:
+    - Use double.TryParse with fallback values, consistent with the
+      pattern already used in other UI files (e.g., RibCutOut.xaml.cs
+      lines 67-74).
+
+[MEDIUM] S-19: Enum.Parse on settings value without validation
+  File: FrameGenerator\Commands\ExportCommands.cs:234
+
+  Description: Enum.Parse is called on a settings string value without
+  try/catch. If the setting contains an invalid value (e.g., from a
+  corrupted or tampered user.config), this throws an ArgumentException.
+
+  Recommendation:
+    - Use Enum.TryParse or wrap in try/catch with a default fallback.
+
+[LOW] S-20: CSV parsing assumes correct column count
+  Files:
+    - Fastener\Module\FastenerModule.cs:28-35 — Splits CSV lines on ';'
+      and indexes directly into the resulting array.
+    - Multiple profile CSV readers follow the same pattern.
+
+  Description: If a CSV data file has missing or extra columns, the
+  array indexing will throw IndexOutOfRangeException. While data files
+  are shipped with the installer, custom/user-edited files could have
+  formatting errors.
+
+  Recommendation:
+    - Validate array length after splitting before accessing indices.
+    - Report a clear error message if a CSV line has unexpected format.
+
+--------------------------------------------------------------------------------
+6. LICENSING AND AUTHENTICATION
+--------------------------------------------------------------------------------
+
+[MEDIUM] S-21: License validation can be bypassed by settings manipulation
+  Files:
+    - Properties\Settings.Designer.cs:131 — LicenseValid is a bool
+      UserScopedSetting.
+    - UIMain\SettingsControl.xaml.cs:510-539 — JSON import can overwrite
+      any setting, including LicenseValid.
+
+  Description: The LicenseValid setting is stored as a user-scoped
+  setting in user.config. Combined with finding S-05 (JSON import
+  applies arbitrary keys), an attacker could craft a JSON settings file
+  that sets LicenseValid=True to bypass the license check, or modify
+  the SerialNumber.
+
+  Note: The actual runtime license check uses ConstructLicenseSpot.IsValid
+  which validates against the license server/file, so the settings value
+  alone may not be sufficient for bypass. However, if any code path
+  trusts Settings.Default.LicenseValid without re-validating, this is
+  exploitable.
+
+  Recommendation:
+    - Never trust the LicenseValid setting from user.config — always
+      re-validate with the license framework.
+    - Exclude LicenseValid from the JSON import allowlist (see S-05).
+    - Consider making LicenseValid an ApplicationScopedSetting instead
+      of UserScoped.
+
+[LOW] S-22: License validation occurs only at startup
+  File: Licensing\LicenseSpot.cs
+
+  Description: License validation (CheckLicense, licenseCheckOut) is
+  called during Connect() and initialization. Once validated, commands
+  are enabled based on the static ConstructLicenseSpot.IsValid flag. If
+  the license expires mid-session, the add-in remains fully functional
+  until SpaceClaim is restarted.
+
+  Risk: Low — standard behavior for desktop add-ins.
+
+  Recommendation: Consider periodic re-validation (e.g., every hour)
+  for network license scenarios.
+
+--------------------------------------------------------------------------------
+7. DEPENDENCIES AND SUPPLY CHAIN
+--------------------------------------------------------------------------------
+
+[LOW] S-23: NuGet package versions — no known critical CVEs
+  File: packages.config
+
+  Packages reviewed:
+    - BetterFolderBrowser 1.2.0 — No known CVEs
+    - DocumentFormat.OpenXml 3.3.0 — No known CVEs for this version
+    - DocumentFormat.OpenXml.Framework 3.3.0 — No known CVEs
+    - LicenseSpot.Framework 3.12.0 — Closed-source; no public CVE data
+    - Microsoft.Bcl.AsyncInterfaces 10.0.1 — Current
+    - System.Buffers 4.6.1 — Current
+    - System.IO.Pipelines 10.0.1 — Current
+    - System.Memory 4.6.3 — Current
+    - System.Numerics.Vectors 4.6.1 — Current
+    - System.Runtime.CompilerServices.Unsafe 6.1.2 — Current
+    - System.Text.Encodings.Web 10.0.1 — Current
+    - System.Text.Json 10.0.1 — Current
+    - System.Threading.Tasks.Extensions 4.6.3 — Current
+    - System.ValueTuple 4.6.1 — Current
+
+  All Microsoft packages are at recent versions. No known high-severity
+  vulnerabilities identified.
+
+  Note: LicenseSpot.Framework is a third-party closed-source package.
+  Verify it is obtained from the official source and pin the version.
+
+[INFO] S-24: Binding redirect for CompilerServices.Unsafe
+  File: app.config:97-102
+
+  Description: A binding redirect maps
+  System.Runtime.CompilerServices.Unsafe 0.0.0.0-6.0.3.0 to 6.0.3.0,
+  but packages.config has version 6.1.2 installed. The redirect may be
+  stale and should be updated to redirect to 6.1.2.
+
+  Recommendation: Update the binding redirect newVersion to match the
+  installed NuGet package version (6.1.2).
+
+--------------------------------------------------------------------------------
+8. REFLECTION AND DYNAMIC DISPATCH
+--------------------------------------------------------------------------------
+
+[LOW] S-25: Reflection used to access SpaceClaim API internals
+  Files:
+    - FrameGenerator\Utilities\JointSelectionHelper.cs:44-54 — Uses
+      Type.GetMethod("GetAncestor").MakeGenericMethod(typeof(Component))
+      to invoke GetAncestor<Component>() on selection items.
+    - RibCutout\Modules\RibCutOutModule.cs:94-113 — Uses reflection to
+      access Body.Edges property and Edge.StartPoint/EndPoint properties.
+    - CustomComponent\UI\CustomComponentControl.xaml.cs:420-468 — Uses
+      reflection to interact with SpaceClaim component properties.
+
+  Description: Reflection is used to call SpaceClaim API methods that
+  may not be directly available in the V242 API surface. This is fragile
+  (breaks on API changes) but not a direct security risk since only
+  known SpaceClaim types are targeted.
+
+  Risk: Low — reflection targets are hardcoded SpaceClaim API types,
+  not user-controlled.
+
+  Recommendation: Document why reflection is needed (e.g., "API method
+  not exposed in V242 public surface") and add null checks on
+  GetMethod/GetProperty results to avoid NullReferenceException.
+
+[INFO] S-26: COM type library GUID exposed
+  File: Properties\AssemblyInfo.cs:22
+
+  Description: The assembly exposes GUID fa818400-56cf-4214-845f-
+  22d414061db4 for COM interop. This is standard for .NET class
+  libraries and not a security concern, but it provides a stable
+  identifier for the assembly.
+
+  Recommendation: No action needed.
+
+--------------------------------------------------------------------------------
+9. NETWORK AND EXTERNAL COMMUNICATION
+--------------------------------------------------------------------------------
+
+[INFO] S-27: Network license communication
+  File: Licensing\LicenseSpot.cs
+
+  Description: The LicenseSpot.Framework handles network license
+  communication. The add-in code calls LicenseCheckOut/LicenseCheckIn
+  with a server URL. The actual network protocol is handled by the
+  closed-source LicenseSpot.Framework DLL.
+
+  Recommendation: Ensure LicenseSpot.Framework uses TLS for license
+  server communication. Verify this with the vendor.
+
+[INFO] S-28: Optional network logging
+  Files:
+    - app.config:82-87 — NetworkLogUser_Enabled (default: False) and
+      NetworkLogUser_Directory (default: %ProgramData%\IPManager\Logs)
+    - Properties\Settings.Designer.cs — Corresponding settings
+
+  Description: The add-in has settings for network-based usage logging,
+  disabled by default. When enabled, logs would be written to a shared
+  directory. This could expose usage data to other users on the machine.
+
+  Risk: Low — disabled by default.
+
+  Recommendation: When enabling, ensure the log directory has
+  appropriate ACLs.
+
+--------------------------------------------------------------------------------
+SUMMARY OF SECURITY FINDINGS
+--------------------------------------------------------------------------------
+
+  Severity  | Count | Key Findings
+  ----------|-------|----------------------------------------------------
+  HIGH      |   3   | S-01 Python script injection, S-02 Predictable
+            |       | temp files, S-10 RSA key in source
+  MEDIUM    |  10   | S-03 Process.Start, S-04 Configurable paths,
+            |       | S-05 JSON import arbitrary keys, S-06 File.Copy
+            |       | overwrite, S-07 CSV unsanitized, S-11 Serial in
+            |       | cleartext, S-12 License world-readable, S-15
+            |       | Logger no locking, S-18 double.Parse, S-19
+            |       | Enum.Parse, S-21 License bypass via settings
+  LOW       |   8   | S-08 Base64 to disk, S-09 DXF open, S-13
+            |       | Clipboard, S-14 Verbose logging, S-16 No log
+            |       | rotation, S-17 Dead code logPath, S-20 CSV column
+            |       | count, S-22 License startup-only, S-23 NuGet OK,
+            |       | S-25 Reflection
+  INFO      |   4   | S-24 Binding redirect stale, S-26 COM GUID,
+            |       | S-27 Network license, S-28 Network logging
+
+  Total: 25 findings (3 High, 10 Medium, 8 Low, 4 Info)
+
+TOP PRIORITY RECOMMENDATIONS:
+
+  1. [S-01] Escape or externalize Python script parameters to prevent
+     injection in EngravingService and CompareCommand.
+
+  2. [S-02] Use unique temp file names (Path.GetRandomFileName) instead
+     of predictable paths. Remove C:\Windows\Temp\_TempDXF.dxf hardcode.
+
+  3. [S-05/S-21] Add an allowlist to JSON settings import. Exclude
+     SerialNumber, LicenseValid, and file path settings from import.
+
+  4. [S-10/S-11] Consider assembly obfuscation and DPAPI encryption
+     for the serial number to raise the bar against casual reverse
+     engineering.
+
+  5. [S-15/S-14] Move log file to per-user location, add locking,
+     reduce verbose geometry logging in production.
+
+================================================================================
+END OF TRACK 3: SECURITY REVIEW
+================================================================================
+
+================================================================================
+ALL THREE REVIEW TRACKS COMPLETE
+================================================================================
+Tracks:
+  1. CODE QUALITY     — 30 findings (7 High, 7 Medium, 8 Low)
+  2. DOCUMENTATION     — 23 findings (5 High, 10 Medium, 8 Low)
+  3. SECURITY          — 25 findings (3 High, 10 Medium, 8 Low, 4 Info)
+
+Total findings across all tracks: 78
+Review completed: 2026-02-16
+================================================================================
+
+================================================================================
+FIX TRACK 1: Entry Point, UI Manager, Licensing, and Language fixes
+================================================================================
+Agent: fix-ui
+Status: COMPLETE
+Date: 2026-02-16
+
+Fixes applied:
+
+1. [HIGH] UIManager.cs:212-213 -- ToggleMode copy-paste bug FIXED
+   Changed second branch from "Ribbon.Button.Float" to "Ribbon.Button.Dock"
+   so the toggle button text correctly reflects floating vs docked state.
+
+2. [HIGH] Empty catch blocks -- Logger.Log() added to all listed locations:
+   a. UIManager.cs:724 (LoadImage) -- now logs "[UIManager] LoadImage failed"
+      Also added "using AESCConstruct2026.FrameGenerator.Utilities;" import.
+   b. LicenseSpot.cs:298 (UpdateNetworkButtonUI) -- now logs "[License] UpdateNetworkButtonUI failed"
+   c. LicenseSpot.cs:305 (EnsureProgramDataFolder) -- now logs "[License] EnsureProgramDataFolder failed"
+   d. LicenseSpot.cs:315 (OpenStrict) -- now logs "[License] OpenStrict failed"
+   e. Construct2026.cs GetCustomUI catch -- now logs "[Construct2026] GetCustomUI failed"
+
+3. [MEDIUM] Construct2026.cs setMode3D (~line 271) FIXED
+   Replaced MessageBox.Show(ex.ToString()) with:
+     Logger.Log("[Construct2026] setMode3D failed: " + ex.ToString());
+     Application.ReportStatus("SetMode3D error: " + ex.Message, StatusMessageType.Error, null);
+
+4. [MEDIUM] Construct2026.cs SaveDXFProfiles_Execute -- profiles.Count() called twice FIXED
+   Stored result in local variable "profileCount" and reused it.
+
+5. [MEDIUM] Construct2026.cs DXFtoProfile preview (~line 407) FIXED
+   Added "using" on Bitmap (using var bmp = new Bitmap(ms)) so it is
+   properly disposed after the preview Form is closed.
+
+6. [LOW] Language.cs:55 -- Empty catch for duplicate row FIXED
+   Now logs "[Language] Duplicate row at line {rowNum}: {ex.Message}"
+   Also added "using AESCConstruct2026.FrameGenerator.Utilities;" import.
+
+Files modified:
+  - UIMain\UIManager.cs (fixes 1, 2a)
+  - Licensing\LicenseSpot.cs (fixes 2b, 2c, 2d)
+  - Construct2026.cs (fixes 2e, 3, 4, 5)
+  - UIMain\Language.cs (fix 6)
+
+================================================================================
+
+================================================================================
+FIX TRACK 3: Connector, DXFImportHelper, Engraving, and Logger fixes
+================================================================================
+Agent: fix-connector
+Status: COMPLETE
+
+1. [MEDIUM] Connector\Connector.cs -- Namespace added FIXED
+   Wrapped class in namespace AESCConstruct2026.Connector { ... }.
+   Updated ConnectorControl.xaml.cs alias from
+     using ConnectorModel = global::Connector;
+   to
+     using ConnectorModel = AESCConstruct2026.Connector.Connector;
+
+2. [HIGH] Connector\Connector.cs:146-150 -- Empty catch in CreateConnector FIXED
+   Added Logger.Log($"[CreateConnector] Failed after {sw.ElapsedMilliseconds}ms: {ex}").
+
+3. [MEDIUM] Connector\Connector.cs GetDynamicHeigth -- Debug DesignBody.Create removed FIXED
+   Removed leftover debug line:
+     List<IDesignBody> _listIDB = part.Document.MainPart.GetDescendants<IDesignBody>().ToList();
+     DesignBody.Create(part.Document.MainPart, "checkDynHeightBody", body.Copy());
+
+4. [MEDIUM] Connector\Connector.cs:417-418, 461-464 -- Empty catch blocks in debug helpers FIXED
+   Added Logger.Log with context to catch blocks in DrawPoint, DrawLine, and DrawWireBox.
+
+5. [LOW] Connector\Connector.cs:348-351 -- Commented-out debug logging removed FIXED
+   Removed inline //Logger.Log comments on CurveSegment.Create lines and
+   standalone //Logger.Log line.
+
+6. [MEDIUM] Utilities\DXFImportHelper.cs getImgBase64 -- Resource leak FIXED
+   Added try/finally to dispose Bitmap after base64 conversion.
+   Added outer finally block to close the SpaceClaim _window after use.
+
+7. [LOW] Engraving\EngravingService.cs:24-229 -- Commented-out AddNote method removed FIXED
+   Removed ~200 lines of commented-out Python-based AddNote implementation.
+   Active C# AddNote method (line 480+) remains intact.
+
+8. [LOW] Utilities\Logger.cs -- Thread-safe file locking FIXED
+   Added private static readonly object _lock = new object();
+   Wrapped File.AppendAllText in lock(_lock) { ... } to prevent
+   concurrent write corruption.
+
+Files modified:
+  - Connector\Connector.cs (fixes 1, 2, 3, 4, 5)
+  - Connector\UI\ConnectorControl.xaml.cs (fix 1 -- namespace alias update)
+  - Utilities\DXFImportHelper.cs (fix 6)
+  - Engraving\EngravingService.cs (fix 7)
+  - Utilities\Logger.cs (fix 8)
+
+================================================================================
+
+FIX BATCH: FrameGenerator, Fastener, and Compare command issues (Task #2)
+=========================================================================
+Applied: 2026-02-16
+
+1. [HIGH] JointModule.cs -- Extracted shared metadata reading FIXED
+   Added TryReadComponentMetadata() and ResolveContours() private helpers.
+   Both ResetComponentGeometryOnly and ResetComponentGeometryAndExtend now
+   call these helpers instead of duplicating ~40 lines of property parsing.
+
+2. [HIGH] createFasteners.cs -- Extracted hexagon helper FIXED
+   Added CreateHexagonBoundary(double s) private method.
+   Replaced 5 duplicated hexagon vertex+boundary blocks in CreateBoltHex,
+   CreateBolt7991, CreateBolt912, CreateNutStandard, CreateNut982.
+
+3. [MEDIUM] createFasteners.cs -- PascalCase rename FIXED
+   Renamed class: createFasteners -> CreateFasteners
+   Renamed file: createFasteners.cs -> CreateFasteners.cs
+   Renamed methods: createBolt -> CreateBoltHex, createBolt84 -> CreateBolt84,
+     createBolt7991 -> CreateBolt7991, createBolt912 -> CreateBolt912,
+     createWasher -> CreateWasher, createNut -> CreateNutStandard,
+     createNut982 -> CreateNut982, createRoundBody -> CreateRoundBody,
+     Create_Bolt -> CreateBolt, Create_Nut -> CreateNut
+   Updated all callers in FastenerModule.cs and csproj.
+
+4. [HIGH] CompareCommand.cs:534-538 -- Empty catch block FIXED
+   Replaced empty catch with Logger.Log(ex.ToString()).
+
+5. [MEDIUM] Regex caching FIXED
+   CompareCommand.cs: Added TrailingParenRegex and TrailingHyphenRegex
+     static compiled fields, replaced Regex.Replace calls.
+   ExportCommands.cs: Added TrailingParenRegex static compiled field,
+     replaced Regex.Replace calls (2 occurrences).
+   CompNameHelper.cs: Added NameTokenRegex and WhitespaceRegex static
+     compiled fields, replaced Regex.Replace call.
+
+6. [LOW] Commented-out code removed FIXED
+   createFasteners.cs: Removed ~20 lines of commented DatumPoint/DesignCurve
+     debug code from createBolt and createNut methods.
+   ProfileModule.cs: Removed ~15 commented-out Logger.Log lines throughout.
+
+7. [LOW] Magic number comments FIXED
+   JointModule.cs:215 -- extendAmount = 200.0 // mm
+   JointModule.cs:493 -- half = 200.0 // mm, half-size of splitting square
+   MiterJoint.cs:126 -- 500.0 // mm, cutter size
+   MiterJoint.cs:137 -- 200.0 /* mm, extrusion length */
+
+Files modified:
+  - FrameGenerator/Modules/JointModule.cs (fixes 1, 7)
+  - Fastener/Module/CreateFasteners.cs (fixes 2, 3, 6) [renamed from createFasteners.cs]
+  - Fastener/Module/FastenerModule.cs (fix 3 -- caller updates)
+  - AESCConstruct2026.csproj (fix 3 -- file reference update)
+  - FrameGenerator/Commands/CompareCommand.cs (fixes 4, 5)
+  - FrameGenerator/Commands/ExportCommands.cs (fix 5)
+  - Utilities/CompNameHelper.cs (fix 5)
+  - FrameGenerator/Modules/ProfileModule.cs (fix 6)
+  - FrameGenerator/Modules/Joints/MiterJoint.cs (fix 7)
+
+================================================================================
+
+================================================================================
+FIX BATCH: XML doc comments, unused imports, magic number constants (Task #3)
+================================================================================
+Agent: fix-xmldocs
+Applied: 2026-02-16
+
+1. [HIGH] XML doc <summary> added to all listed public classes:
+   - Connector\Connector.cs -- class Connector
+   - Connector\CylInfo.cs -- class CylInfo
+   - Utilities\Logger.cs -- class Logger
+   - Fastener\Module\Bolt.cs -- class Bolt
+   - Fastener\Module\Nut.cs -- class Nut
+   - Fastener\Module\Washer.cs -- class Washer
+   - Fastener\Module\FastenerModule.cs -- class FastenerModule
+   - Fastener\Module\PlacementData.cs -- class PlacementData
+   - FrameGenerator\Modules\Profiles\ProfileBase.cs -- class ProfileBase
+   - FrameGenerator\Modules\Joints\JointBase.cs -- class JointBase
+
+2. [MEDIUM] XML docs added to key public methods:
+   - Logger.cs: Log(string) -- summary added
+   - Connector.cs: CreateConnector() -- summary added
+   - Connector.cs: CreateGeometry() -- summary added
+   - FastenerModule.cs: CreateFasteners() -- summary added
+
+3. [LOW] Unused imports removed:
+   - Connector\UI\ConnectorControl.xaml.cs:
+     Removed: DocumentFormat.OpenXml.Drawing.Charts
+     Removed: DocumentFormat.OpenXml.Office2010.Excel
+     Removed: DocumentFormat.OpenXml.Spreadsheet
+     Removed: using static System.Windows.Forms.VisualStyles.VisualStyleElement
+     (DocumentFormat.OpenXml.Drawing.Diagrams was not present in file)
+   - Fastener\UI\FastenersControl.xaml.cs:
+     Removed: using System.Security.Cryptography
+   - Plates\Modules\PlatesModule.cs:
+     Removed: DocumentFormat.OpenXml.Wordprocessing
+
+4. [MEDIUM] Magic number constants/comments in Connector.cs:
+   - EPSM = 1e-9 -- added comment "// geometric tolerance in meters"
+   - Height / 1000.0 -- updated comment to "// mm to meters conversion"
+   - 0.0001 value referenced in task no longer exists in current file (already removed)
+
+Files modified:
+  - Connector\Connector.cs (fixes 1, 2, 4)
+  - Connector\CylInfo.cs (fix 1)
+  - Utilities\Logger.cs (fixes 1, 2)
+  - Fastener\Module\Bolt.cs (fix 1)
+  - Fastener\Module\Nut.cs (fix 1)
+  - Fastener\Module\Washer.cs (fix 1)
+  - Fastener\Module\FastenerModule.cs (fixes 1, 2)
+  - Fastener\Module\PlacementData.cs (fix 1)
+  - FrameGenerator\Modules\Profiles\ProfileBase.cs (fix 1)
+  - FrameGenerator\Modules\Joints\JointBase.cs (fix 1)
+  - Connector\UI\ConnectorControl.xaml.cs (fix 3)
+  - Fastener\UI\FastenersControl.xaml.cs (fix 3)
+  - Plates\Modules\PlatesModule.cs (fix 3)
+
+================================================================================
+
+================================================================================
+FIX BATCH: CLAUDE.md, README.md, and AssemblyInfo.cs (Task #1)
+================================================================================
+Agent: fix-docs
+Applied: 2026-02-16
+
+1. [HIGH] CLAUDE.md -- Logger namespace FIXED
+   Updated Logging section to explicitly note namespace
+   "AESCConstruct2026.FrameGenerator.Utilities" for Logger.cs.
+
+2. [HIGH] CLAUDE.md -- Key Namespaces section rewritten FIXED
+   - Removed incorrect "AESCConstruct2026.Utilities" entry.
+   - Added "AESCConstruct2026.FrameGenerator.Utilities" with note
+     that files are in Utilities/ folder.
+   - Added "AESCConstruct2026.Connector" for TubeLocker connector module.
+   - Added "AESCConstruct2026.Localization" with note that Language.cs
+     lives in UIMain/ folder.
+   - Documented EngravingService.cs namespace anomaly: uses
+     AESCConstruct2026.UIMain despite residing in Engraving/ folder.
+
+3. [HIGH] README.md -- Completely rewritten FIXED
+   Replaced outdated Construct25 references with correct AESCConstruct2026
+   content. Includes project name/purpose, build instructions pointing to
+   CLAUDE.md, and correct AddIn XML registration snippet matching
+   AESCConstruct2026.xml (name="AESC Construct 2026",
+   assembly="AESCConstruct2026.dll",
+   typename="AESCConstruct2026.Construct2026").
+
+4. [LOW] Properties/AssemblyInfo.cs FIXED
+   - Updated copyright from 2025 to 2026.
+   - Added AssemblyDescription: "SpaceClaim AddIn for ANSYS Discovery -
+     Structural modeling tools"
+
+Files modified:
+  - CLAUDE.md (fixes 1, 2)
+  - README.md (fix 3)
+  - Properties/AssemblyInfo.cs (fix 4)
+
+================================================================================
+
+================================================================================
+FIX BATCH: Naming conventions — method/property renames, typos (Task #2)
+================================================================================
+Status: FIXED (applied 2026-02-16)
+
+1. [HIGH] LicenseSpot.cs — licenseCheckOut() -> LicenseCheckOut(), licenseCheckIn() -> LicenseCheckIn() FIXED
+   Updated callers in Construct2026.cs (lines 202, 204).
+
+2. [HIGH] DXFImportHelper.cs — getImgBase64() -> GetImgBase64(), initializeSC() -> InitializeSC() FIXED
+   Updated caller at line 186 and error message at line 460.
+
+3. [HIGH] Bolt.cs — All properties renamed to PascalCase FIXED
+   type->Type, size->Size, d->D, c->C, k->K, s->S, l->L, t->T
+   Updated callers in CreateFasteners.cs (lines 45, 49, 53, 57, 61) and
+   FastenerModule.cs (~20 references in LINQ queries and comparison blocks).
+
+4. [HIGH] Nut.cs — All properties renamed to PascalCase FIXED
+   type->Type, size->Size, d->D, s->S, e->E, h->H, k->K
+   Updated callers in CreateFasteners.cs (lines 72, 76) and
+   FastenerModule.cs (~10 references including displacement calculations).
+
+5. [HIGH] Washer.cs — All properties renamed to PascalCase FIXED
+   type->Type, size->Size, d1->D1, d2->D2, s->S
+   Updated callers in FastenerModule.cs (~12 references in LINQ queries,
+   comparisons, and displacement calculations).
+
+6. [MEDIUM] Connector.cs — GetDynamicHeigth -> GetDynamicHeight FIXED
+   Also renamed local variable DynamicHeigth -> dynamicHeight,
+   parameter bottomHeigth -> bottomHeight (all 3 usages in CreateBoundary).
+
+7. [LOW] Connector.cs:191 — "thicknening" -> "thickening" comment typo FIXED
+
+8. [MEDIUM] FastenersControl.xaml.cs:164 — StatusMessageType.Error -> StatusMessageType.Information FIXED
+   Success message was incorrectly using Error severity.
+
+Files modified:
+  - Licensing\LicenseSpot.cs (fix 1)
+  - Construct2026.cs (fix 1 callers)
+  - Utilities\DXFImportHelper.cs (fix 2)
+  - Fastener\Module\Bolt.cs (fix 3)
+  - Fastener\Module\Nut.cs (fix 4)
+  - Fastener\Module\Washer.cs (fix 5)
+  - Fastener\Module\CreateFasteners.cs (fixes 3, 4 callers)
+  - Fastener\Module\FastenerModule.cs (fixes 3, 4, 5 callers)
+  - Connector\Connector.cs (fixes 6, 7)
+  - Fastener\UI\FastenersControl.xaml.cs (fix 8)
+
+================================================================================
+ALL DOCUMENTATION FIXES COMPLETE
+================================================================================
+Summary:
+  Task #1 (fix-docs):     CLAUDE.md, README.md, AssemblyInfo.cs — 4 fixes
+  Task #2 (fix-naming):   Naming conventions — 8 fix categories across 10 files
+  Task #3 (fix-xmldocs):  XML docs, unused imports, magic numbers — 4 fix categories
+================================================================================

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+/// <summary>Helper for analyzing cylindrical faces: coaxial pair detection, edge lookup, and closest-point queries.</summary>
 public static class CylInfo
 {
     /// <summary>

@@ -14,6 +14,9 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 {
     class CompareCommand
     {
+        private static readonly Regex TrailingParenRegex = new Regex(@"\(\d+\)$", RegexOptions.Compiled);
+        private static readonly Regex TrailingHyphenRegex = new Regex(@"-\d+$", RegexOptions.Compiled);
+
         public static void CompareSimple()
         {
             try
@@ -534,7 +537,7 @@ if nrBodies > 0:
             }
             catch (Exception ex)
             {
-                //MessageBox.Show(ex.ToString());
+                Logger.Log(ex.ToString());
             }
         }
 
@@ -542,17 +545,12 @@ if nrBodies > 0:
         // Helpers for name normalization
         // ───────────────────────────────────────────────────────────────────────
 
-        private static string StripTrailing(string name, string pattern)
-        {
-            if (string.IsNullOrEmpty(name)) return string.Empty;
-            return Regex.Replace(name, pattern, "");
-        }
-
         private static string BaseFromName(string name)
         {
+            if (string.IsNullOrEmpty(name)) return string.Empty;
             // Remove "(number)" then "-number" at the very end
-            var noParen = StripTrailing(name, @"\(\d+\)$");
-            return StripTrailing(noParen, @"-\d+$");
+            var noParen = TrailingParenRegex.Replace(name, "");
+            return TrailingHyphenRegex.Replace(noParen, "");
         }
 
         private static string ApplyHyphen(string baseName, int idx)
