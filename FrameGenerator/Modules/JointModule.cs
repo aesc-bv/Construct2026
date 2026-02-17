@@ -9,11 +9,13 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Properties;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using Application = SpaceClaim.Api.V242.Application;
@@ -396,7 +398,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // Insert cutter into component’s Part (local)
             DesignBody temp = DesignBody.Create(part, "TempCutter", cutter.Copy());
 
-            temp.Layer = part.Document.GetLayer("Frames");
+            temp.Layer = GetOrCreateFramesLayer(part.Document);
             temp.SetVisibility(null, true);
 
             try
@@ -540,7 +542,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                              ?.Delete();
 
                 // create new DesignBodies
-                var framesLayer = component.Template.Document.GetLayer("Frames");
+                var framesLayer = GetOrCreateFramesLayer(component.Template.Document);
                 DesignBody.Create(component.Template, "HalfStart", halfStart)
                          .Layer = framesLayer;
                 DesignBody.Create(component.Template, "HalfEnd", halfEnd)
@@ -619,7 +621,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             }
 
             DesignBody.Create(template, "preservedHalf", preserved)
-                     .Layer = template.Document.GetLayer("Frames");
+                     .Layer = GetOrCreateFramesLayer(template.Document);
 
             // 6) regenerate full profile
             if (extendProfile)
@@ -664,7 +666,19 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // 10) unite into final
             presCopy.Unite(new[] { corCopy });
             var finalDb = DesignBody.Create(template, "ExtrudedProfile", presCopy);
-            finalDb.Layer = template.Document.GetLayer("Frames");
+            finalDb.Layer = GetOrCreateFramesLayer(template.Document);
+        }
+
+        private static Layer GetOrCreateFramesLayer(Document doc)
+        {
+            var layer = doc.GetLayer("Frames");
+            if (layer != null) return layer;
+
+            string hex = Settings.Default.FrameColor ?? "";
+            if (string.IsNullOrWhiteSpace(hex)) hex = "#006d8b";
+            try { layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml(hex)); }
+            catch { layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml("#006d8b")); }
+            return layer;
         }
     }
 }
