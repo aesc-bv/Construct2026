@@ -11,8 +11,8 @@ AESCConstruct2026 is a SpaceClaim AddIn for ANSYS Discovery (v251). It provides 
 - **Solution:** `AESCConstruct2026.sln` (Visual Studio 2017+)
 - **Framework:** .NET Framework 4.8, C# 12.0
 - **Output:** Class Library DLL
-- **Debug output:** `%ProgramData%\SpaceClaim\AddIns\AESCConstruct2026\`
-- **Release output:** `Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\`
+- **Debug output:** `C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\`
+- **Release output:** `C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\`
 - Build via Visual Studio or `msbuild AESCConstruct2026.sln`
 - No test framework is configured; testing is done manually in SpaceClaim
 
