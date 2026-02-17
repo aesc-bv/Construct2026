@@ -76,6 +76,11 @@
 							  getLabel="GetRibbonLabel"
 							  size="large"
 							  style="imageandtext"/>
+					<button id="AESCConstruct2026.DetectClashesBtn"
+							  command="AESCConstruct2026.DetectClashes"
+							  getLabel="GetRibbonLabel"
+							  size="large"
+							  style="imageandtext"/>
 					<button id="AESCConstruct2026.ExportBOMBtn"
 							command="AESCConstruct2026.ExportBOM"
 							getLabel="GetRibbonLabel"

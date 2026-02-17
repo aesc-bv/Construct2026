@@ -109,6 +109,7 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClashDetection\ClashDetectionCommand.cs" />
     <Compile Include="Connector\Connector.cs" />
     <Compile Include="Connector\CylInfo.cs" />
     <Compile Include="Connector\UI\ConnectorControl.xaml.cs">
