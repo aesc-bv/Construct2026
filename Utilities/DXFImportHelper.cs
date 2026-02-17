@@ -376,22 +376,12 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             }
 
             // 8) Otherwise, build a circular arc from ps → pe around center pm.
-            //    Try CCW (DirZ) first. If endpoints don't match, flip normal to -DirZ.
+            //    StringFromBody encodes arcs so that CreateArc(center, ps, pe, -DirZ)
+            //    reproduces the original edge (it tests with -DirZ and swaps start/end
+            //    when the edge doesn't match). Use -DirZ here to stay consistent.
             try
             {
-                var testArc = CurveSegment.CreateArc(pm, ps, pe, Direction.DirZ);
-                // Compare endpoints by distance instead of .IsAlmostEqual
-                if (((testArc.StartPoint - ps).Magnitude < tol) &&
-                    ((testArc.EndPoint - pe).Magnitude < tol))
-                {
-                    return testArc;
-                }
-                else
-                {
-                    // Reverse winding
-                    var reversedArc = CurveSegment.CreateArc(pm, ps, pe, -Direction.DirZ);
-                    return reversedArc;
-                }
+                return CurveSegment.CreateArc(pm, ps, pe, -Direction.DirZ);
             }
             catch
             {

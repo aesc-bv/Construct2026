@@ -25,14 +25,51 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
                 if (curve is CurveSegment segment)
                 {
                     Point newStart = profilePlane.Frame.Origin
-                                      + (segment.StartPoint.X/* + offsetX*/) * profilePlane.Frame.DirX
-                                      + (segment.StartPoint.Y/* + offsetY*/) * profilePlane.Frame.DirY;
+                                      + segment.StartPoint.X * profilePlane.Frame.DirX
+                                      + segment.StartPoint.Y * profilePlane.Frame.DirY;
 
                     Point newEnd = profilePlane.Frame.Origin
-                                    + (segment.EndPoint.X/* + offsetX*/) * profilePlane.Frame.DirX
-                                    + (segment.EndPoint.Y/* + offsetY*/) * profilePlane.Frame.DirY;
+                                    + segment.EndPoint.X * profilePlane.Frame.DirX
+                                    + segment.EndPoint.Y * profilePlane.Frame.DirY;
 
-                    alignedCurves.Add(CurveSegment.Create(newStart, newEnd));
+                    if (segment.Geometry is Circle circle)
+                    {
+                        Point newCenter = profilePlane.Frame.Origin
+                                          + circle.Axis.Origin.X * profilePlane.Frame.DirX
+                                          + circle.Axis.Origin.Y * profilePlane.Frame.DirY;
+
+                        if ((newStart - newEnd).Magnitude < 1e-6)
+                        {
+                            // Full circle
+                            var newCircle = Circle.Create(
+                                Frame.Create(newCenter, profilePlane.Frame.DirZ),
+                                circle.Radius);
+                            alignedCurves.Add(CurveSegment.Create(newCircle));
+                        }
+                        else
+                        {
+                            // Arc — map the original normal to the profile plane:
+                            // original curves live in XY so the arc normal is +Z or -Z
+                            Direction newNormal = circle.Axis.Direction.Z > 0
+                                ? profilePlane.Frame.DirZ
+                                : -profilePlane.Frame.DirZ;
+
+                            try
+                            {
+                                alignedCurves.Add(CurveSegment.CreateArc(
+                                    newCenter, newStart, newEnd, newNormal));
+                            }
+                            catch
+                            {
+                                alignedCurves.Add(CurveSegment.CreateArc(
+                                    newCenter, newStart, newEnd, -newNormal));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        alignedCurves.Add(CurveSegment.Create(newStart, newEnd));
+                    }
                 }
             }
 
