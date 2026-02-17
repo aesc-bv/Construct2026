@@ -124,7 +124,11 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         /// converts that Body into a single “profile string,” creates a small PNG‐preview (Base64),
         /// and returns a new DXFProfile (Name,ProfileString,ImgString). Also appends to SessionProfiles.
         /// </summary>
-        public static DXFProfile DXFtoProfile()
+        /// <param name="insideWriteBlock">
+        /// When true, skips the internal WriteBlock (caller is already inside one).
+        /// When false (default), wraps design operations in its own WriteBlock.
+        /// </param>
+        public static DXFProfile DXFtoProfile(bool insideWriteBlock = false)
         {
             DXFProfile dxfProfile = null;
 
@@ -163,7 +167,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                 itcList.Add(dc.Shape);
 
             Body body = null;
-            WriteBlock.ExecuteTask("Create DXF profile string and image", () =>
+            Action designWork = () =>
             {
                 try
                 {
@@ -185,7 +189,15 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     db.SetColor(null, myCustomColor);
                     string imgString = getImgBase64(docImg.MainPart, 200, 150, Frame.Create(Point.Origin, Direction.DirZ));
 
-                    // 4) Build the DXFProfile object
+                    // Close the temp document's window(s) to clean up
+                    try
+                    {
+                        foreach (var w in Window.GetWindows(docImg))
+                            w.Close();
+                    }
+                    catch { }
+
+                    // 3) Build the DXFProfile object
                     dxfProfile = new DXFProfile
                     {
                         Name = datumPlane.Name,
@@ -193,16 +205,15 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                         ImgString = imgString
                     };
 
-                    // 5) (Optionally) rebuild it in the mainPart for verification
-                    {
-                        var bodyFromString = BodyFromString(bodyString);
-                        DesignBody.Create(mainPart, "bodyFromString", bodyFromString);
-                    }
-
-                    // 6) Store in session for later “Save CSV”
+                    // 4) Store in session for later "Save CSV"
                     SessionProfiles.Add(dxfProfile);
                 }
-            });
+            };
+
+            if (insideWriteBlock)
+                designWork();
+            else
+                WriteBlock.ExecuteTask("Create DXF profile string and image", () => designWork());
 
             if (body == null)
             {
@@ -430,10 +441,11 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         /// </summary>
         public static string getImgBase64(Part part, int sizeX, int sizeY, Frame viewFrame)
         {
+            Window _window = null;
             try
             {
                 var imageSize = new Size(sizeX, sizeY);
-                var _window = Window.Create(part, false);
+                _window = Window.Create(part, false);
                 _window.SetProjection(Matrix.CreateMapping(viewFrame), true, false);
                 _window.InteractionMode = InteractionMode.Solid;
 
@@ -451,6 +463,10 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             {
                 Application.ReportStatus($"getImgBase64 error:\n{ex}", StatusMessageType.Error, null);
                 return "";
+            }
+            finally
+            {
+                try { _window?.Close(); } catch { }
             }
         }
 

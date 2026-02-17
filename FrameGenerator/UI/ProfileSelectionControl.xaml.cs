@@ -537,23 +537,23 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             string dxfPath = dlg.FileName;
 
+            // Capture the original document path before any design operations
+            string originalDocPath = Window.ActiveWindow?.Document?.Path;
+
+            DXFProfile profile = null;
+            Window winDXF = null;
+
+            // ── Phase 1: Design operations INSIDE WriteBlock ──
             WriteBlock.ExecuteTask("Convert DXF Profile", () =>
             {
-
                 Window currentWindow = Window.ActiveWindow;
                 Document doc = currentWindow.Document;
                 doc.Save();
-                Part mainPart = doc.MainPart;
-                Window winDXF;
-                Document docDXF;
-                Part mainPartDXF;
 
                 try
                 {
                     Document.Open(dxfPath, null);
                     winDXF = Window.ActiveWindow;
-                    docDXF = winDXF.Document;
-                    mainPartDXF = docDXF.MainPart;
                 }
                 catch (Exception ex)
                 {
@@ -561,143 +561,140 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     return;
                 }
 
-                // 3) Build the profile + preview image
-                DXFProfile profile = DXFImportHelper.DXFtoProfile();
+                // Build the profile + preview image (no nested WriteBlock)
+                profile = DXFImportHelper.DXFtoProfile(insideWriteBlock: true);
 
-                // 4) Close that DXF window
-                Window.ActiveWindow?.Close();
-                if (profile == null)
-                {
-                    // DXFtoProfile already showed an error 
-                    return;
-                }
+                // Close the DXF window by reference
+                try { winDXF?.Close(); } catch { }
+            });
 
-                // 5) Copy the profile‐string to the clipboard
-                Clipboard.SetText(profile.ProfileString);
+            // ── Phase 2: Post-processing OUTSIDE WriteBlock ──
+            if (profile == null)
+                return;
 
-                Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
+            // Copy the profile‐string to the clipboard (safe outside WriteBlock)
+            try { Clipboard.SetText(profile.ProfileString); } catch { }
 
-                //
-                // 7) Create “C:\ProgramData\AESC_Construct\UserDXFProfiles” if it doesn’t exist
-                //
-                string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                string userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
+            Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
 
-                try
-                {
-                    Directory.CreateDirectory(userFolder);
-                }
-                catch (Exception ex)
-                {
-                    Application.ReportStatus($"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}", StatusMessageType.Error, null);
-                    return;
-                }
+            // Create UserDXFProfiles folder if needed
+            string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            string userFolder = Path.Combine(programData, "AESCConstruct", "UserDXFProfiles");
 
-                //
-                // 8) Decode Base64 preview and save it as a PNG in that folder
-                //
-                string safeName = string.Concat(profile.Name
+            try
+            {
+                Directory.CreateDirectory(userFolder);
+            }
+            catch (Exception ex)
+            {
+                Application.ReportStatus($"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}", StatusMessageType.Error, null);
+                return;
+            }
+
+            // Decode Base64 preview and save it as a PNG
+            string safeName = string.Concat(profile.Name
                 .Where(c => !Path.GetInvalidFileNameChars().Contains(c)))
                 .Replace(' ', '_');
 
-                // Append timestamp and ensure extension is correct
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string imageFileName = $"{safeName}_{timestamp}.png";
-                // Logger.Log($"imagefilename: {imageFileName}");
-                string imageFullPath = Path.Combine(userFolder, imageFileName);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string imageFileName = $"{safeName}_{timestamp}.png";
+            string imageFullPath = Path.Combine(userFolder, imageFileName);
 
-                try
-                {
-                    byte[] pngBytes = Convert.FromBase64String(profile.ImgString);
-                    File.WriteAllBytes(imageFullPath, pngBytes);
-                }
-                catch (Exception ex)
-                {
-                    Application.ReportStatus($"Failed to save preview image to disk:\n{ex.Message}", StatusMessageType.Error, null);
-                    // If saving PNG fails, omit the image path in CSV
-                    imageFileName = "";
-                }
+            try
+            {
+                byte[] pngBytes = Convert.FromBase64String(profile.ImgString);
+                File.WriteAllBytes(imageFullPath, pngBytes);
+            }
+            catch (Exception ex)
+            {
+                Application.ReportStatus($"Failed to save preview image to disk:\n{ex.Message}", StatusMessageType.Error, null);
+                imageFileName = "";
+            }
 
-                //
-                // 9) Append (or create) “profiles.csv” in C:\ProgramData\AESCConstruct\UserDXFProfiles
-                //
-                string csvPath = Settings.Default.profiles;
+            // Append (or create) profiles.csv
+            string csvPath = Settings.Default.profiles;
 
-                // Ensure fallback if only relative path was saved
-                if (!Path.IsPathRooted(csvPath))
-                {
-                    string baseDir = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                        "AESCConstruct"
-                    );
-                    csvPath = Path.Combine(baseDir, csvPath);
-                }
-                bool writeHeader = !File.Exists(csvPath);
+            if (!Path.IsPathRooted(csvPath))
+            {
+                string baseDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "AESCConstruct"
+                );
+                csvPath = Path.Combine(baseDir, csvPath);
+            }
+            bool writeHeader = !File.Exists(csvPath);
 
-                try
+            try
+            {
+                using (var sw = new StreamWriter(csvPath, append: true, encoding: System.Text.Encoding.UTF8))
                 {
-                    using (var sw = new StreamWriter(csvPath, append: true, encoding: System.Text.Encoding.UTF8))
+                    if (writeHeader)
                     {
-                        if (writeHeader)
-                        {
-                            sw.WriteLine("Name;ProfileString;ImageRelativePath");
-                        }
-
-                        // Escape semicolons in the profile string so they don’t break our CSV
-                        string escapedProfile = profile.ProfileString.Replace(";", "\\;");
-                        string imageRel = string.IsNullOrEmpty(imageFileName) ? "" : imageFileName;
-
-                        sw.WriteLine($"{profile.Name};{escapedProfile};{imageRel}");
+                        sw.WriteLine("Name;ProfileString;ImageRelativePath");
                     }
 
-                    LoadUserProfiles();
+                    string escapedProfile = profile.ProfileString.Replace(";", "\\;");
+                    string imageRel = string.IsNullOrEmpty(imageFileName) ? "" : imageFileName;
 
-                    // Auto-check the newest one (so ProfileButton_Checked fires immediately)
-                    var newestRb = UserProfilesGrid.Children
-                                     .OfType<RadioButton>()
-                                     .LastOrDefault();
-                    if (newestRb != null)
-                        newestRb.IsChecked = true;
+                    sw.WriteLine($"{profile.Name};{escapedProfile};{imageRel}");
+                }
+
+                LoadUserProfiles();
+
+                // Auto-check the newest radio button
+                var newestRb = UserProfilesGrid.Children
+                                 .OfType<RadioButton>()
+                                 .LastOrDefault();
+                if (newestRb != null)
+                    newestRb.IsChecked = true;
+            }
+            catch (Exception ex)
+            {
+                Application.ReportStatus($"Failed to update CSV:\n{ex.Message}", StatusMessageType.Error, null);
+            }
+
+            // Show the saved PNG in a preview dialog (safe outside WriteBlock)
+            if (!string.IsNullOrEmpty(imageFullPath) && File.Exists(imageFullPath))
+            {
+                try
+                {
+                    using var bmp = new System.Drawing.Bitmap(imageFullPath);
+                    var previewForm = new System.Windows.Forms.Form
+                    {
+                        Text = $"DXF Preview: {profile.Name}",
+                        ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
+                    };
+                    var pictureBox = new System.Windows.Forms.PictureBox
+                    {
+                        Dock = System.Windows.Forms.DockStyle.Fill,
+                        Image = new System.Drawing.Bitmap(bmp),
+                        SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+                    };
+                    previewForm.Controls.Add(pictureBox);
+                    previewForm.ShowDialog();
                 }
                 catch (Exception ex)
                 {
-                    Application.ReportStatus($"Failed to update CSV:\n{ex.Message}", StatusMessageType.Error, null);
+                    Application.ReportStatus($"Failed to render saved preview image:\n{ex.Message}", StatusMessageType.Error, null);
                 }
+            }
 
-                //
-                // 10) Finally, show the saved PNG in a WinForms window
-                //
-                if (!string.IsNullOrEmpty(imageFullPath) && File.Exists(imageFullPath))
+            // Smart reopen: only if the original document isn't already the active one
+            if (!string.IsNullOrEmpty(originalDocPath))
+            {
+                var activeDoc = Window.ActiveWindow?.Document;
+                if (activeDoc == null || !string.Equals(activeDoc.Path, originalDocPath, StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
-                        using var bmp = new System.Drawing.Bitmap(imageFullPath);
-                        var previewForm = new System.Windows.Forms.Form
-                        {
-                            Text = $"DXF Preview: {profile.Name}",
-                            ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
-                        };
-                        var pictureBox = new System.Windows.Forms.PictureBox
-                        {
-                            Dock = System.Windows.Forms.DockStyle.Fill,
-                            Image = new System.Drawing.Bitmap(bmp),
-                            SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-                        };
-                        previewForm.Controls.Add(pictureBox);
-                        previewForm.ShowDialog();
+                        Document.Open(originalDocPath, null);
                     }
                     catch (Exception ex)
                     {
-                        Application.ReportStatus($"Failed to render saved preview image:\n{ex.Message}", StatusMessageType.Error, null);
+                        Application.ReportStatus($"Failed to reopen document:\n{ex.Message}", StatusMessageType.Error, null);
                     }
                 }
-                if (!string.IsNullOrEmpty(doc.Path))
-                {
-                    // Logger.Log(doc.Path);
-                    Window.ActiveWindow?.Close();
-                    Document.Open(doc.Path, null); // reopen the original document
-                }
-            });
+            }
         }
 
         // Loads user-defined DXF profiles from CSV and builds the UI list with preview images and delete buttons.
