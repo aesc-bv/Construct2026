@@ -10,6 +10,7 @@
 
 using AESCConstruct2026.FrameGenerator.Modules.Profiles;
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Properties;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -163,9 +164,14 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             }
 
             // 10) Finally add the fresh body at local (0,0,0)→+Z
-            var framesLayer = doc.GetLayer("Frames");
             var db = DesignBody.Create(comp.Template, "ExtrudedProfile", outerBody);
-            db.Layer = framesLayer;
+            string frameColor = Settings.Default.FrameColor ?? "";
+            if (!string.IsNullOrWhiteSpace(frameColor))
+            {
+                var framesLayer = doc.GetLayer("Frames");
+                if (framesLayer != null)
+                    db.Layer = framesLayer;
+            }
         }
 
         // Returns the world axis vector that is most orthogonal to the given vector v.
@@ -267,15 +273,26 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 len
             );
 
-            Layer framesLayer = doc.GetLayer("Frames");
-            Layer hiddenFramesLayer = doc.GetLayer("Construct (hidden)");
-
-            // …if it wasn’t there, create it
-            if (framesLayer == null)
+            string frameColorHex = Settings.Default.FrameColor ?? "";
+            if (!string.IsNullOrWhiteSpace(frameColorHex))
             {
-                Color myCustomColor = ColorTranslator.FromHtml("#006d8b");
-                framesLayer = Layer.Create(doc, "Frames", myCustomColor);
+                try
+                {
+                    Color parsedColor = ColorTranslator.FromHtml(frameColorHex);
+                    Layer framesLayer = doc.GetLayer("Frames");
+                    if (framesLayer == null)
+                    {
+                        framesLayer = Layer.Create(doc, "Frames", parsedColor);
+                    }
+                    else
+                    {
+                        framesLayer.SetColor(null, parsedColor);
+                    }
+                }
+                catch { /* invalid hex – skip layer creation */ }
             }
+
+            Layer hiddenFramesLayer = doc.GetLayer("Construct (hidden)");
             if (hiddenFramesLayer == null)
             {
                 var gray = ColorTranslator.FromHtml("#9ea0a1");

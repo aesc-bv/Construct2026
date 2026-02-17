@@ -37,7 +37,9 @@ namespace AESCConstruct2026.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Rectangular@Rect@[Name]_[w]x[h]_[length]|Circular@C@[Name]_[d]x[t]_[length]" +
+            "|H Profile@H@[Name]_[w]x[h]_[length]|L Profile@L@[Name]_[w]x[h]_[length]" +
+            "|T Profile@T@[Name]_[w]x[h]_[length]|U Profile@U@[Name]_[w]x[h]_[length]")]
         public string TypeString {
             get {
                 return ((string)(this["TypeString"]));
@@ -356,6 +358,30 @@ namespace AESCConstruct2026.Properties {
             }
             set {
                 this["DocumentAnchor"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int NameDecimals {
+            get {
+                return ((int)(this["NameDecimals"]));
+            }
+            set {
+                this["NameDecimals"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("#006d8b")]
+        public string FrameColor {
+            get {
+                return ((string)(this["FrameColor"]));
+            }
+            set {
+                this["FrameColor"] = value;
             }
         }
     }
