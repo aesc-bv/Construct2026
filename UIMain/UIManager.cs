@@ -21,7 +21,7 @@ using System.Windows.Media.Imaging;           // for BitmapImage
 using System.Windows.Threading;
 using Application = SpaceClaim.Api.V242.Application;
 using Image = System.Drawing.Image;
-using Panel = SpaceClaim.Api.V242.Panel;
+
 using WpfWindow = System.Windows.Window;
 // Optional WPF aliases to avoid WinForms collisions
 using WpfBrushes = System.Windows.Media.Brushes;
@@ -38,9 +38,14 @@ namespace AESCConstruct2026.UIMain
         private static bool _floatingMode;
         private static string _lastPanelKey;
 
-        // Docked hosts and controls
-        private static ElementHost _profileHost, _settingsHost, _plateHost, _fastenerHost,
-                                  _ribCutOutHost, _customPropertiesHost, _engravingHost, _connectorHost;
+        // Construct panel
+        private const string ConstructPanelCommand = "AESCConstruct2026.ConstructPanel";
+        private static Command _constructPanelCmd;
+        private static PanelTab _constructPanelTab;
+        private static ElementHost _constructHost;
+        private static string _activeDockedKey;   // tracks which module is currently shown
+
+        // Docked controls
         private static ProfileSelectionControl _profileControl;
         private static SettingsControl _settingsControl;
         private static PlatesControl _plateControl;
@@ -158,6 +163,8 @@ namespace AESCConstruct2026.UIMain
                 () => ToggleMode(),
                 true
             );
+
+            RegisterConstructPanel();
         }
 
         // Refreshes sidebar command enabled state based on license validity and updates texts.
@@ -217,12 +224,13 @@ namespace AESCConstruct2026.UIMain
 
             if (_floatingMode)
             {
+                if (_constructPanelCmd != null) _constructPanelCmd.IsVisible = false;
                 ShowFloating(_lastPanelKey);
             }
             else
             {
                 CloseFloatingWindow();
-                ShowDocked(_lastPanelKey);
+                ShowDocked(_lastPanelKey);  // EnsureConstructPanel sets IsVisible = true
             }
         }
 
@@ -618,29 +626,78 @@ namespace AESCConstruct2026.UIMain
             }
         }
 
-        // Displays the requested panel in a docked SpaceClaim panel and initializes controls on demand.
+        // Creates the dedicated Construct panel tab docked on the right side.
+        private static void RegisterConstructPanel()
+        {
+            _constructPanelCmd = Command.Create(ConstructPanelCommand);
+            _constructPanelCmd.Text = "AESC Construct";
+            _constructPanelCmd.Hint = "AESC Construct tools panel";
+            _constructPanelCmd.Image = LoadImage(Resources.FrameGen);
+            _constructPanelCmd.IsEnabled = true;
+            _constructPanelCmd.IsVisible = false;   // hidden until first use
+            _constructPanelCmd.KeepAlive(true);
+
+            _constructHost = new ElementHost { Dock = DockStyle.Fill };
+
+            _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
+        }
+
+        // Re-creates the Construct panel if the user closed it.
+        private static void EnsureConstructPanel()
+        {
+            if (_constructPanelCmd == null) { RegisterConstructPanel(); return; }
+
+            if (_constructPanelTab == null || _constructPanelTab.IsDeleted)
+            {
+                _constructHost = new ElementHost { Dock = DockStyle.Fill };
+                _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
+                _activeDockedKey = null;
+            }
+
+            _constructPanelCmd.IsVisible = true;
+        }
+
+        // Returns the WPF control for a given command key, creating it on demand.
+        private static System.Windows.Controls.UserControl GetDockedControl(string key)
+        {
+            switch (key)
+            {
+                case ProfileCommand:          EnsureProfile();           return _profileControl;
+                case SettingsCommand:         EnsureSettings();          return _settingsControl;
+                case PlateCommand:            EnsurePlate();             return _plateControl;
+                case FastenerCommand:         EnsureFastener();          return _fastenerControl;
+                case RibCutOutCommand:        EnsureRibCutOut();         return _ribCutOutControl;
+                case CustomPropertiesCommand: EnsureCustomProperties();  return _customPropertiesControl;
+                case EngravingCommand:        EnsureEngraving();         return _engravingControl;
+                case ConnectorCommand:        EnsureConnector();         return _connectorControl;
+                default: return null;
+            }
+        }
+
+        // Displays the requested module in the dedicated Construct panel.
         private static void ShowDocked(string key)
         {
             Command.Execute("AESC.Construct.SetMode3D");
-            switch (key)
+            EnsureConstructPanel();
+
+            var control = GetDockedControl(key);
+            if (control == null) return;
+
+            if (_activeDockedKey != key)
             {
-                case ProfileCommand:
-                    EnsureProfile(); Application.AddPanelContent(Command.GetCommand(key), _profileHost, Panel.Options); break;
-                case SettingsCommand:
-                    EnsureSettings(); Application.AddPanelContent(Command.GetCommand(key), _settingsHost, Panel.Options); break;
-                case PlateCommand:
-                    EnsurePlate(); Application.AddPanelContent(Command.GetCommand(key), _plateHost, Panel.Options); break;
-                case FastenerCommand:
-                    EnsureFastener(); Application.AddPanelContent(Command.GetCommand(key), _fastenerHost, Panel.Options); break;
-                case RibCutOutCommand:
-                    EnsureRibCutOut(); Application.AddPanelContent(Command.GetCommand(key), _ribCutOutHost, Panel.Options); break;
-                case CustomPropertiesCommand:
-                    EnsureCustomProperties(); Application.AddPanelContent(Command.GetCommand(key), _customPropertiesHost, Panel.Options); break;
-                case EngravingCommand:
-                    EnsureEngraving(); Application.AddPanelContent(Command.GetCommand(key), _engravingHost, Panel.Options); break;
-                case ConnectorCommand:
-                    EnsureConnector(); Application.AddPanelContent(Command.GetCommand(key), _connectorHost, Panel.Options); break;
+                _constructHost.Child = control;
+                _activeDockedKey = key;
             }
+
+            // Bring the panel tab to the front
+            if (_constructPanelTab != null && !_constructPanelTab.IsDeleted)
+                _constructPanelTab.Activate();
+        }
+
+        // Public entry point for KruisRibCmd to show the RibCutOut panel.
+        public static void ShowRibCutOut()
+        {
+            Show(RibCutOutCommand);
         }
 
         // Creates a new WPF UserControl instance for the requested sidebar key (used for floating mode).
@@ -695,29 +752,29 @@ namespace AESCConstruct2026.UIMain
             }
         }
 
-        // Creates the Profile sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureProfile() { if (_profileControl == null) { _profileControl = new ProfileSelectionControl(); _profileHost = new ElementHost { Dock = DockStyle.Fill, Child = _profileControl }; } }
+        // Lazily creates the Profile sidebar control.
+        private static void EnsureProfile() { if (_profileControl == null) _profileControl = new ProfileSelectionControl(); }
 
-        // Creates the Settings sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureSettings() { if (_settingsControl == null) { _settingsControl = new SettingsControl(); _settingsHost = new ElementHost { Dock = DockStyle.Fill, Child = _settingsControl }; } }
+        // Lazily creates the Settings sidebar control.
+        private static void EnsureSettings() { if (_settingsControl == null) _settingsControl = new SettingsControl(); }
 
-        // Creates the Plate sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsurePlate() { if (_plateControl == null) { _plateControl = new PlatesControl(); _plateHost = new ElementHost { Dock = DockStyle.Fill, Child = _plateControl }; } }
+        // Lazily creates the Plate sidebar control.
+        private static void EnsurePlate() { if (_plateControl == null) _plateControl = new PlatesControl(); }
 
-        // Creates the Fastener sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureFastener() { if (_fastenerControl == null) { _fastenerControl = new FastenersControl(); _fastenerHost = new ElementHost { Dock = DockStyle.Fill, Child = _fastenerControl }; } }
+        // Lazily creates the Fastener sidebar control.
+        private static void EnsureFastener() { if (_fastenerControl == null) _fastenerControl = new FastenersControl(); }
 
-        // Creates the RibCutOut sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureRibCutOut() { if (_ribCutOutControl == null) { _ribCutOutControl = new RibCutOutControl(); _ribCutOutHost = new ElementHost { Dock = DockStyle.Fill, Child = _ribCutOutControl }; } }
+        // Lazily creates the RibCutOut sidebar control.
+        private static void EnsureRibCutOut() { if (_ribCutOutControl == null) _ribCutOutControl = new RibCutOutControl(); }
 
-        // Creates the CustomProperties sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureCustomProperties() { if (_customPropertiesControl == null) { _customPropertiesControl = new CustomComponentControl(); _customPropertiesHost = new ElementHost { Dock = DockStyle.Fill, Child = _customPropertiesControl }; } }
+        // Lazily creates the CustomProperties sidebar control.
+        private static void EnsureCustomProperties() { if (_customPropertiesControl == null) _customPropertiesControl = new CustomComponentControl(); }
 
-        // Creates the Engraving sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureEngraving() { if (_engravingControl == null) { _engravingControl = new EngravingControl(); _engravingHost = new ElementHost { Dock = DockStyle.Fill, Child = _engravingControl }; } }
+        // Lazily creates the Engraving sidebar control.
+        private static void EnsureEngraving() { if (_engravingControl == null) _engravingControl = new EngravingControl(); }
 
-        // Creates the Connector sidebar control and wraps it in a WinForms ElementHost.
-        private static void EnsureConnector() { if (_connectorControl == null) { _connectorControl = new ConnectorControl(); _connectorHost = new ElementHost { Dock = DockStyle.Fill, Child = _connectorControl }; } }
+        // Lazily creates the Connector sidebar control.
+        private static void EnsureConnector() { if (_connectorControl == null) _connectorControl = new ConnectorControl(); }
 
         // Converts raw icon bytes to a System.Drawing.Image used as SpaceClaim command icon.
         private static Image LoadImage(byte[] bytes)

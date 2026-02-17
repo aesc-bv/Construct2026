@@ -1,26 +1,19 @@
-﻿/*
+/*
  KruisRibCmd defines the SpaceClaim command capsule for the Rib Cut-Out tool.
- It hosts the RibCutOutControl in a dockable panel and exposes it as a ribbon/button command
- that is enabled when a SpaceClaim document window is active.
+ It routes the panel display through UIManager so it appears in the dedicated
+ Construct panel instead of creating its own AddPanelContent call.
 */
 
-using AESCConstruct2026.UI;                         // for RibCutOutControl
+using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;          // for CommandCapsule, ExecutionContext
 using System.Drawing;                             // for Rectangle
-using System.Windows.Forms;                       // for DockStyle
-using System.Windows.Forms.Integration;           // for ElementHost
-using Application = SpaceClaim.Api.V242.Application;
-using Panel = SpaceClaim.Api.V242.Panel;
 
 namespace AESCConstruct2026.RibCutout.Commands
 {
     class KruisRibCmd : CommandCapsule
     {
         public const string CommandName = "AESCConstruct2026.RibCutOut.KruisRib";
-
-        private RibCutOutControl _ribCutControl;
-        private ElementHost _ribCutHost;
 
         // Initializes the command capsule with id, display text and tooltip for the Rib Cut-Out panel.
         public KruisRibCmd()
@@ -39,28 +32,11 @@ namespace AESCConstruct2026.RibCutout.Commands
             command.IsEnabled = Window.ActiveWindow != null;
         }
 
-        // Executes the command by creating (once) and showing the RibCutOutControl in a dockable panel.
+        // Executes the command by showing the RibCutOut panel through UIManager.
         protected override void OnExecute(Command command, ExecutionContext context, Rectangle buttonRect)
         {
-            var window = Window.ActiveWindow;
-            if (window == null)
-                return;
-
-            if (_ribCutControl == null)
-            {
-                _ribCutControl = new RibCutOutControl();
-                _ribCutHost = new ElementHost
-                {
-                    Dock = DockStyle.Fill,
-                    Child = _ribCutControl
-                };
-            }
-
-            Application.AddPanelContent(
-                command,
-                _ribCutHost,
-                Panel.Options
-            );
+            if (Window.ActiveWindow == null) return;
+            UIManager.ShowRibCutOut();
         }
     }
 }

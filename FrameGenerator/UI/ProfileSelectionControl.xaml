@@ -203,27 +203,6 @@
                                        Height="15" />
                             </Button>
 
-                            <StackPanel Orientation="Horizontal"
-                                        Margin="0,0,0,0"
-                                        Height="25"
-                                        Grid.Column="2"
-                                        Grid.Row="0"
-                                        HorizontalAlignment="Right">
-                                <Image Source="pack://application:,,,/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Radius.png"
-                                       Width="25"
-                                       Height="25"
-                                       Margin="0,0,5,0"
-                                       HorizontalAlignment="Right" />
-                                <TextBox x:Name="RotationAngleTextBox"
-                                         TextAlignment="Center"
-                                         Width="40"
-                                         Height="25"
-                                         Text="0"
-                                         Margin="0"
-                                         HorizontalAlignment="Right"
-                                         TextChanged="RotationAngleTextBox_TextChanged" />
-                            </StackPanel>
-
                             <CheckBox x:Name="HollowCheckBox"
                                       Tag="SolidProfileText"
                                       Content="Solid Profile"
@@ -232,6 +211,26 @@
                                       Grid.Column="0"
                                       Grid.Row="1" />
                         </Grid>
+                    </StackPanel>
+
+                    <!-- Rotation angle — always visible for all profile types -->
+                    <StackPanel x:Name="RotationAnglePanel"
+                                Orientation="Horizontal"
+                                Margin="0,5,0,0"
+                                Height="25"
+                                Width="230"
+                                HorizontalAlignment="Center">
+                        <Image Source="pack://application:,,,/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Radius.png"
+                               Width="25"
+                               Height="25"
+                               Margin="0,0,5,0" />
+                        <TextBox x:Name="RotationAngleTextBox"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Text="0"
+                                 Margin="0"
+                                 TextChanged="RotationAngleTextBox_TextChanged" />
                     </StackPanel>
 
                     <Grid x:Name="UserProfilesGridScrollView"

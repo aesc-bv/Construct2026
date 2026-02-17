@@ -349,11 +349,17 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                         w = GetNum("w");
                         break;
                     case "DXF":
-                        var (widthMm, heightMm) = DXFImportHelper.GetDXFSize(dxfContourVal);
-                        w = widthMm * 1000.0;
+                        var (dxfW, dxfH) = DXFImportHelper.GetDXFSize(dxfContourVal);
+                        w = dxfW * 1000.0;
+                        if (dxfH > 0)
+                            profileData["h"] = (dxfH * 1000.0).ToString(CultureInfo.InvariantCulture);
                         CreateCustomProperty(part, "DXFPath", dxfFilePath);
                         break;
                     case "CSV":
+                        var (csvWidth, csvHeight) = DXFImportHelper.GetDXFSize(dxfContourVal);
+                        w = csvWidth * 1000.0;
+                        if (csvHeight > 0)
+                            profileData["h"] = (csvHeight * 1000.0).ToString(CultureInfo.InvariantCulture);
                         CreateCustomProperty(part, "RawCSV", csvProfileString);
                         break;
                     default:
