@@ -97,6 +97,7 @@
                         </Grid.ColumnDefinitions>
                         <CheckBox x:Name="connectorDynamicHeight"
                                   Tag="connectorDynamicHeight"
+                                  IsChecked="True"
                                   Margin="0,0,10,0"
                                   VerticalAlignment="Center"
                                   Grid.Column="0" />
