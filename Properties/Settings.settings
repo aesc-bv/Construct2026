@@ -6,7 +6,7 @@
       <Value Profile="(Default)">[Name]_[w]x[h]_[length]</Value>
     </Setting>
     <Setting Name="TypeString" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Rectangular@Rect|Circular@C|H Profile@H|L Profile@L|T Profile@T|U Profile@U</Value>
+      <Value Profile="(Default)">Rectangular@Rect@[Name]_[w]x[h]_[length]|Circular@C@[Name]_[d]x[t]_[length]|H Profile@H@[Name]_[w]x[h]_[length]|L Profile@L@[Name]_[w]x[h]_[length]|T Profile@T@[Name]_[w]x[h]_[length]|U Profile@U@[Name]_[w]x[h]_[length]</Value>
     </Setting>
     <Setting Name="TableAnchorX" Type="System.Double" Scope="User">
       <Value Profile="(Default)">15.75</Value>
@@ -85,6 +85,12 @@
     </Setting>
     <Setting Name="DocumentAnchor" Type="System.String" Scope="User">
       <Value Profile="(Default)">TopRight</Value>
+    </Setting>
+    <Setting Name="NameDecimals" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="FrameColor" Type="System.String" Scope="User">
+      <Value Profile="(Default)">#006d8b</Value>
     </Setting>
   </Settings>
 </SettingsFile>

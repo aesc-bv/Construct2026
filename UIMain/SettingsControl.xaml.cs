@@ -19,7 +19,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using Application = SpaceClaim.Api.V242.Application;
+using Path = System.IO.Path;
 
 
 namespace AESCConstruct2026.FrameGenerator.UI
@@ -36,6 +39,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
         {
             public string Type { get; set; }
             public string Name { get; set; }
+            public string Template { get; set; }
         }
 
         // backing collection
@@ -105,19 +109,23 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             foreach (var entry in entries)
             {
-                var parts = entry.Split(new[] { '@' }, 2);
-                if (parts.Length == 2)
+                var parts = entry.Split('@');
+                _pairs.Add(new TypeNamePair
                 {
-                    _pairs.Add(new TypeNamePair { Type = parts[0], Name = parts[1] });
-                }
-                else
-                {
-                    _pairs.Add(new TypeNamePair { Type = entry, Name = "" });
-                }
+                    Type = parts.Length >= 1 ? parts[0] : entry,
+                    Name = parts.Length >= 2 ? parts[1] : "",
+                    Template = parts.Length >= 3 ? parts[2] : ""
+                });
             }
 
             // bind it
             TypesDataGrid.ItemsSource = _pairs;
+
+            // Decimals
+            DecimalsTextBox.Text = Settings.Default.NameDecimals.ToString();
+
+            // Frame color
+            LoadFrameColorUI();
 
             // anchor coordinates
             AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
@@ -161,13 +169,22 @@ namespace AESCConstruct2026.FrameGenerator.UI
             // Save Part naming
             Settings.Default.NameString = PartNameTextBox.Text.Trim();
 
-            // Reserialize the list back into TypeString
+            // Reserialize the list back into TypeString (Type@Name@Template)
             var serialized = string.Join("|",
                 _pairs
                     .Where(p => !string.IsNullOrWhiteSpace(p.Type) || !string.IsNullOrWhiteSpace(p.Name))
-                    .Select(p => $"{p.Type}@{p.Name}")
+                    .Select(p => $"{p.Type}@{p.Name}@{p.Template}")
             );
             Settings.Default.TypeString = serialized;
+
+            // Save decimals
+            if (int.TryParse(DecimalsTextBox.Text.Trim(), out var dec) && dec >= 0)
+                Settings.Default.NameDecimals = dec;
+
+            // Save frame color
+            Settings.Default.FrameColor = FrameColorCheckBox.IsChecked == true
+                ? FrameColorTextBox.Text.Trim()
+                : string.Empty;
 
             Settings.Default.MatInExcel = Checkbox_ExcelMaterial.IsChecked == true;
             Settings.Default.MatInBOM = Checkbox_BOMMaterial.IsChecked == true;
@@ -575,16 +592,25 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
                 AnchorYTextBox.Text = Settings.Default.TableAnchorY.ToString();
 
-                // Rebuild the type/name grid from TypeString
+                // Rebuild the type/name/template grid from TypeString
                 _pairs.Clear();
                 var raw = Settings.Default.TypeString ?? "";
                 foreach (var entry in raw.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    var parts = entry.Split(new[] { '@' }, 2);
-                    _pairs.Add(parts.Length == 2
-                        ? new TypeNamePair { Type = parts[0], Name = parts[1] }
-                        : new TypeNamePair { Type = entry, Name = "" });
+                    var parts = entry.Split('@');
+                    _pairs.Add(new TypeNamePair
+                    {
+                        Type = parts.Length >= 1 ? parts[0] : entry,
+                        Name = parts.Length >= 2 ? parts[1] : "",
+                        Template = parts.Length >= 3 ? parts[2] : ""
+                    });
                 }
+
+                // Decimals
+                DecimalsTextBox.Text = Settings.Default.NameDecimals.ToString();
+
+                // Frame color
+                LoadFrameColorUI();
 
                 // Rebuild CSV path rows from settings
                 PopulateCsvFilePathFields();
@@ -600,6 +626,55 @@ namespace AESCConstruct2026.FrameGenerator.UI
             {
                 Application.ReportStatus("Import failed:\n" + ex.Message, StatusMessageType.Error, null);
             }
+        }
+
+        // Loads the FrameColor setting into the checkbox, textbox, and preview rectangle.
+        private void LoadFrameColorUI()
+        {
+            string fc = Settings.Default.FrameColor ?? "";
+            if (!string.IsNullOrWhiteSpace(fc))
+            {
+                FrameColorCheckBox.IsChecked = true;
+                FrameColorTextBox.Text = fc;
+            }
+            else
+            {
+                FrameColorCheckBox.IsChecked = false;
+                FrameColorTextBox.Text = "#006d8b";
+            }
+            UpdateFrameColorPreview();
+        }
+
+        // Updates the preview rectangle to reflect the current hex value in the textbox.
+        private void UpdateFrameColorPreview()
+        {
+            try
+            {
+                if (FrameColorCheckBox.IsChecked == true && !string.IsNullOrWhiteSpace(FrameColorTextBox.Text))
+                {
+                    var c = System.Drawing.ColorTranslator.FromHtml(FrameColorTextBox.Text.Trim());
+                    FrameColorPreview.Fill = new SolidColorBrush(
+                        System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B));
+                }
+                else
+                {
+                    FrameColorPreview.Fill = Brushes.Transparent;
+                }
+            }
+            catch
+            {
+                FrameColorPreview.Fill = Brushes.Transparent;
+            }
+        }
+
+        private void FrameColorCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateFrameColorPreview();
+        }
+
+        private void FrameColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateFrameColorPreview();
         }
 
         // Converts a JsonElement into a strongly typed value suitable for assigning to a Settings property.

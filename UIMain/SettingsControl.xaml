@@ -67,18 +67,63 @@
                                 <DataGrid x:Name="TypesDataGrid"
                                           AutoGenerateColumns="False"
                                           HeadersVisibility="Column"
-                                          Height="150">
+                                          Height="170">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn x:Name="Column_Type"
                                                             Header="Type"
                                                             Binding="{Binding Type}"
-                                                            Width="*" />
+                                                            Width="70" />
                                         <DataGridTextColumn x:Name="Column_Name"
                                                             Header="Name"
                                                             Binding="{Binding Name}"
+                                                            Width="50" />
+                                        <DataGridTextColumn x:Name="Column_Template"
+                                                            Header="Naming scheme"
+                                                            Binding="{Binding Template}"
                                                             Width="*" />
                                     </DataGrid.Columns>
                                 </DataGrid>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="60" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Tag="Label_Decimals"
+                                               Text="Decimals:"
+                                               VerticalAlignment="Center"
+                                               Grid.Column="0" />
+                                    <TextBox x:Name="DecimalsTextBox"
+                                             Height="24"
+                                             Margin="5,0,0,0"
+                                             Grid.Column="1" />
+                                </Grid>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="80" />
+                                        <ColumnDefinition Width="20" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="FrameColorCheckBox"
+                                              Tag="Checkbox_FrameColor"
+                                              Content="Profile color:"
+                                              VerticalAlignment="Center"
+                                              Grid.Column="0"
+                                              Checked="FrameColorCheckBox_Changed"
+                                              Unchecked="FrameColorCheckBox_Changed" />
+                                    <TextBox x:Name="FrameColorTextBox"
+                                             Height="24"
+                                             Margin="5,0,0,0"
+                                             Grid.Column="1"
+                                             IsEnabled="{Binding IsChecked, ElementName=FrameColorCheckBox}"
+                                             TextChanged="FrameColorTextBox_TextChanged" />
+                                    <Rectangle x:Name="FrameColorPreview"
+                                               Width="16"
+                                               Height="16"
+                                               Margin="4,0,0,0"
+                                               Grid.Column="2"
+                                               Stroke="Gray"
+                                               StrokeThickness="0.5" />
+                                </Grid>
                             </StackPanel>
                         </GroupBox>
                     </Expander>
