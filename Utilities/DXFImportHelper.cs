@@ -29,8 +29,9 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         //
         /// <summary>
         /// Holds all DXFProfile objects created during this session.
-        /// Used by “Save CSV” / “Load CSV” commands.
+        /// Used by "Save CSV" / "Load CSV" commands.
         /// </summary>
+        internal static readonly object _profilesLock = new object();
         public static List<DXFProfile> SessionProfiles { get; } = new List<DXFProfile>();
 
         //
@@ -54,7 +55,8 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     var mainPartDXF = dxfWindow.Document.MainPart;
 
                     // Extract curves from first DatumPlane
-                    DatumPlane dp = mainPartDXF.DatumPlanes.First();
+                    DatumPlane dp = mainPartDXF.DatumPlanes.FirstOrDefault();
+                    if (dp == null) return;
                     foreach (DesignCurve dc in dp.Curves)
                     {
                         localContours.Add(dc.Shape);
@@ -63,8 +65,9 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                 contours.AddRange(localContours);
                 return contours.Count > 2; // Return true if ≥ 3 curves found
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log("ImportDXFContours failed: " + ex.ToString());
                 return false;
             }
         }
@@ -153,7 +156,12 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                 return null;
             }
 
-            var datumPlane = mainPart.DatumPlanes.First();
+            var datumPlane = mainPart.DatumPlanes.FirstOrDefault();
+            if (datumPlane == null)
+            {
+                Application.ReportStatus("DXF has no datum plane.", StatusMessageType.Warning, null);
+                return null;
+            }
             // Ensure that plane is aligned with XY
             if (!((Plane)datumPlane.Shape.Geometry).Frame.DirZ.IsParallel(Direction.DirZ))
             {
@@ -195,7 +203,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                         foreach (var w in Window.GetWindows(docImg))
                             w.Close();
                     }
-                    catch { }
+                    catch (Exception ex) { Logger.Log("DXFImportHelper: failed to close temp document windows: " + ex.ToString()); }
 
                     // 3) Build the DXFProfile object
                     dxfProfile = new DXFProfile
@@ -206,7 +214,10 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     };
 
                     // 4) Store in session for later "Save CSV"
-                    SessionProfiles.Add(dxfProfile);
+                    lock (_profilesLock)
+                    {
+                        SessionProfiles.Add(dxfProfile);
+                    }
                 }
             };
 
@@ -236,7 +247,8 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         public static string StringFromBody(Body body)
         {
             string profileString = "";
-            var face = body.Faces.First();
+            var face = body.Faces.FirstOrDefault();
+            if (face == null) return profileString;
 
             foreach (Loop loop in face.Loops)
             {
@@ -463,7 +475,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             }
             finally
             {
-                try { _window?.Close(); } catch { }
+                try { _window?.Close(); } catch (Exception ex) { Logger.Log("DXFImportHelper: failed to close window: " + ex.ToString()); }
             }
         }
 

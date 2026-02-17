@@ -555,8 +555,9 @@ namespace AESCConstruct2026.FrameGenerator.Modules
 
                 return (halfStart, halfEnd);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Log("SplitBodyAtMidpoint failed: " + ex.ToString());
                 return (null, null);
             }
         }
@@ -682,7 +683,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             string hex = Settings.Default.FrameColor ?? "";
             if (string.IsNullOrWhiteSpace(hex)) hex = "#006d8b";
             try { layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml(hex)); }
-            catch { layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml("#006d8b")); }
+            catch (Exception ex) { Logger.Log("GetOrCreateFramesLayer color parse failed: " + ex.ToString()); layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml("#006d8b")); }
             return layer;
         }
     }

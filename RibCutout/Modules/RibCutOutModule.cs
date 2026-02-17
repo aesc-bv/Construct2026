@@ -373,8 +373,8 @@ namespace AESCConstruct2026.RibCutout.Modules
                     var overlapA = bodyA.Copy();
                     overlapA.Intersect(new[] { bodyB.Copy() });
 
-                    var overlapB = bodyA.Copy();
-                    overlapB.Intersect(new[] { bodyB.Copy() });
+                    var overlapB = bodyB.Copy();
+                    overlapB.Intersect(new[] { bodyA.Copy() });
 
                     if (overlapA.Volume < 1e-12 || overlapB.Volume < 1e-12)
                     {

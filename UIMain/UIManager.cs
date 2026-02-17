@@ -75,8 +75,12 @@ namespace AESCConstruct2026.UIMain
 
 
         private static Command DockToggleCommandHolder;
-        static Bitmap _undock = new Bitmap(new MemoryStream(Resources.Menu_Undock));
-        static Bitmap _dock = new Bitmap(new MemoryStream(Resources.Menu_Dock));
+        // Streams must stay alive for the lifetime of the Bitmap (GDI+ requirement).
+        // These are static app-lifetime objects, so no disposal is needed.
+        private static readonly MemoryStream _undockStream = new MemoryStream(Resources.Menu_Undock);
+        private static readonly MemoryStream _dockStream = new MemoryStream(Resources.Menu_Dock);
+        static Bitmap _undock = new Bitmap(_undockStream);
+        static Bitmap _dock = new Bitmap(_dockStream);
 
         // Registers all sidebar and dock toggle commands with SpaceClaim and wires them to UI handlers.
         public static void RegisterAll()
@@ -251,12 +255,18 @@ namespace AESCConstruct2026.UIMain
         // Closes the floating window if it exists by invoking Close on its dispatcher.
         private static void CloseFloatingWindow()
         {
-            if (_floatingDispatcher != null)
+            var dispatcher = _floatingDispatcher;
+            if (dispatcher != null)
             {
-                _floatingDispatcher.BeginInvoke(new Action(() =>
+                dispatcher.BeginInvoke(new Action(() =>
                 {
                     _floatingWindow?.Close();
                 }));
+                // InvokeShutdown exits Dispatcher.Run(), allowing the thread to finish.
+                dispatcher.InvokeShutdown();
+                _floatingThread?.Join(2000);
+                _floatingDispatcher = null;
+                _floatingThread = null;
             }
         }
 
@@ -603,6 +613,9 @@ namespace AESCConstruct2026.UIMain
             _floatingWindow = null;
             _floatingContentHost = null;
             _restoreBounds = null;
+            _floatingDispatcher?.InvokeShutdown();
+            _floatingDispatcher = null;
+            _floatingThread = null;
         }
 
         // Recursively walks the WPF visual tree and ensures all TextBoxes are enabled and editable.
@@ -649,6 +662,7 @@ namespace AESCConstruct2026.UIMain
 
             if (_constructPanelTab == null || _constructPanelTab.IsDeleted)
             {
+                _constructHost?.Dispose();
                 _constructHost = new ElementHost { Dock = DockStyle.Fill };
                 _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
                 _activeDockedKey = null;

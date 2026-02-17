@@ -1,4 +1,6 @@
-﻿using SpaceClaim.Api.V242.Geometry;
+﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242.Geometry;
+using System;
 using System.Collections.Generic;
 
 namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
@@ -59,8 +61,9 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
                                 alignedCurves.Add(CurveSegment.CreateArc(
                                     newCenter, newStart, newEnd, newNormal));
                             }
-                            catch
+                            catch (Exception ex)
                             {
+                                Logger.Log("CSVProfile arc creation failed, retrying with flipped normal: " + ex.ToString());
                                 alignedCurves.Add(CurveSegment.CreateArc(
                                     newCenter, newStart, newEnd, -newNormal));
                             }

@@ -19,43 +19,52 @@ namespace AESCConstruct2026.Localization
     {
         private static readonly DataTable _translations = new DataTable();
         private static string[] _columns;
+        private static readonly object _loadLock = new object();
+        private static bool _isLoaded = false;
 
         // Loads the translation CSV into an in-memory DataTable keyed by translation id.
         public static void LoadCSV()
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-            var path = Path.Combine(appData, "AESCConstruct", "Language", "languageConstruct.csv");
-
-            // Logger.Log("[Language] Loading CSV from " + path);
-            if (!File.Exists(path))
-                throw new FileNotFoundException("[Language] Missing CSV at " + path);
-
-            using (var sr = new StreamReader(path, Encoding.GetEncoding("Windows-1252")))
+            lock (_loadLock)
             {
-                var header = sr.ReadLine();
-                if (header == null)
-                    throw new InvalidDataException("[Language] Empty CSV");
+                if (_isLoaded) return;
 
-                _columns = header.Split(';').Select(c => c.Trim('\uFEFF', ' ', '"')).ToArray();
-                foreach (var col in _columns) _translations.Columns.Add(col);
-                _translations.PrimaryKey = new[] { _translations.Columns[_columns[0]] };
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                var path = Path.Combine(appData, "AESCConstruct", "Language", "languageConstruct.csv");
 
-                int rowNum = 2;
-                while (!sr.EndOfStream)
+                // Logger.Log("[Language] Loading CSV from " + path);
+                if (!File.Exists(path))
+                    throw new FileNotFoundException("[Language] Missing CSV at " + path);
+
+                using (var sr = new StreamReader(path, Encoding.GetEncoding("Windows-1252")))
                 {
-                    var line = sr.ReadLine() ?? string.Empty;
-                    var cells = Regex.Split(
-                       line,
-                       // this pattern correctly splits on ; outside of quotes
-                       @";(?=(?:[^""]*""[^""]*"")*[^""]*$)"
-                    );
-                    var row = _translations.NewRow();
-                    for (int i = 0; i < _columns.Length; i++)
-                        row[i] = i < cells.Length ? cells[i] : string.Empty;
+                    var header = sr.ReadLine();
+                    if (header == null)
+                        throw new InvalidDataException("[Language] Empty CSV");
 
-                    try { _translations.Rows.Add(row); } catch (Exception ex) { Logger.Log($"[Language] Duplicate row at line {rowNum}: {ex.Message}"); }
-                    rowNum++;
+                    _columns = header.Split(';').Select(c => c.Trim('\uFEFF', ' ', '"')).ToArray();
+                    foreach (var col in _columns) _translations.Columns.Add(col);
+                    _translations.PrimaryKey = new[] { _translations.Columns[_columns[0]] };
+
+                    int rowNum = 2;
+                    while (!sr.EndOfStream)
+                    {
+                        var line = sr.ReadLine() ?? string.Empty;
+                        var cells = Regex.Split(
+                           line,
+                           // this pattern correctly splits on ; outside of quotes
+                           @";(?=(?:[^""]*""[^""]*"")*[^""]*$)"
+                        );
+                        var row = _translations.NewRow();
+                        for (int i = 0; i < _columns.Length; i++)
+                            row[i] = i < cells.Length ? cells[i] : string.Empty;
+
+                        try { _translations.Rows.Add(row); } catch (Exception ex) { Logger.Log($"[Language] Duplicate row at line {rowNum}: {ex.Message}"); }
+                        rowNum++;
+                    }
                 }
+
+                _isLoaded = true;
             }
         }
 
@@ -63,7 +72,7 @@ namespace AESCConstruct2026.Localization
         public static string Translate(string id)
         {
             if (string.IsNullOrEmpty(id)) return string.Empty;
-            if (_columns == null) LoadCSV();
+            if (!_isLoaded) LoadCSV();
 
             var lang = Properties.Settings.Default.Construct_Language;
             var row = _translations.Rows.Find(id);

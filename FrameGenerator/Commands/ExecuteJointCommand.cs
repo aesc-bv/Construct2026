@@ -433,9 +433,9 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                             copy.Dispose();
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // ignore a single failing cutter; continue with the rest
+                        Logger.Log("ExecuteCutOut: cutter subtraction failed: " + ex.ToString());
                     }
                 }
 
@@ -479,7 +479,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 {
                     foreach (var extra in postBodies.Where(b => !object.ReferenceEquals(b, keeper)).ToList())
                     {
-                        try { extra.Delete(); } catch { /* ignore */ }
+                        try { extra.Delete(); } catch (Exception ex) { Logger.Log("ExecuteCutOut: cleanup delete failed: " + ex.ToString()); }
                     }
                 }
             });

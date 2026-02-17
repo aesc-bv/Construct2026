@@ -68,9 +68,9 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     win.ActiveContext.Selection = toSelect;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore UI/selection issues
+                Logger.Log("ProfileReplaceHelper: selection update failed: " + ex.ToString());
             }
 
             return (true, originals);
@@ -157,7 +157,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         {
             foreach (var comp in components.Where(c => c != null).ToList())
             {
-                try { comp.Delete(); } catch { /* ignore */ }
+                try { comp.Delete(); } catch (Exception ex) { Logger.Log("ProfileReplaceHelper: DeleteComponents failed: " + ex.ToString()); }
             }
         }
 

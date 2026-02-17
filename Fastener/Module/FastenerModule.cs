@@ -26,14 +26,41 @@ namespace AESCConstruct2026.Fastener.Module
             var basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                "AESCConstruct", "Fasteners");
-            _bolts = File.ReadAllLines(Settings.Default.Bolt)
-                         .Skip(1).Select(Bolt.FromCsv).ToList();
+            try
+            {
+                _bolts = File.ReadAllLines(Settings.Default.Bolt)
+                             .Skip(1).Select(Bolt.FromCsv).ToList();
+            }
+            catch (Exception ex)
+            {
+                AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load bolt CSV: " + ex.ToString());
+                Application.ReportStatus("Failed to load bolt data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                _bolts = new List<Bolt>();
+            }
 
-            _washers = File.ReadAllLines(Settings.Default.Washer)
-                        .Skip(1).Select(Washer.FromCsv).ToList();
+            try
+            {
+                _washers = File.ReadAllLines(Settings.Default.Washer)
+                            .Skip(1).Select(Washer.FromCsv).ToList();
+            }
+            catch (Exception ex)
+            {
+                AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load washer CSV: " + ex.ToString());
+                Application.ReportStatus("Failed to load washer data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                _washers = new List<Washer>();
+            }
 
-            _nuts = File.ReadAllLines(Settings.Default.Nut)
-                         .Skip(1).Select(Nut.FromCsv).ToList();
+            try
+            {
+                _nuts = File.ReadAllLines(Settings.Default.Nut)
+                             .Skip(1).Select(Nut.FromCsv).ToList();
+            }
+            catch (Exception ex)
+            {
+                AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load nut CSV: " + ex.ToString());
+                Application.ReportStatus("Failed to load nut data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                _nuts = new List<Nut>();
+            }
         }
 
         public IEnumerable<string> BoltNames => _bolts.Select(b => b.Name).Distinct();
@@ -357,15 +384,21 @@ namespace AESCConstruct2026.Fastener.Module
                 return;
             }
 
+            // TODO: Wrap in transaction for rollback support
             try
-            {   //Execute a Command 
+            {   //Execute a Command
                 WriteBlock.ExecuteTask("AESCConstruct.FastenersCreate",
                 delegate
                 {
                     // Logger.Log($"[FastenerModule] CreateFasteners() starting; includeTop={includeWasherTop}, includeBottom={includeWasherBottom}, includeNut={includeNut}");
                     // Logger.Log($"[FastenerModule] boltType={boltType}, boltSize={boltSize}, washerTopType={washerTopType}, washerTopSize={washerTopSize}, washerBottomType={washerBottomType}, washerBottomSize={washerBottomSize}");
 
-                    Bolt _bolt = listBolt.First();
+                    Bolt _bolt = listBolt.FirstOrDefault();
+                    if (_bolt == null)
+                    {
+                        Application.ReportStatus("No bolt data available.", StatusMessageType.Error, null);
+                        return;
+                    }
 
                     foreach (Bolt bolt in listBolt)
                     {
@@ -384,8 +417,13 @@ namespace AESCConstruct2026.Fastener.Module
                         }
                     }
 
-                    Washer _washerBottom = listWasherBottom.First();
-                    Washer _washerTop = listWasherTop.First();
+                    Washer _washerBottom = listWasherBottom.FirstOrDefault();
+                    Washer _washerTop = listWasherTop.FirstOrDefault();
+                    if (_washerBottom == null || _washerTop == null)
+                    {
+                        Application.ReportStatus("No washer data available.", StatusMessageType.Error, null);
+                        return;
+                    }
 
                     foreach (Washer washer in listWasherBottom)
                     {
@@ -401,7 +439,12 @@ namespace AESCConstruct2026.Fastener.Module
                             _washerTop = washer;
                         }
                     }
-                    Nut _nut = listNut.First();
+                    Nut _nut = listNut.FirstOrDefault();
+                    if (_nut == null)
+                    {
+                        Application.ReportStatus("No nut data available.", StatusMessageType.Error, null);
+                        return;
+                    }
                     foreach (Nut nut in listNut)
                     {
                         if (nut.Type == nutType && nut.Size == nutSize)

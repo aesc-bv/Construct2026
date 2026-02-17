@@ -565,7 +565,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 profile = DXFImportHelper.DXFtoProfile(insideWriteBlock: true);
 
                 // Close the DXF window by reference
-                try { winDXF?.Close(); } catch { }
+                try { winDXF?.Close(); } catch (Exception ex) { Logger.Log("Failed to close DXF window: " + ex.ToString()); }
             });
 
             // ── Phase 2: Post-processing OUTSIDE WriteBlock ──
@@ -573,7 +573,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 return;
 
             // Copy the profile‐string to the clipboard (safe outside WriteBlock)
-            try { Clipboard.SetText(profile.ProfileString); } catch { }
+            try { Clipboard.SetText(profile.ProfileString); } catch (Exception ex) { Logger.Log("Clipboard.SetText failed: " + ex.ToString()); }
 
             Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
 
@@ -956,8 +956,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                                         }
                                     }
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
+                                    Logger.Log("Profile curve inspection failed: " + ex.ToString());
                                 }
                             }
                         }
@@ -1012,8 +1013,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                             );
                             //});
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
+                            Logger.Log("Extrude user-saved profile failed: " + ex.ToString());
                             Application.ReportStatus("An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.", StatusMessageType.Error, null);
                         }
                         return;
@@ -1053,8 +1055,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                                 ""
                             );
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
+                            Logger.Log("Extrude DXF contours failed: " + ex.ToString());
                             Application.ReportStatus("An error occurred while extruding the DXF contours.\nSee log in addin folder for details.", StatusMessageType.Error, null);
                         }
                         return;
@@ -1124,8 +1127,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                             ""
                         );
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        Logger.Log("Extrude built-in profile failed: " + ex.ToString());
                         Application.ReportStatus("An error occurred while extruding the built‐in profile.", StatusMessageType.Error, null);
                     }
                 }
@@ -1528,8 +1532,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         curve.SetVisibility(ctx, true);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log("RestoreCurveVisibility failed: " + ex.ToString());
             }
         }
 

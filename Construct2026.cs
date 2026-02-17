@@ -4,6 +4,7 @@
  and provides helpers for DXF import/export, BOM/STEP/Excel export, and license UI state.
 */
 
+using AESCConstruct2026.ClashDetection;
 using AESCConstruct2026.FrameGenerator.Commands;
 using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Licensing;
@@ -52,8 +53,12 @@ namespace AESCConstruct2026
             try
             {
                 var session = Session.GetSessions().FirstOrDefault();
-                if (session != null)
-                    Api.AttachToSession(session);
+                if (session == null)
+                {
+                    Logger.Log("No active SpaceClaim session found.");
+                    return;
+                }
+                Api.AttachToSession(session);
 
                 // Check license, but don't let it prevent command registration
                 bool valid = false;
@@ -159,6 +164,15 @@ namespace AESCConstruct2026
                     CompareCmd.Executing += (s, e) =>
                         CompareCommand.compareLegacy();
 
+                    // 6) Detect Clashes
+                    var clashCmd = Command.Create("AESCConstruct2026.DetectClashes");
+                    clashCmd.Text = "Detect Clashes";
+                    clashCmd.Hint = "Detect intersecting bodies in the model";
+                    clashCmd.Image = loadImg(Resources.compare);
+                    clashCmd.IsEnabled = valid;
+                    clashCmd.Executing += (s, e) => ClashDetectionCommand.DetectClashes(Window.ActiveWindow);
+                    clashCmd.KeepAlive(true);
+
                     //
                     // ─── LEGACY / OTHER COMMANDS ─────────────────────────────────────────────────
                     //
@@ -214,7 +228,7 @@ namespace AESCConstruct2026
                     };
 
                     // Initial button state (enabled/disabled) based on license type
-                    try { ConstructLicenseSpot.UpdateNetworkButtonUI(); } catch { }
+                    try { ConstructLicenseSpot.UpdateNetworkButtonUI(); } catch (Exception ex) { Logger.Log("UpdateNetworkButtonUI failed: " + ex.ToString()); }
 
                     // Sidebar commands
                     var _ = Localization.Language.Translate("Settings");
@@ -283,6 +297,7 @@ namespace AESCConstruct2026
             SetEnabled("AESCConstruct2026.UpdateBOM", valid);
             SetEnabled("AESCConstruct2026.ExportSTEP", valid);
             SetEnabled("AESCConstruct2026.CompareBodies", valid);
+            SetEnabled("AESCConstruct2026.DetectClashes", valid);
 
             UIManager.RefreshLicenseUI();
             UpdateCommandTexts();
@@ -314,8 +329,9 @@ namespace AESCConstruct2026
             {
                 return new Bitmap(new MemoryStream(bytes));
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log("loadImg failed: " + ex.ToString());
                 return null;
             }
         }
@@ -403,24 +419,28 @@ namespace AESCConstruct2026
             // Decode and display the preview image if available
             if (!string.IsNullOrEmpty(profile.ImgString))
             {
+                Bitmap preview;
                 byte[] bytes = Convert.FromBase64String(profile.ImgString);
                 using (var ms = new MemoryStream(bytes))
                 using (var bmp = new Bitmap(ms))
                 {
-                    var frm = new Form
-                    {
-                        Text = "DXF Preview: " + profile.Name,
-                        ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
-                    };
-                    var pb = new PictureBox
-                    {
-                        Dock = DockStyle.Fill,
-                        Image = bmp,
-                        SizeMode = PictureBoxSizeMode.Zoom
-                    };
-                    frm.Controls.Add(pb);
-                    frm.ShowDialog();
+                    preview = new Bitmap(bmp);
                 }
+
+                var frm = new Form
+                {
+                    Text = "DXF Preview: " + profile.Name,
+                    ClientSize = new System.Drawing.Size(preview.Width, preview.Height)
+                };
+                var pb = new PictureBox
+                {
+                    Dock = DockStyle.Fill,
+                    Image = preview,
+                    SizeMode = PictureBoxSizeMode.Zoom
+                };
+                frm.Controls.Add(pb);
+                frm.FormClosed += (s2, e2) => preview.Dispose();
+                frm.ShowDialog();
             }
         }
 
@@ -488,6 +508,9 @@ namespace AESCConstruct2026
                     return Localization.Language.Translate("Ribbon.Button.Settings");
                 case "AESCConstruct2026.ConnectorSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Connector");
+                case "AESCConstruct2026.DetectClashesBtn":
+                    return "Detect Clashes";
+
                 case "AESCConstruct2026.ActivateNetworkBtn":
                     return Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
 

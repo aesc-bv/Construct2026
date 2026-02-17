@@ -73,7 +73,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                     Command.Execute("NewDrawingSheet");
                     sheet = doc.DrawingSheets.FirstOrDefault();
                 }
-                catch { }
+                catch (Exception ex) { Logger.Log("NewDrawingSheet failed: " + ex.ToString()); }
 
                 if (sheet == null)
                 {
@@ -98,7 +98,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                     // Always use the visual top-left as the anchor we will reuse
                     reuseLocation = existingBoms[0].GetLocation(LocationPoint.TopLeftCorner);
                 }
-                catch { reuseLocation = null; }
+                catch (Exception ex) { Logger.Log("BOM reuseLocation failed: " + ex.ToString()); reuseLocation = null; }
 
                 foreach (var tbl in existingBoms)
                     tbl.Delete();
@@ -136,7 +136,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                     string material = first.Template.Material?.Name ?? "";
 
                     string cuts;
-                    try { cuts = GetCutString(first); } catch { cuts = "N/A"; }
+                    try { cuts = GetCutString(first); } catch (Exception ex) { Logger.Log("GetCutString in ExportBOM failed: " + ex.ToString()); cuts = "N/A"; }
 
                     return new
                     {
@@ -297,7 +297,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                     string material = first.Template.Material?.Name ?? "";
 
                     string cuts;
-                    try { cuts = GetCutString(first); } catch { cuts = "N/A"; }
+                    try { cuts = GetCutString(first); } catch (Exception ex) { Logger.Log("GetCutString in ExportExcel failed: " + ex.ToString()); cuts = "N/A"; }
 
                     return new
                     {
@@ -459,8 +459,9 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                         {
                             part.Export(PartExportFormat.Step, dest, false, null);
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            Logger.Log($"ExportSTEP: Failed to export part '{part.DisplayName}': " + ex.ToString());
                         }
                     }
 
@@ -569,8 +570,9 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 string result = $"X: {x0:F1}/Z: {z0:F1}, X: {x1:F1}/Z: {z1:F1}";
                 return result;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Log("GetCutString failed: " + ex.ToString());
                 return "ERR";
             }
         }

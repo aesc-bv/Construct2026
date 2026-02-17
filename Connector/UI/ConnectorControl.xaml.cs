@@ -120,8 +120,9 @@ namespace AESCConstruct2026.UI
                     {
                         InvalidateDrawing();
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        Logger.Log("ConnectorControl resize InvalidateDrawing failed: " + ex.ToString());
                     }
                 };
 
@@ -132,13 +133,15 @@ namespace AESCConstruct2026.UI
                 this.SizeChanged += (_, __) =>
                 {
                     try { InvalidateDrawing(); }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        Logger.Log("ConnectorControl SizeChanged InvalidateDrawing failed: " + ex.ToString());
                     }
                 };
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Log("InitializeDrawingHost failed: " + ex.ToString());
             }
         }
 
@@ -152,7 +155,7 @@ namespace AESCConstruct2026.UI
             }
             catch (Exception ex)
             {
-                ////Logger.Log($"PicDrawing_Paint error: {ex}");
+                Logger.Log("PicDrawing_Paint error: " + ex.ToString());
             }
         }
 
@@ -175,6 +178,7 @@ namespace AESCConstruct2026.UI
             }
             catch (Exception ex)
             {
+                Logger.Log("drawConnector failed: " + ex.ToString());
             }
         }
 
@@ -191,7 +195,7 @@ namespace AESCConstruct2026.UI
                 drawConnector();
                 UpdateGenerateEnabled();
             }
-            catch (Exception ex) { }
+            catch (Exception ex) { Logger.Log("ConnectorControl_Loaded failed: " + ex.ToString()); }
         }
 
         // LoadConnectorPresets reads connector presets from a CSV file and binds them into the preset combobox.
@@ -370,7 +374,7 @@ namespace AESCConstruct2026.UI
             {
                 return (T)Convert.ChangeType(s, typeof(T), CultureInfo.InvariantCulture);
             }
-            catch { return fallback; }
+            catch (Exception ex) { Logger.Log("ConnectorControl: CSV column parse failed for key '" + key + "': " + ex.ToString()); return fallback; }
         }
 
         // GetDouble parses a nullable double from a CSV column using invariant culture semantics.
@@ -528,7 +532,7 @@ namespace AESCConstruct2026.UI
 
                     Collision cstat;
                     try { cstat = master.GetCollision(probeInOther); }
-                    catch { continue; }
+                    catch (Exception ex) { Logger.Log("ConnectorControl: GetCollision failed: " + ex.ToString()); continue; }
 
                     if (cstat == Collision.Intersect)
                     {
@@ -566,7 +570,7 @@ namespace AESCConstruct2026.UI
                     var c = ownerMaster.Shape.GetCollision(tool);
                     return c == Collision.Intersect;// || c == Collision.Touch;
                 }
-                catch { return false; }
+                catch (Exception ex) { Logger.Log("ConnectorControl: IsAttachedLocal collision check failed: " + ex.ToString()); return false; }
             }
             static bool IsAttachedLocalCyl(DesignBody ownerMaster, Body tool)
             {
@@ -576,7 +580,7 @@ namespace AESCConstruct2026.UI
                     var c = ownerMaster.Shape.GetCollision(tool);
                     return c == Collision.Intersect || c == Collision.Touch;
                 }
-                catch { return false; }
+                catch (Exception ex) { Logger.Log("ConnectorControl: IsAttachedLocalCyl collision check failed: " + ex.ToString()); return false; }
             }
 
             static bool ShouldExtendPlanarLocal(
@@ -737,7 +741,7 @@ namespace AESCConstruct2026.UI
                             allPlacements.Add((iEdge, iDesignBody, designBody, centers));
 
                     }
-                    catch {}
+                    catch (Exception ex) { Logger.Log("ConnectorControl: edge placement computation failed: " + ex.ToString()); }
                 }
 
                 if (allPlacements.Count == 0)
@@ -876,7 +880,7 @@ namespace AESCConstruct2026.UI
                                         dirX_m = Direction.Cross(dirY_m, dirZ_m);
                                     }
                                 }
-                                catch { }
+                                catch (Exception ex) { Logger.Log("ConnectorControl: direction flip ContainsPoint failed: " + ex.ToString()); }
 
                                 // compute thickness once per edge via opposite face (small<->big pairing unchanged)
                                 var opp = getOppositeFace(smallFaceEdge, bigFaceEdge, isPlaneEdge, out double thickness, out Direction _);
@@ -982,13 +986,14 @@ namespace AESCConstruct2026.UI
                                 }
                                 catch (Exception exUnite)
                                 {
+                                    Logger.Log("ConnectorControl: unite/extend failed: " + exUnite.ToString());
                                 }
                                 finally
                                 {
-                                    try { extConnector?.Dispose(); } catch { }
-                                    try { extCut?.Dispose(); } catch { }
-                                    try { extCollision?.Dispose(); } catch { }
-                                    foreach (var b in extOwnerCuts) { try { b?.Dispose(); } catch { } }
+                                    try { extConnector?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extConnector dispose failed: " + ex.ToString()); }
+                                    try { extCut?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extCut dispose failed: " + ex.ToString()); }
+                                    try { extCollision?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extCollision dispose failed: " + ex.ToString()); }
+                                    foreach (var b in extOwnerCuts) { try { b?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extOwnerCut dispose failed: " + ex.ToString()); } }
                                 }
 
                                 if (!rectangularCut && connectorBody != null && !c.RadiusInCutOut)
@@ -1003,7 +1008,7 @@ namespace AESCConstruct2026.UI
                                         collisionBody?.Dispose();
                                         collisionBody = inflated.Copy();
                                     }
-                                    catch { inflated?.Dispose(); }
+                                    catch (Exception ex) { Logger.Log("ConnectorControl: OffsetFaces inflate failed: " + ex.ToString()); inflated?.Dispose(); }
                                 }
                             }
                             // AFTER (full cylindrical branch, no omissions)
@@ -1227,8 +1232,8 @@ namespace AESCConstruct2026.UI
                                         var cylInnerCopy = protoCylInner?.Copy();
                                         var cylAnnulCopy = protoCylAnnulus?.Copy();
 
-                                        try { if (cylInnerCopy != null) connectorBodyLocal.Subtract(cylInnerCopy); } catch { }
-                                        try { if (cylAnnulCopy != null) connectorBodyLocal.Subtract(cylAnnulCopy); } catch { }
+                                        try { if (cylInnerCopy != null) connectorBodyLocal.Subtract(cylInnerCopy); } catch (Exception ex) { Logger.Log("ConnectorControl: cylinder inner subtraction failed: " + ex.ToString()); }
+                                        try { if (cylAnnulCopy != null) connectorBodyLocal.Subtract(cylAnnulCopy); } catch (Exception ex) { Logger.Log("ConnectorControl: cylinder annulus subtraction failed: " + ex.ToString()); }
 
                                         connectorBody = connectorBodyLocal.Copy();
 
@@ -1314,7 +1319,7 @@ namespace AESCConstruct2026.UI
                                         {
                                             // Non rectangular cut: inflate by face offset, same as before
                                             cutBody = rectLoft.Copy();
-                                            try { cutBody.OffsetFaces(cutBody.Faces, tolM); } catch { }
+                                            try { cutBody.OffsetFaces(cutBody.Faces, tolM); } catch (Exception ex) { Logger.Log("ConnectorControl: OffsetFaces for non-rectangular cut failed: " + ex.ToString()); }
                                         }
 
                                     }
@@ -1389,7 +1394,7 @@ namespace AESCConstruct2026.UI
                                                     var col2 = ownerMaster.Shape.GetCollision(extConnector);
                                                     LogCyl(edgeCounter, placementIdx, $"Extension attached collision={col2}");
                                                 }
-                                                catch { }
+                                                catch (Exception ex) { Logger.Log("ConnectorControl: extension collision check failed: " + ex.ToString()); }
 
                                                 connectorBody?.Dispose();
                                                 connectorBody = extConnector;
@@ -1401,9 +1406,9 @@ namespace AESCConstruct2026.UI
                                                     var col2 = ownerMaster.Shape.GetCollision(extConnector);
                                                     LogCyl(edgeCounter, placementIdx, $"Extension still not attached collision={col2}");
                                                 }
-                                                catch { }
+                                                catch (Exception ex) { Logger.Log("ConnectorControl: extension not-attached collision check failed: " + ex.ToString()); }
 
-                                                try { extConnector?.Dispose(); } catch { }
+                                                try { extConnector?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extConnector dispose failed: " + ex.ToString()); }
                                                 throw new InvalidOperationException("Connector could not attach to the owner body (after one extension).");
                                             }
                                         }
@@ -1423,7 +1428,7 @@ namespace AESCConstruct2026.UI
                                             cutBody?.Dispose(); cutBody = inflated;
                                             collisionBody?.Dispose(); collisionBody = inflated.Copy();
                                         }
-                                        catch { inflated?.Dispose(); }
+                                        catch (Exception ex) { Logger.Log("ConnectorControl: OffsetFaces inflate (cyl) failed: " + ex.ToString()); inflated?.Dispose(); }
                                     }
                                 }
                                 catch (Exception exCyl)
@@ -1442,9 +1447,9 @@ namespace AESCConstruct2026.UI
                         } // placements
 
                         // cleanup per-edge prototypes
-                        try { protoCylInner?.Dispose(); } catch { }
-                        try { protoCylOuter?.Dispose(); } catch { }
-                        try { protoCylAnnulus?.Dispose(); } catch { }
+                        try { protoCylInner?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: protoCylInner dispose failed: " + ex.ToString()); }
+                        try { protoCylOuter?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: protoCylOuter dispose failed: " + ex.ToString()); }
+                        try { protoCylAnnulus?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: protoCylAnnulus dispose failed: " + ex.ToString()); }
 
                         try
                         {
@@ -1700,7 +1705,7 @@ namespace AESCConstruct2026.UI
                 var c = neighbourOcc.Master.Shape.GetCollision(mapped);
                 return c == Collision.Intersect; // strict: no Touch
             }
-            catch { return false; }
+            catch (Exception ex) { Logger.Log("ConnectorControl: IntersectsNeighbour collision check failed: " + ex.ToString()); return false; }
         }
 
         // PropagateCutsForChoice applies connector cuts to neighbour bodies around the owner.
@@ -1838,12 +1843,12 @@ namespace AESCConstruct2026.UI
                             }
                             finally
                             {
-                                try { if (!tmp.IsDeleted) tmp.Delete(); } catch { }
+                                try { if (!tmp.IsDeleted) tmp.Delete(); } catch (Exception ex) { Logger.Log("ConnectorControl: tmp body delete failed: " + ex.ToString()); }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // swallow and continue with the next tool / neighbour
+                            Logger.Log("ConnectorControl: neighbour cut propagation failed: " + ex.ToString());
                         }
                     }
                 }

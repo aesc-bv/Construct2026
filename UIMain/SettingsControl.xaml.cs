@@ -4,6 +4,7 @@
  integrates license activation and status display, and supports JSON export/import of all settings.
 */
 
+using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Licensing;
 using AESCConstruct2026.Properties;
 using Microsoft.Win32;
@@ -555,8 +556,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         var coerced = CoerceJsonToType(kv.Value, targetType);
                         s[kv.Key] = coerced;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Logger.Log($"ImportSettings: failed to set setting '{kv.Key}': " + ex.ToString());
                     }
                 }
 
@@ -661,8 +663,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     FrameColorPreview.Fill = Brushes.Transparent;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log("UpdateFrameColorPreview failed: " + ex.ToString());
                 FrameColorPreview.Fill = Brushes.Transparent;
             }
         }

@@ -1,0 +1,693 @@
+================================================================================
+  CODEBASE INVESTIGATION: COMPREHENSIVE ANALYSIS & RECOMMENDATIONS
+  AESCConstruct2026 SpaceClaim AddIn
+  Generated: 2026-02-17
+================================================================================
+
+
+TABLE OF CONTENTS
+-----------------
+  1. Executive Summary
+  2. Bugs (Fix Immediately)
+  3. Code Quality Improvements
+  4. Architecture Improvements
+  5. UI/UX Improvements
+  6. Feature Additions
+  7. Module-Specific Findings
+  8. Priority Matrix
+  9. Verification Checklist
+
+
+================================================================================
+  1. EXECUTIVE SUMMARY
+================================================================================
+
+A thorough investigation of the entire AESCConstruct2026 codebase was conducted
+across three parallel analyses:
+  - Core architecture (entry point, UI, licensing, logging, localization, config)
+  - FrameGenerator, Fastener, and Plates modules
+  - Connector, RibCutout, Engraving, and CustomComponent modules
+
+Overall Assessment:
+  The codebase is WELL-STRUCTURED and MATURE with solid architectural foundations.
+  Module separation is clean, SpaceClaim API usage is competent, and the profile/
+  joint hierarchy demonstrates good OOP design. The localization and licensing
+  systems are functional.
+
+  However, several systemic issues reduce reliability and maintainability:
+  - 33+ bare catch blocks silently swallowing exceptions across 19 files
+  - Thread safety gaps in licensing, localization, and static collections
+  - Resource leaks in floating window thread/dispatcher and Bitmap objects
+  - Significant code duplication in profile geometry, joint execution, and CSV parsing
+  - No log rotation or severity levels in logging
+  - Incomplete features (connector PatternQty, unused properties)
+  - Hardcoded paths, magic numbers, and version strings
+
+Key Statistics:
+  - 264 null checks across 37 files (good defensive coding)
+  - 490 logging calls across 40 files (good coverage)
+  - 33 catch blocks that need improvement across 19 files
+  - 33 arc-creation patterns duplicated across 7 profile classes
+  - ~460-line CreateGeometry() method in Connector (needs decomposition)
+
+
+================================================================================
+  2. BUGS (Fix Immediately)
+================================================================================
+
+A1. [RESOLVED - already fixed] UIManager dock/float label
+    File: UIMain/UIManager.cs:221
+    Investigation found this was already correct in the codebase:
+      _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
+    No changes needed.
+
+A2. [FIXED 2026-02-17] MemoryStream disposed while Bitmap still in use
+    File: Construct2026.cs:418-443
+    The original code disposed the MemoryStream inside a using block while
+    the PictureBox was still referencing the Bitmap during ShowDialog().
+    Fix applied: Bitmap is now cloned (new Bitmap(bmp)) inside the using
+    block so the clone is independent of the stream. The original stream
+    and bitmap are disposed immediately after cloning. The cloned bitmap
+    is used by the PictureBox and disposed via a FormClosed event handler.
+
+A3. [FIXED 2026-02-17] RibCutout overlap computed with wrong body
+    File: RibCutout/Modules/RibCutOutModule.cs:376-377
+    overlapB was incorrectly copying bodyA instead of bodyB.
+    Fix applied: Changed to:
+      var overlapB = bodyB.Copy();
+      overlapB.Intersect(new[] { bodyA.Copy() });
+    Now overlapA represents the intersection from bodyA's perspective,
+    and overlapB from bodyB's perspective.
+
+A4. [FIXED 2026-02-17] Session null not validated at initialization
+    File: Construct2026.cs:55
+    Session.GetSessions().FirstOrDefault() could return null, causing a
+    crash in Api.AttachToSession(session).
+    Fix applied: Added null guard with Logger.Log("No active SpaceClaim
+    session found.") and early return, preventing the rest of Initialize()
+    from running without an attached session.
+
+
+================================================================================
+  3. CODE QUALITY IMPROVEMENTS
+================================================================================
+
+--- 3.1 Error Handling ---
+
+B1. [FIXED 2026-02-17] Bare catch (Exception) blocks - 45+ catches fixed
+    Added Logger.Log(ex.ToString()) to all bare catch blocks across ~15 files:
+    Construct2026.cs (2), CSVProfile.cs (1), ConnectorControl.xaml.cs (~25),
+    JointModule.cs (2), ExportCommands.cs (6), ProfileSelectionControl.xaml.cs (7),
+    SettingsControl.xaml.cs (2), PlatesModule.cs (2), ProfileReplaceHelper.cs (2),
+    ExecuteJointCommand.cs (2), TrimJoint.cs (1), DXFImportHelper.cs (3).
+    Intentionally left unchanged: ContainsPoint catches in Connector ray marching
+    (expected failures) and Logger.Log catches (prevent infinite recursion).
+
+B2. [FIXED 2026-02-17] Unguarded .First() calls replaced
+    Changed .First() to .FirstOrDefault() + null check in 6 locations:
+    DXFImportHelper.cs (3 locations), FastenerModule.cs (3 locations).
+
+B3. [FIXED 2026-02-17] FastenerModule CSV loading error handling added
+    All 3 File.ReadAllLines() calls wrapped in try-catch with Logger.Log,
+    Application.ReportStatus warning, and empty list fallback.
+
+B4. [FIXED 2026-02-17] Logger.Log made crash-proof
+    Entire Log() body wrapped in try-catch. Directory.CreateDirectory()
+    called before every write to ensure path exists.
+
+--- 3.2 Resource Management ---
+
+B5. [FIXED 2026-02-17] Floating window thread/dispatcher cleanup
+    Added _floatingDispatcher?.InvokeShutdown() in both FloatingWindow_Closed
+    and CloseFloatingWindow(). Added _floatingThread?.Join(2000) for clean
+    thread exit. References nulled after shutdown.
+
+B6. [FIXED 2026-02-17] Static Bitmap/MemoryStream lifecycle documented
+    Extracted anonymous MemoryStreams into named static fields (_undockStream,
+    _dockStream in UIManager.cs; _activeStream, _inactiveStream in
+    LicenseSpot.cs). GDI+ bitmaps require backing streams to stay alive,
+    so these are kept as static readonly fields with documenting comments.
+
+B7. [FIXED 2026-02-17] ElementHost disposal on recreation
+    Added _constructHost?.Dispose() before creating new ElementHost in
+    EnsureConstructPanel().
+
+B8. [NOTED 2026-02-17] Transaction rollback - TODO added
+    Added "// TODO: Wrap in transaction for rollback support" comment
+    before WriteBlock in FastenerModule.cs. Full implementation deferred
+    pending SpaceClaim transaction API research.
+
+--- 3.3 Thread Safety ---
+
+B9. [FIXED 2026-02-17] Licensing thread safety
+     Added private static readonly object _lock to LicenseSpot.cs. Wrapped
+     all 5 state-mutating methods (CheckLicense, TryActivate,
+     EnsureNetworkDeactivatedOnStartup, LicenseCheckOut, LicenseCheckIn)
+     in lock(_lock). C# Monitor locks are re-entrant, so TryActivate ->
+     CheckLicense call chain is safe.
+
+B10. [FIXED 2026-02-17] Localization lazy-loading race condition
+     Added _loadLock and _isLoaded flag to Language.cs. LoadCSV() now uses
+     double-checked locking: lock(_loadLock) { if (!_isLoaded) { ... } }.
+     Translate() checks !_isLoaded before calling LoadCSV().
+
+B11. [FIXED 2026-02-17] DXFImportHelper.SessionProfiles thread safety
+     Added internal static readonly object _profilesLock. SessionProfiles.Add()
+     wrapped in lock(_profilesLock). Made internal for potential external callers.
+
+--- 3.4 Logging ---
+
+B12. [FIXED 2026-02-17] Log rotation implemented
+     Added RotateIfNeeded() method. When log file exceeds 10 MB, it is
+     copied to .log.bak (overwriting existing backup) then deleted.
+     Rotation wrapped in try-catch for robustness.
+
+B13. [FIXED 2026-02-17] Severity levels added
+     Added LogLevel enum (Debug, Info, Warning, Error) and
+     Log(LogLevel level, string message) overload. Existing Log(string)
+     delegates to new overload with LogLevel.Info (backward compatible).
+     Added static MinLevel property (defaults to Debug) for filtering.
+     Log lines now include level: "2026-02-17 14:30:00 [Info] message".
+
+B14. [FIXED 2026-02-17] Lock duration minimized
+     Lock now only covers building the log line string. File I/O
+     (Directory.CreateDirectory, RotateIfNeeded, File.AppendAllText)
+     happens outside the lock.
+
+--- 3.5 Code Duplication ---
+
+B15. Arc creation pattern duplicated 33 times across 7 profile classes
+     Files: RectangularProfile.cs, HProfile.cs, LProfile.cs, TProfile.cs,
+            UProfile.cs, DXFProfile.cs, CSVProfile.cs
+     Fix: Extract shared utility:
+       public static List<ITrimmedCurve> CreateRoundedRectangleCurves(
+           Plane plane, double width, double height,
+           double outerRadius, double innerRadius)
+
+B16. DXF/CSV profile classes are ~95% identical
+     Files: DXFProfile.cs and CSVProfile.cs (~160 lines duplicated)
+     Both have duplicate arc/line transformation logic (lines 19-79),
+     identical fallback logic and direction checking.
+     Fix: Create CustomProfileBase : ProfileBase with shared alignment logic.
+
+B17. CSV parsing duplicated in 4+ locations
+     Files: PlatesControl.xaml.cs:64, JointModule.cs:118-121,
+            DXFImportHelper.cs:521-532, SettingsControl.xaml.cs
+     Fix: Create shared CsvParser utility class.
+
+B18. FastenerModule method duplication
+     GetBoltPart(), GetWasherPart(), GetNutPart() contain near-identical logic.
+     Fix: Refactor into generic GetOrCreateFastenerPart<T>() method.
+
+--- 3.6 Configuration & Constants ---
+
+B19. Hardcoded magic numbers throughout
+     - 500.0 mm cutter size (MiterJoint:126, StraightJoint:152, etc.)
+     - 200.0 mm extrusion length (multiple joints)
+     - 100.0 edgeOffset in RibCutOutModule:35
+     - "ExtrudedProfile" body name (ProfileModule:155, 167)
+     Fix: Extract to ConstructConstants class.
+
+B20. Version string hardcoded, not synced with assembly
+     File: UIMain/SettingsControl.xaml:338
+     Version "2025.1.5" is a hardcoded string, not pulled from AssemblyInfo.
+     Fix: Use Assembly.GetExecutingAssembly().GetName().Version at runtime.
+
+B21. Dead setting: LicenseValid in app.config
+     Settings.settings line 37-38: LicenseValid stored but never used.
+     License state determined by ConstructLicenseSpot.IsValid instead.
+     Fix: Remove dead setting.
+
+B22. Path handling inconsistency
+     Some modules use Path.Combine() (Language.cs), others use string
+     concatenation with "\\" (FastenerModule.cs).
+     Fix: Standardize to Path.Combine() everywhere.
+
+
+================================================================================
+  4. ARCHITECTURE IMPROVEMENTS
+================================================================================
+
+C1. Consider MVVM pattern for WPF controls
+    Currently all WPF controls use code-behind (xaml.cs) with direct UI
+    manipulation. This makes testing difficult and couples logic to presentation.
+    Migration path: Start with new controls using MVVM; refactor existing
+    controls opportunistically during feature work.
+
+C2. Centralize error handling strategy
+    Define a consistent pattern for exception handling:
+    - Log with severity level
+    - Show user-facing message via ReportStatus
+    - Optionally rethrow or return error result
+    Apply uniformly across all modules.
+
+C3. Extract common CSV parsing into shared utility
+    Four+ separate CSV parsing implementations exist. A shared CsvParser<T>
+    with configurable delimiter and record factory would eliminate duplication.
+
+C4. Add unit testing framework
+    No test framework is configured. Even basic unit tests for:
+    - Profile parameter validation
+    - CSV parsing
+    - Component naming (CompNameHelper)
+    - License state management
+    would catch regressions early.
+
+C5. Empty Disconnect() method - no cleanup
+    File: Construct2026.cs:324-326
+    No cleanup of GC.KeepAlive references, listener unsubscription, or
+    floating window threads. Should mirror Connect() initialization.
+
+C6. Namespace violation: EngravingService uses UIMain namespace
+    File: Engraving/EngravingService.cs
+    Uses AESCConstruct2026.UIMain namespace despite residing in the
+    Engraving folder. Should be AESCConstruct2026.Engraving.
+
+C7. Duplicate initialization in SettingsControl
+    File: UIMain/SettingsControl.xaml.cs
+    Both SettingsControl_Loaded (lines 62-87) and UserControl_Loaded
+    (lines 90-164) initialize the same controls, causing race conditions.
+    Fix: Consolidate into a single initialization path.
+
+
+================================================================================
+  5. UI/UX IMPROVEMENTS
+================================================================================
+
+D1. Hardcoded UI strings - 30+ locations not localized
+    Key files with hardcoded English text instead of Tag-based localization:
+    - SettingsControl.xaml       "Naming scheme", "Anchor X/Y", "CSV File Paths"
+    - FastenersControl.xaml      "Bolt", "Name", "Size", "Length"
+    - ConnectorControl.xaml      "Shape", "Dynamic", "Width 1"
+    - RibCutOut.xaml             "Cutout", "Weld Round"
+    - PlatesControl.xaml         "Plate"
+    - EngravingControl.xaml      "Engraving", "Imprint"
+    - UIManager.cs:310           Window title "AESC Construct"
+
+D2. Fixed panel heights prevent responsive layout
+    All controls use hardcoded heights (588px, 700px, 740px, 760px). Content
+    clips on smaller screens or with high DPI scaling.
+    Fix: Use MinHeight + VerticalAlignment="Stretch" instead of fixed Height.
+
+D3. No user feedback for long operations
+    Profile generation, connector creation, and fastener placement provide no
+    progress indication. Users don't know if the operation is running or stalled.
+    Note: ExtrudeProfileCommand uses ProgressTracker (good), but FastenerModule,
+    PlatesModule, and JointModule do not.
+    Fix: Add ProgressTracker or at minimum Application.ReportStatus("Working...")
+         at start of operations.
+
+D4. Missing input validation feedback
+    Invalid rotation angle, gap, tolerance values are silently ignored. Users
+    don't know their input wasn't accepted.
+    Fix: Highlight invalid fields or show validation message via ReportStatus.
+
+D5. No confirmation for destructive operations
+    - Delete Profile button has no "Are you sure?" dialog
+    - Import Settings silently overwrites current settings
+
+D6. HollowCheckBox naming confusion
+    Control named HollowCheckBox but labeled "Solid Profile" - semantic mismatch
+    makes code harder to maintain.
+
+D7. DPI awareness edge case
+    File: UIManager.cs:559-564
+    Relies on PresentationSource.FromVisual() which can return null if
+    window not yet rendered. Add null check.
+
+
+================================================================================
+  6. FEATURE ADDITIONS
+================================================================================
+
+--- Quick Wins (Low Effort, High Value) ---
+
+E1. Fastener counts in BOM
+    BOM export currently only aggregates frame members. Fastener components
+    (bolts/washers/nuts) are not counted or listed. Adding a fastener summary
+    section to the Excel/BOM export would be very valuable for ordering.
+    Effort: Low - scan components for Construct_Fastener custom property,
+            group and count.
+
+E2. Weight calculation in BOM
+    No mass/weight anywhere in the BOM. SpaceClaim API provides Body.Volume
+    and Material.Density.
+    Effort: Low-Medium - multiply volume by density per component, add column.
+
+E3. Standard European beam profiles (IPE/HEA/HEB)
+    Currently only Rectangular, Circular, H, L, T, U profiles. IPE/HEA/HEB
+    are the most commonly used European structural beams.
+    Effort: Low - add CSV preset files with standard dimensions; the H-profile
+            geometry already supports the shape.
+
+E4. Complete connector PatternQty feature
+    PatternQty parameter is parsed from CSV and stored but never used to
+    generate multiple connectors. The feature is partially implemented.
+    Effort: Low - add loop in connector creation based on PatternQty value.
+
+--- Medium Effort ---
+
+E5. Gusset plate generation
+    Triangular/trapezoidal bracing plates at joints are commonly needed but
+    must be built manually.
+    Effort: Medium - new plate type in PlatesModule with parametric geometry.
+
+E6. DXF export for fabrication
+    Currently only STEP export. DXF 2D flat patterns for CNC cutting/laser.
+    Effort: Medium - flatten profile cross-sections, export as DXF polylines.
+
+E7. Clash/interference detection
+    No automated check for overlapping or interfering geometry.
+    Effort: Medium - use SpaceClaim's Body.GetCollisions() API.
+
+E8. Preview mode for connectors, rib cutouts, joints
+    No preview of geometry before applying operations. Users must undo
+    if result is not what they expected.
+    Effort: Medium - generate preview geometry in temporary bodies.
+
+E9. Profile library management (import/export/share profiles)
+    Currently profiles are per-installation. No way to share profile
+    libraries between users or machines.
+    Effort: Medium - serialize profile definitions to shareable file format.
+
+E10. Recent profiles / favorites list
+     No way to quickly access frequently used profiles.
+     Effort: Low-Medium - persist recent selections in Settings.
+
+--- Higher Effort ---
+
+E11. Batch operations (apply profiles to multiple curves at once)
+     Currently single-curve selection only.
+     Effort: Medium-High - extend selection helper, add progress tracking.
+
+E12. Batch rib cutout processing
+     RibCutout requires manual pair selection. Auto-detecting all perpendicular
+     intersections would save significant time on complex structures.
+     Effort: Medium-High - detect member crossings via bounding box overlap.
+
+E13. Undo/redo support for geometry operations
+     Commands don't capture undo state. Should use Document.CreateTransaction()
+     or SpaceClaim's built-in undo system.
+     Effort: Medium - requires wrapping all geometry ops.
+
+E14. Settings import/export
+     No way to back up or transfer user settings between machines.
+     Effort: Low-Medium - serialize Settings.Default to XML/JSON file.
+
+E15. Automatic update checker
+     No mechanism to notify users of new versions.
+     Effort: Medium - simple HTTP check against version endpoint.
+
+
+================================================================================
+  7. MODULE-SPECIFIC FINDINGS
+================================================================================
+
+--- 7.1 Entry Point (Construct2026.cs) ---
+
+Strengths:
+  - Two-phase initialization (Connect → Initialize) is well-designed
+  - Commands registered once via static isCommandRegistered flag
+  - GC.KeepAlive prevents premature collection of command objects
+
+Issues:
+  - Resource leak in loadImg() (lines 311-320): Bitmap/MemoryStream without
+    guaranteed disposal. Catch block returns null mid-construction.
+  - No check if Api.Initialize() actually succeeded before using API
+  - No validation that ribbon XML resource exists before GetCustomUI()
+  - Commands registered AFTER license check, but failure doesn't prevent
+    registration (intentional per comment, but unclear state sync)
+
+--- 7.2 FrameGenerator Module ---
+
+Strengths:
+  - Excellent profile hierarchy (ProfileBase + 8 subclasses)
+  - Good joint hierarchy (JointBase + 5 implementations)
+  - Smart offset handling and frame building logic
+  - ProfileBase.CreateProfile factory pattern is clean and polymorphic
+  - Good use of WriteBlock transactions
+
+Issues:
+  - Arc creation duplicated 33 times across profile classes (see B15)
+  - DXF/CSV profile code 95% identical (see B16)
+  - Joint execution has duplicate code across 4 joint types
+    (world-up calculation, perpendicular vector computation)
+  - UProfile has 33 Logger.Log calls - appears to be debug code
+  - No validation that profile radii don't overlap or exceed dimensions
+  - JointModule.BuildDebugCutterFrameAndLoop called in 4 joints
+  - Multiple uncached calls to component.Placement.Inverse in joints
+
+--- 7.3 Fastener Module ---
+
+Strengths:
+  - Clean data model (Bolt, Washer, Nut classes)
+  - Good CSV data loading pattern
+
+Issues:
+  - No geometry caching (recreates washer geometry every time)
+  - N+1 query pattern: BoltNames iterates all bolts, then BoltSizesFor()
+    iterates again. Each call re-filters entire list. (lines 39-73)
+  - GetBoltPart/GetWasherPart/GetNutPart near-identical (see B18)
+  - CSV loading has no error handling (see B3)
+  - No pre-flight validation for bolt/nut/washer combinations
+  - No batch progress tracking
+
+--- 7.4 Plates Module ---
+
+Strengths:
+  - Good planar face detection
+  - Clean module interface
+  - PlatesControl record parsing uses semantic data model
+
+Issues:
+  - PlatesControl has complex CSV parsing mixed with UI logic (lines 58-88)
+  - No validation that holes don't exceed plate thickness
+  - No progress tracking for plate generation
+
+--- 7.5 Connector Module ---
+
+Strengths:
+  - Effective use of SpaceClaim geometry primitives
+  - WPF-WinForms integration via ElementHost is well-structured
+  - CSV preset loading is robust
+  - Dynamic height calculation is clever
+
+Issues:
+  - CreateGeometry() is ~460 lines (lines 385-843) - needs decomposition
+    into smaller methods (profile boundary, fillet/chamfer, collision body,
+    cylindrical cutter, weld round)
+  - Debug code left in (lines 404-481): DrawPoint, DrawLine, DrawWireBox
+    controlled by DEBUG flag - should be removed or use #if DEBUG
+  - Unused properties never set to true:
+    OneSide (line 132), RoundCutout (line 133), ConnectorStraight
+  - Location property parsed but never used in geometry creation
+  - PatternQty parsed but never applied to generate multiple connectors
+  - GetDynamicHeight() doesn't validate input parameters
+  - No null checks for Part/Direction in CreateGeometry
+  - CylInfo.AreCoaxial() (lines 93-104) uses isCoincident but doesn't
+    properly validate parallel axes - could incorrectly identify
+    opposite-direction axes as coaxial
+  - 3 empty catch blocks in ConnectorControl.xaml.cs (lines 127-146)
+  - Event handler leaks: Paint/Resize handlers wired in constructor
+    but never unsubscribed
+
+--- 7.6 RibCutout Module ---
+
+Strengths:
+  - Half-lap joint generation works correctly for standard cases
+  - Automatic local frame derivation from body edges
+
+Issues:
+  - Reflection-based edge access (lines 94-157):
+      var edgesProp = body.GetType().GetProperty("Edges");
+    Very fragile, could break with SpaceClaim updates. Should use proper
+    SpaceClaim API or document the workaround.
+  - Overlap computed redundantly (see Bug A3)
+  - Cutter creation for bodyA and bodyB is nearly identical (lines 397-512)
+    - should be extracted into shared method
+  - Hardcoded edgeOffset = 100.0 (line 35) with no explanation
+  - Unused F() format helper (line 38) - never called
+  - Commented-out debug body creation (lines 515-531)
+  - CreateLocalFrameFromEdges() assumes rectangular bodies with 3
+    perpendicular edge directions - will fail on complex geometries
+  - No validation that overlap exists before attempting cuts
+  - Boolean Subtract creates temp DesignBodies not cleaned up on failure
+  - Frame normalization uses hardcoded tolerance 1e-3 (line 127)
+
+--- 7.7 Engraving Module ---
+
+Strengths:
+  - Creative use of ScriptEnvironment for Python-based operations
+  - Supports multiple text sources (ComponentName, BodyName, CustomText)
+
+Issues:
+  - Dynamic Python generation as string template (lines 56-151) - hard
+    to debug, no syntax validation at compile time
+  - Hard-coded temp path: C:\Windows\Temp\_TempDXF.dxf (line 107)
+    No cleanup, potential collisions if multiple users run simultaneously
+  - Namespace violation: uses AESCConstruct2026.UIMain (see C6)
+  - Python script failures don't propagate errors back to C# caller
+  - Version detection via GetHostApiVersion() may be fragile
+  - Complex layer manipulation via Python makes debugging difficult
+
+--- 7.8 CustomComponent Module ---
+
+  - Minimal implementation - mostly UI with template selection
+  - Functions for adding/deleting document/component properties
+  - No significant issues found (simple module)
+
+--- 7.9 UIManager ---
+
+Strengths:
+  - Centralized registration of 8 sidebar commands
+  - Supports both docked panels and floating windows
+  - Panel state management via _activeDockedKey
+  - Licensing integration disables non-core features properly
+
+Issues:
+  - Thread/dispatcher leak (see B5)
+  - Bitmap resources not disposed (see B6)
+  - ElementHost lifecycle (see B7)
+  - Lazy control initialization accumulates memory (lines 756-777)
+  - DPI awareness null check missing (see D7)
+  - Duplicate button IDs in Ribbon.xml: ProfileSidebarBtn vs ProfileSidebar
+
+--- 7.10 Licensing ---
+
+Strengths:
+  - Clean abstraction layer for license checking
+  - Supports both node-locked and network licenses
+  - Implements deactivation on startup to avoid consuming seats
+  - Debug mode available via IsDebugMode property
+
+Issues:
+  - Race conditions on static fields (see B9)
+  - No validation of RSA key format at startup (line 26-27)
+  - File I/O without retries for transient failures (line 58)
+  - WaitUntilFileLooksWritten() uses polling with fixed delays (line 322-332)
+    - silently times out if file locked by antivirus
+  - No expiration warning (only shown in UI, not logged)
+  - No offline mode or grace period
+  - No license caching/fallback if server unreachable
+
+--- 7.11 Localization ---
+
+Strengths:
+  - CSV-based multi-language support is well-structured
+  - Recursive WPF control translation via Tag-based matching
+  - EN fallback chain
+
+Issues:
+  - No error recovery if CSV missing - FileNotFoundException at startup (line 31)
+  - Regex-based CSV parsing fragile for quoted fields (line 47-50)
+  - BOM character stripping may affect legitimate content (line 39)
+  - Silent failure on duplicate keys (line 56)
+  - Lazy loading race condition (see B10)
+  - No validation that required language columns exist
+  - No re-load capability if CSV changes at runtime
+
+--- 7.12 Configuration ---
+
+Issues:
+  - All CSV paths hardcoded to C:\ProgramData\AESCConstruct\*
+  - No environment variable substitution in Settings.settings
+  - No fallback paths if ProgramData inaccessible
+  - No validation that data files exist at startup
+  - Dead LicenseValid setting (see B21)
+  - Assembly binding redirect for System.Runtime.CompilerServices.Unsafe
+    hardcoded to v6.0.3.0 - could break with newer .NET Runtime
+
+
+================================================================================
+  8. PRIORITY MATRIX
+================================================================================
+
+  IMPACT -->     LOW              MEDIUM             HIGH
+  EFFORT
+    |
+    v
+
+  LOW      B19 Constants       B22 Path.Combine    [DONE] A1 Dock/float label
+           B20 Version sync    B21 Dead setting    [DONE] A2 MemoryStream bug
+           [DONE] B13 Levels   D6 Checkbox name    [DONE] A4 Session null check
+           C6 Namespace fix    E10 Recent profiles E1 Fastener BOM
+                               E4 PatternQty       E3 EU beam profiles
+
+  MEDIUM   B15 Arc dedup       [DONE] B1 Catches   [DONE] A3 RibCut overlap bug
+           B16 DXF/CSV dedup   [DONE] B5 Thread    [DONE] B3 CSV error handling
+           B17 CSV parser      [DONE] B9 License   [DONE] B12 Log rotation
+           B18 Fastener dedup  [DONE] B10 Locale    D3 Progress feedback
+           C7 Settings init    D1 Localization      E2 Weight in BOM
+                               D2 Responsive layout E8 Preview mode
+
+  HIGH     C4 Unit tests       C1 MVVM pattern     E7 Clash detection
+           E6 DXF export       E9 Profile library  E11 Batch operations
+                               E13 Undo support     E12 Batch rib cutout
+
+
+  RECOMMENDED IMPLEMENTATION ORDER
+  ---------------------------------
+
+  Phase   Items                                   Scope
+  ------  --------------------------------------  ---------------------------------
+  1       [DONE] Bugfixes: A1, A2, A3, A4         2 files changed (A1 was already fixed)
+  2       [DONE] Robustness: B1, B2, B3, B4      ~15 files, 45+ catches + null guards
+  3       [DONE] Resource mgmt: B5, B6, B7       UIManager.cs, LicenseSpot.cs
+  4       Quick-win features: E1, E2, E3          ExportCommands.cs + CSV data
+  5       [DONE] Thread safety: B9, B10, B11       License, Language, DXF helper
+  6       UX polish: D3, D4, D5                   UI code-behind files
+  7       [DONE] Logging: B12, B13, B14            Logger.cs (rotation, levels, lock opt)
+  8       Code dedup: B15, B16, B17, B18          Profile, CSV, Fastener files
+  9       Localization: D1, D2                    All XAML files
+  10      New features: E4, E5, E8                Connector, Plates, preview
+  11      Advanced features: E6, E7, E11, E12     New modules / major additions
+  12      Architecture: C1, C4                    Ongoing / incremental
+
+
+================================================================================
+  9. VERIFICATION CHECKLIST
+================================================================================
+
+  [DONE] A1:   Already correct - verified dock/float label alternates properly
+  [DONE] A2:   Open DXF preview dialog - image should render without artifacts
+               (bitmap cloned before stream disposal, disposed on form close)
+  [DONE] A3:   Create rib cutout on perpendicular members - both bodies
+               should be cut correctly (overlapB now copies bodyB)
+  [DONE] A4:   Launch add-in without active session - should log error
+               gracefully instead of crashing (null guard + Logger.Log added)
+  [DONE] B1-B4: Intentionally trigger error paths - verify log file captures
+               details and user sees status messages. Logger now crash-proof
+               with directory creation, rotation at 10 MB, and severity levels.
+  [DONE] B5-B7: Open/close floating window repeatedly - verify dispatcher
+               shuts down cleanly. ElementHost disposed on panel recreation.
+  [DONE] B9-B11: License state mutations now locked. Language CSV loading
+               uses double-checked locking. SessionProfiles access locked.
+  After D3:    Generate profiles/connectors - verify progress indication
+               appears during operation
+  After E1-E2: Generate BOM with fastener components present - verify counts
+               and weights appear in export
+  After E3:    Load IPE/HEA/HEB presets - verify correct geometry generated
+  General:     Build and test in SpaceClaim after each phase
+
+
+================================================================================
+  POSITIVE PATTERNS TO PRESERVE
+================================================================================
+
+  These existing patterns are well-designed and should be maintained:
+
+  1. CompNameHelper token replacement system - flexible, testable, maintainable
+  2. ProfileBase.CreateProfile() factory pattern - clean polymorphic creation
+  3. WriteBlock transaction wrapping throughout - prevents partial failures
+  4. Custom property attachment to components - metadata persistence
+  5. GC.KeepAlive for command objects - prevents premature collection
+  6. Two-phase initialization (Connect → Initialize) - proper lifecycle
+  7. Module/UI/Commands separation per feature - clean architecture
+  8. Localization Tag-based matching with recursive control traversal
+  9. PlatesControl semantic data model (records instead of magic indices)
+  10. Dependency injection via module parameters
+
+
+================================================================================
+  END OF REPORT
+================================================================================

@@ -99,7 +99,7 @@ namespace AESCConstruct2026.Plates.Modules
                                 if (sp is Point pw) selPointWorld = pw;
                             }
                         }
-                        catch { /* box/whole-body case -> keep center */ }
+                        catch (Exception ex) { Logger.Log("PlatesModule: GetSelectionPoint failed (box/whole-body case): " + ex.ToString()); }
 
                         // Project to this face plane (MASTER)
                         var selOnPlane = plane.ProjectPoint(selPointWorld).Point;
@@ -454,7 +454,7 @@ namespace AESCConstruct2026.Plates.Modules
                         var copy = cutter.Copy();
                         copy.Transform(Matrix.CreateTranslation(Vector.Create(dx, dy, 0)));
                         try { body.Subtract(copy); }
-                        catch { copy.Dispose(); }
+                        catch (Exception ex) { Logger.Log("PlatesModule: hole subtraction failed: " + ex.ToString()); copy.Dispose(); }
                     }
                 cutter.Dispose();
             }
