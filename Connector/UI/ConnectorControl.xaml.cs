@@ -48,6 +48,18 @@ namespace AESCConstruct2026.UI
         private readonly TimeSpan UiDebounceInterval = TimeSpan.FromMilliseconds(150);
         private DispatcherTimer _uiDebounce;
 
+        // 3D preview state
+        private readonly List<DesignBody> _previewBodies = new List<DesignBody>();
+        private static readonly Color PreviewColor = Color.FromArgb(100, 0, 120, 215);
+
+        private struct PlanarConnectorResult
+        {
+            public Body Connector;
+            public Body CutBody;
+            public Body CollisionBody;
+            public List<Body> OwnerCuts;
+        }
+
         private static readonly Dictionary<DesignBody, NeighbourIndepChoice> s_neighbourDecisionCache
             = new Dictionary<DesignBody, NeighbourIndepChoice>();
 
@@ -92,6 +104,11 @@ namespace AESCConstruct2026.UI
 
                 // ensure we actually run once
                 this.Loaded += ConnectorControl_Loaded;
+                this.Unloaded += ConnectorControl_Unloaded;
+                this.IsVisibleChanged += (_, __) =>
+                {
+                    if (!this.IsVisible) ClearPreview();
+                };
 
                 DataContext = this;
                 Localization.Language.LocalizeFrameworkElement(this);
@@ -194,8 +211,36 @@ namespace AESCConstruct2026.UI
                 LoadConnectorPresets();
                 drawConnector();
                 UpdateGenerateEnabled();
+
+                var win = Window.ActiveWindow;
+                if (win != null)
+                    win.SelectionChanged += OnViewportSelectionChanged;
             }
             catch (Exception ex) { Logger.Log("ConnectorControl_Loaded failed: " + ex.ToString()); }
+        }
+
+        // OnViewportSelectionChanged triggers a debounced preview update when the user selects a different edge.
+        private void OnViewportSelectionChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                Dispatcher.BeginInvoke(new Action(() => DebouncedRedraw()));
+            }
+            catch (Exception ex) { Logger.Log("OnViewportSelectionChanged: " + ex.ToString()); }
+        }
+
+        // ConnectorControl_Unloaded unsubscribes from viewport events and clears any 3D preview bodies.
+        private void ConnectorControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var win = Window.ActiveWindow;
+                if (win != null)
+                    win.SelectionChanged -= OnViewportSelectionChanged;
+            }
+            catch (Exception ex) { Logger.Log("ConnectorControl_Unloaded unsub: " + ex.ToString()); }
+
+            ClearPreview();
         }
 
         // LoadConnectorPresets reads connector presets from a CSV file and binds them into the preset combobox.
@@ -559,9 +604,240 @@ namespace AESCConstruct2026.UI
             return Math.Max(0.0, Math.Min(req, available));
         }
 
+        // ShouldExtendPlanarLocal tests whether the connector body can unite with the owner; if not, an extension pass with flipped direction is needed.
+        private static bool ShouldExtendPlanarLocal(
+            Part mainPart,
+            IDesignBody ownerOcc,
+            DesignBody ownerMaster,
+            Body connectorBody,
+            Body cutBody)
+        {
+            try
+            {
+                using var ownerCopy = ownerMaster.Shape.Copy();
+                int ownerfaces = ownerCopy.Faces.Count;
+                using var connCopy = connectorBody.Copy();
+                ownerCopy.Unite(new[] { connCopy });
+                Logger.Log("ShouldExtendPlanarLocal: No extension needed");
+                return false;
+            }
+            catch
+            {
+                Logger.Log("ShouldExtendPlanarLocal: Unite failed, extend");
+                return true;
+            }
+        }
+
+        /// Computes connector geometry for a single planar placement without modifying the scene.
+        /// Extracted from createConnector() planar branch.
+        private PlanarConnectorResult? ComputePlanarConnectorBodies(
+            ConnectorModel c,
+            Part parentPart,
+            Part winMainPart,
+            IDesignBody iDesignBody,
+            DesignBody ownerMaster,
+            Matrix occToMaster,
+            Matrix masterToOcc,
+            Point pCenterOcc,
+            Direction tanOcc,
+            DesignFace bigFaceEdge,
+            DesignFace smallFaceEdge,
+            bool isPlaneEdge,
+            bool rectangularCut)
+        {
+            Body connectorBody = null, cutBody = null, collisionBody = null;
+            var cutBodiesSource = new List<Body>();
+
+            try
+            {
+                var pCenterM = occToMaster * pCenterOcc;
+
+                Direction nBigM = ((Plane)bigFaceEdge.Shape.Geometry).Frame.DirZ;
+                if (bigFaceEdge.Shape.IsReversed) nBigM = -nBigM;
+
+                Direction tanM_raw = (occToMaster * tanOcc.ToVector()).Direction;
+
+                Vector tanM_vec = tanM_raw.ToVector();
+                Vector nM_vec = nBigM.ToVector();
+                double tanDotN = Vector.Dot(tanM_vec, nM_vec);
+                Vector tanProj = (tanM_vec - tanDotN * nM_vec);
+
+                Direction dirX_m;
+                if (tanProj.Magnitude < 1e-12)
+                {
+                    var tryX = Vector.Create(1, 0, 0);
+                    if (Math.Abs(Vector.Dot(tryX, nM_vec)) > 0.95) tryX = Vector.Create(0, 1, 0);
+                    var xProj = (tryX - Vector.Dot(tryX, nM_vec) * nM_vec).Direction;
+                    dirX_m = xProj;
+                }
+                else
+                {
+                    dirX_m = tanProj.Direction;
+                }
+
+                Direction dirY_m = nBigM;
+                Direction dirZ_m = Direction.Cross(dirX_m, dirY_m);
+                dirX_m = Direction.Cross(dirY_m, dirZ_m);
+
+                Direction dirZ_w = (masterToOcc * dirZ_m.ToVector()).Direction;
+                try
+                {
+                    var bodyM = ownerMaster?.Shape;
+                    if (bodyM != null && bodyM.ContainsPoint(pCenterM + 1e-5 * dirZ_m))
+                    {
+                        dirY_m = Direction.Cross(dirZ_m, dirX_m);
+                        dirZ_m = -dirZ_m;
+                        dirX_m = Direction.Cross(dirY_m, dirZ_m);
+                    }
+                }
+                catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: direction flip ContainsPoint failed: " + ex.ToString()); }
+
+                var opp = getOppositeFace(smallFaceEdge, bigFaceEdge, isPlaneEdge, out double thickness, out Direction _);
+                if (opp == null) return null;
+
+                double usedHeight = 0.001 * c.Height;
+                if (c.DynamicHeight)
+                {
+                    usedHeight = ComputeAvailableHeightAlongRay(
+                        winMainPart, ownerMaster, iDesignBody, pCenterOcc,
+                        -dirZ_w, usedHeight, thickness, dirY_m
+                    );
+                }
+
+                double tolM = Math.Max(0.0, c.Tolerance) * 0.001;
+                double gapM = Math.Max(0.0, c.EndRelief) * 0.001;
+
+                double connectorHeightM = Math.Max(0.0, usedHeight - gapM);
+
+                double baseRectHeightM = rectangularCut
+                    ? (c.DynamicHeight ? (connectorHeightM + gapM) : (0.001 * c.Height))
+                    : usedHeight;
+
+                double cutterHeightM = Math.Max(0.0, baseRectHeightM);
+
+                c.CreateGeometry(
+                    parentPart, dirX_m, dirY_m, dirZ_m, pCenterM,
+                    cutterHeightM, connectorHeightM, thickness,
+                    out connectorBody, out cutBodiesSource, out cutBody, out collisionBody, false,
+                    null, rectangularCut
+                );
+
+                bool doExtend = ShouldExtendPlanarLocal(
+                    winMainPart,
+                    iDesignBody,
+                    ownerMaster,
+                    connectorBody,
+                    cutBody);
+
+                var extCenter = pCenterM;
+                var extConnHeight = connectorHeightM;
+
+                Body extConnector = null, extCut = null, extCollision = null;
+                var extOwnerCuts = new List<Body>();
+
+                if (doExtend)
+                {
+                    c.CreateGeometry(
+                        parentPart,
+                        dirX_m,
+                        dirY_m,
+                        -dirZ_m,
+                        extCenter,
+                        cutterHeightM,
+                        extConnHeight,
+                        thickness,
+                        out extConnector,
+                        out extOwnerCuts,
+                        out extCut,
+                        out extCollision,
+                        false,
+                        null,
+                        rectangularCut,
+                        false
+                    );
+                }
+
+                try
+                {
+                    if (extConnector != null && connectorBody != null)
+                    {
+                        connectorBody.Unite(extConnector.Copy());
+                    }
+                    else if (connectorBody == null && extConnector != null)
+                    {
+                        connectorBody = extConnector.Copy();
+                    }
+
+                    if (extCut != null && cutBody != null)
+                    {
+                        cutBody.Unite(extCut.Copy());
+                    }
+                    else if (cutBody == null && extCut != null)
+                    {
+                        cutBody = extCut.Copy();
+                    }
+
+                    if (extCollision != null && collisionBody != null)
+                    {
+                        collisionBody.Unite(extCollision.Copy());
+                    }
+                    else if (collisionBody == null && extCollision != null)
+                    {
+                        collisionBody = extCollision.Copy();
+                    }
+
+                    foreach (var b in extOwnerCuts)
+                    {
+                        cutBodiesSource.Add(b.Copy());
+                    }
+                }
+                catch (Exception exUnite)
+                {
+                    Logger.Log("ComputePlanarConnectorBodies: unite/extend failed: " + exUnite.ToString());
+                }
+                finally
+                {
+                    try { extConnector?.Dispose(); } catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: extConnector dispose failed: " + ex.ToString()); }
+                    try { extCut?.Dispose(); } catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: extCut dispose failed: " + ex.ToString()); }
+                    try { extCollision?.Dispose(); } catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: extCollision dispose failed: " + ex.ToString()); }
+                    foreach (var b in extOwnerCuts) { try { b?.Dispose(); } catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: extOwnerCut dispose failed: " + ex.ToString()); } }
+                }
+
+                if (!rectangularCut && connectorBody != null && !c.RadiusInCutOut)
+                {
+                    var inflated = connectorBody.Copy();
+                    try
+                    {
+                        double grow = Math.Max(1e-6, tolM);
+                        inflated.OffsetFaces(inflated.Faces, grow);
+                        cutBody?.Dispose();
+                        cutBody = inflated;
+                        collisionBody?.Dispose();
+                        collisionBody = inflated.Copy();
+                    }
+                    catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: OffsetFaces inflate failed: " + ex.ToString()); inflated?.Dispose(); }
+                }
+
+                return new PlanarConnectorResult
+                {
+                    Connector = connectorBody,
+                    CutBody = cutBody,
+                    CollisionBody = collisionBody,
+                    OwnerCuts = cutBodiesSource
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("ComputePlanarConnectorBodies: " + ex.ToString());
+                return null;
+            }
+        }
+
         // createConnector is the main entry that builds connector geometries on selected edges and applies all booleans and neighbour cuts.
         private void createConnector()
         {
+            ClearPreview();
+
             static bool IsAttachedLocal(DesignBody ownerMaster, Body tool)
             {
                 if (ownerMaster?.Shape == null || tool == null) return false;
@@ -581,30 +857,6 @@ namespace AESCConstruct2026.UI
                     return c == Collision.Intersect || c == Collision.Touch;
                 }
                 catch (Exception ex) { Logger.Log("ConnectorControl: IsAttachedLocalCyl collision check failed: " + ex.ToString()); return false; }
-            }
-
-            static bool ShouldExtendPlanarLocal(
-                Part mainPart,
-                IDesignBody ownerOcc,
-                DesignBody ownerMaster,
-                Body connectorBody,
-                Body cutBody)
-            {
-                try
-                { 
-                    using var ownerCopy = ownerMaster.Shape.Copy();
-                    int ownerfaces = ownerCopy.Faces.Count;
-                    using var connCopy = connectorBody.Copy();
-                    ownerCopy.Unite(new[] { connCopy });
-                    Logger.Log("ShouldExtendPlanarLocal: No extension needed");
-                    // If this try doesn't revert to catch, unite() was successful. No extension needed.
-                    return false;
-                }
-                catch
-                {
-                    Logger.Log("ShouldExtendPlanarLocal: Unite failed, extend");
-                    return true;
-                }
             }
 
             s_neighbourDecisionCache.Clear();
@@ -838,178 +1090,21 @@ namespace AESCConstruct2026.UI
 
                             if (isPlaneEdge)
                             {
-                                //Logger.Log("planar");
-                                // === PLANAR ===
-                                var pCenterM = occToMaster * pCenterOcc;
+                                // === PLANAR === (delegated to shared helper)
+                                var planarResult = ComputePlanarConnectorBodies(
+                                    c, parentPart, winMainPart,
+                                    iDesignBody, ownerMaster,
+                                    occToMaster, masterToOcc,
+                                    pCenterOcc, tanOcc,
+                                    bigFaceEdge, smallFaceEdge,
+                                    isPlaneEdge, rectangularCut);
 
-                                Direction nBigM = ((Plane)bigFaceEdge.Shape.Geometry).Frame.DirZ;
-                                if (bigFaceEdge.Shape.IsReversed) nBigM = -nBigM;
+                                if (planarResult == null) continue;
 
-                                Direction tanM_raw = (occToMaster * tanOcc.ToVector()).Direction;
-
-                                Vector tanM_vec = tanM_raw.ToVector();
-                                Vector nM_vec = nBigM.ToVector();
-                                double tanDotN = Vector.Dot(tanM_vec, nM_vec);
-                                Vector tanProj = (tanM_vec - tanDotN * nM_vec);
-
-                                Direction dirX_m;
-                                if (tanProj.Magnitude < 1e-12)
-                                {
-                                    var tryX = Vector.Create(1, 0, 0);
-                                    if (Math.Abs(Vector.Dot(tryX, nM_vec)) > 0.95) tryX = Vector.Create(0, 1, 0);
-                                    var xProj = (tryX - Vector.Dot(tryX, nM_vec) * nM_vec).Direction;
-                                    dirX_m = xProj;
-                                }
-                                else
-                                {
-                                    dirX_m = tanProj.Direction;
-                                }
-
-                                Direction dirY_m = nBigM;                  // sheet/extrude normal
-                                Direction dirZ_m = Direction.Cross(dirX_m, dirY_m);
-                                dirX_m = Direction.Cross(dirY_m, dirZ_m);
-
-                                Direction dirZ_w = (masterToOcc * dirZ_m.ToVector()).Direction;
-                                try
-                                {
-                                    var bodyM = ownerMaster?.Shape;
-                                    if (bodyM != null && bodyM.ContainsPoint(pCenterM + 1e-5 * dirZ_m))
-                                    {
-                                        dirY_m = Direction.Cross(dirZ_m, dirX_m);
-                                        dirZ_m = -dirZ_m;
-                                        dirX_m = Direction.Cross(dirY_m, dirZ_m);
-                                    }
-                                }
-                                catch (Exception ex) { Logger.Log("ConnectorControl: direction flip ContainsPoint failed: " + ex.ToString()); }
-
-                                // compute thickness once per edge via opposite face (small<->big pairing unchanged)
-                                var opp = getOppositeFace(smallFaceEdge, bigFaceEdge, isPlaneEdge, out double thickness, out Direction _);
-                                if (opp == null) continue;
-
-                                double usedHeight = 0.001 * c.Height; // UI height (m)
-                                if (c.DynamicHeight)
-                                {
-                                    usedHeight = ComputeAvailableHeightAlongRay(
-                                        winMainPart, ownerMaster, iDesignBody, pCenterOcc,
-                                        -dirZ_w, usedHeight, thickness, dirY_m
-                                    );
-                                }
-
-                                double tolM = Math.Max(0.0, c.Tolerance) * 0.001;
-                                double gapM = Math.Max(0.0, c.EndRelief) * 0.001;
-
-                                double connectorHeightM = Math.Max(0.0, usedHeight - gapM);
-
-                                double baseRectHeightM = rectangularCut
-                                    ? (c.DynamicHeight ? (connectorHeightM + gapM) : (0.001 * c.Height))
-                                    : usedHeight;
-
-                                double cutterHeightM = Math.Max(0.0, baseRectHeightM);
-
-                                // reuse existing instance 'c' (no new Connector allocations)
-                                c.CreateGeometry(
-                                    parentPart, dirX_m, dirY_m, dirZ_m, pCenterM,
-                                    cutterHeightM, connectorHeightM, thickness,
-                                    out connectorBody, out cutBodiesSource, out cutBody, out collisionBody, false,
-                                    null, rectangularCut
-                                );
-
-                                bool doExtend = ShouldExtendPlanarLocal(
-                                    winMainPart,
-                                    iDesignBody,
-                                    ownerMaster,
-                                    connectorBody,
-                                    cutBody);
-
-                                // Always build both base and extended geometries, then merge results (unchanged policy)
-                                var extCenter = pCenterM;                 // no downward shift
-                                var extConnHeight = connectorHeightM;     // same height
-
-                                Body extConnector = null, extCut = null, extCollision = null;
-                                var extOwnerCuts = new List<Body>();
-
-                                if (doExtend)
-                                {
-                                    c.CreateGeometry(
-                                        parentPart,
-                                        dirX_m,
-                                        dirY_m,
-                                        -dirZ_m,            // ← flipped direction only
-                                        extCenter,
-                                        cutterHeightM,
-                                        extConnHeight,
-                                        thickness,
-                                        out extConnector,
-                                        out extOwnerCuts,
-                                        out extCut,
-                                        out extCollision,
-                                        false,
-                                        null,
-                                        rectangularCut,
-                                        false // disable corner features for extended pass
-                                    );
-                                }
-
-                                try
-                                {
-                                    if (extConnector != null && connectorBody != null)
-                                    {
-                                        connectorBody.Unite(extConnector.Copy());
-                                    }
-                                    else if (connectorBody == null && extConnector != null)
-                                    {
-                                        connectorBody = extConnector.Copy();
-                                    }
-
-                                    if (extCut != null && cutBody != null)
-                                    {
-                                        cutBody.Unite(extCut.Copy());
-                                    }
-                                    else if (cutBody == null && extCut != null)
-                                    {
-                                        cutBody = extCut.Copy();
-                                    }
-
-                                    if (extCollision != null && collisionBody != null)
-                                    {
-                                        collisionBody.Unite(extCollision.Copy());
-                                    }
-                                    else if (collisionBody == null && extCollision != null)
-                                    {
-                                        collisionBody = extCollision.Copy();
-                                    }
-
-                                    foreach (var b in extOwnerCuts)
-                                    {
-                                        cutBodiesSource.Add(b.Copy());
-                                    }
-                                }
-                                catch (Exception exUnite)
-                                {
-                                    Logger.Log("ConnectorControl: unite/extend failed: " + exUnite.ToString());
-                                }
-                                finally
-                                {
-                                    try { extConnector?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extConnector dispose failed: " + ex.ToString()); }
-                                    try { extCut?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extCut dispose failed: " + ex.ToString()); }
-                                    try { extCollision?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extCollision dispose failed: " + ex.ToString()); }
-                                    foreach (var b in extOwnerCuts) { try { b?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extOwnerCut dispose failed: " + ex.ToString()); } }
-                                }
-
-                                if (!rectangularCut && connectorBody != null && !c.RadiusInCutOut)
-                                {
-                                    var inflated = connectorBody.Copy();
-                                    try
-                                    {
-                                        double grow = Math.Max(1e-6, tolM);
-                                        inflated.OffsetFaces(inflated.Faces, grow);
-                                        cutBody?.Dispose();
-                                        cutBody = inflated;
-                                        collisionBody?.Dispose();
-                                        collisionBody = inflated.Copy();
-                                    }
-                                    catch (Exception ex) { Logger.Log("ConnectorControl: OffsetFaces inflate failed: " + ex.ToString()); inflated?.Dispose(); }
-                                }
+                                connectorBody = planarResult.Value.Connector;
+                                cutBody = planarResult.Value.CutBody;
+                                collisionBody = planarResult.Value.CollisionBody;
+                                cutBodiesSource = planarResult.Value.OwnerCuts ?? new List<Body>();
                             }
                             // AFTER (full cylindrical branch, no omissions)
                             // Fix: force c.Height to connectorHeightM only while building the connector loft,
@@ -2392,6 +2487,7 @@ namespace AESCConstruct2026.UI
                     drawConnector();
                     EnforceRectCutExclusivity();
                     UpdateGenerateEnabled();
+                    UpdatePreview();
                 };
             }
             _uiDebounce.Stop();
@@ -2732,6 +2828,160 @@ namespace AESCConstruct2026.UI
         {
             try { picDrawing?.Invalidate(); }
             catch (Exception ex) { }
+        }
+
+        // ClearPreview removes all temporary 3D preview DesignBodies from the scene.
+        private void ClearPreview()
+        {
+            if (_previewBodies.Count == 0) return;
+            try
+            {
+                WriteBlock.ExecuteTask("Clear connector preview", () =>
+                {
+                    foreach (var db in _previewBodies)
+                    {
+                        try { if (!db.IsDeleted) db.Delete(); }
+                        catch (Exception ex) { Logger.Log("ClearPreview: " + ex.ToString()); }
+                    }
+                });
+            }
+            catch (Exception ex) { Logger.Log("ClearPreview WriteBlock: " + ex.ToString()); }
+            _previewBodies.Clear();
+        }
+
+        // UpdatePreview builds semi-transparent 3D preview bodies for all selected planar edges.
+        private void UpdatePreview()
+        {
+            ClearPreview();
+
+            if (connectorShow3DPreview?.IsChecked != true) return;
+
+            var win = Window.ActiveWindow;
+            if (win == null) return;
+            var ctx = win.ActiveContext;
+            var mainPart = win.Document.MainPart;
+
+            var c = ConnectorModel.CreateConnector(this);
+            if (c == null) return;
+
+            bool rectangularCut = connectorRectangularCut?.IsChecked == true;
+            bool patternEnabled = (connectorPattern?.IsChecked == true);
+            int patternQty = 0;
+            if (patternEnabled)
+                int.TryParse(connectorPatternValue?.Text ?? "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out patternQty);
+            patternEnabled = patternEnabled && patternQty > 0;
+
+            // Collect edges (same logic as createConnector)
+            var iEdges = ctx.Selection.OfType<IDesignEdge>().ToList();
+            if (iEdges.Count == 0)
+            {
+                var masters = ctx.Selection.OfType<DesignEdge>().ToList();
+                if (masters.Count > 0)
+                {
+                    var occEdges = mainPart.GetDescendants<IDesignEdge>().ToList();
+                    foreach (var de in masters)
+                    {
+                        var occ = occEdges.FirstOrDefault(e => e.Master == de);
+                        if (occ != null) iEdges.Add(occ);
+                    }
+                }
+                else
+                {
+                    foreach (var sel in ctx.Selection)
+                        if (sel is IDesignEdge ide) iEdges.Add(ide);
+                }
+            }
+            if (iEdges.Count == 0) return;
+
+            // Precompute placements
+            var allPlacements = new List<(IDesignEdge edge, IDesignBody iDesignBody, DesignBody designBody, List<(Point pOcc, Direction tanOcc)> centers)>();
+            foreach (var iEdge in iEdges)
+            {
+                try
+                {
+                    if (iEdge == null || iEdge.Parent == null) continue;
+                    var iDesignBody = iEdge.Parent as IDesignBody;
+                    var designBody = iDesignBody?.Master;
+                    var partMaster = designBody?.Parent;
+                    if (iDesignBody == null || designBody == null || partMaster == null) continue;
+
+                    var centers = new List<(Point pOcc, Direction tanOcc)>();
+                    if (!patternEnabled)
+                    {
+                        if (!checkDesignEdge(iEdge, c.ClickPosition, out var pOcc))
+                            continue;
+                        var tan = iEdge.Shape.ProjectPoint(pOcc).Derivative.Direction;
+                        pOcc = pOcc + (0.001 * c.Location) * tan;
+                        centers.Add((pOcc, tan));
+                    }
+                    else
+                    {
+                        centers.AddRange(ComputePatternCentersOcc(iEdge, c, patternQty));
+                    }
+
+                    if (centers.Count > 0)
+                        allPlacements.Add((iEdge, iDesignBody, designBody, centers));
+                }
+                catch (Exception ex) { Logger.Log("UpdatePreview: edge placement failed: " + ex.ToString()); }
+            }
+            if (allPlacements.Count == 0) return;
+
+            try
+            {
+                WriteBlock.ExecuteTask("Connector preview", () =>
+                {
+                    foreach (var entry in allPlacements)
+                    {
+                        var iDesignBody = entry.iDesignBody;
+                        var ownerMaster = iDesignBody.Master;
+                        var parentPart = ownerMaster.Parent;
+                        var winMainPart = Window.ActiveWindow.Document.MainPart;
+
+                        var occToMaster = iDesignBody.TransformToMaster;
+                        var masterToOcc = occToMaster.Inverse;
+
+                        getFacesFromSelection(entry.edge, out DesignFace bigFace, out DesignFace smallFace);
+                        if (bigFace == null || smallFace == null) continue;
+
+                        // Only handle planar faces for v1
+                        if (!(bigFace.Shape.Geometry is Plane)) continue;
+
+                        foreach (var (pOcc, tanOcc) in entry.centers)
+                        {
+                            try
+                            {
+                                var result = ComputePlanarConnectorBodies(
+                                    c, parentPart, winMainPart,
+                                    iDesignBody, ownerMaster,
+                                    occToMaster, masterToOcc,
+                                    pOcc, tanOcc,
+                                    bigFace, smallFace,
+                                    true, rectangularCut);
+
+                                if (result?.Connector == null) continue;
+
+                                var db = DesignBody.Create(
+                                    parentPart,
+                                    "_preview_connector",
+                                    result.Value.Connector.Copy());
+                                db.SetColor(null, PreviewColor);
+                                _previewBodies.Add(db);
+                            }
+                            catch (Exception ex) { Logger.Log("UpdatePreview placement: " + ex.ToString()); }
+                        }
+                    }
+                });
+            }
+            catch (Exception ex) { Logger.Log("UpdatePreview: " + ex.ToString()); }
+        }
+
+        // On3DPreviewToggled handles the 3D Preview checkbox toggle.
+        private void On3DPreviewToggled(object sender, RoutedEventArgs e)
+        {
+            if (connectorShow3DPreview?.IsChecked == true)
+                UpdatePreview();
+            else
+                ClearPreview();
         }
 
         // CheckSelectedEdgeWidth ensures the connector bottom width does not exceed the available length on the selected edge.
