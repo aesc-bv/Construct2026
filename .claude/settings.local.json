@@ -39,7 +39,15 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\dirkv\\\\OneDrive - AESC\\\\Addins\\\\Construct26\\\\fix_pngs.ps1\")",
       "Bash(git -C \"/c/Users/dirkv/OneDrive - AESC/Addins/Construct26\" status -u)",
       "Bash(git -C \"/c/Users/dirkv/OneDrive - AESC/Addins/Construct26\" diff --stat)",
-      "Bash(git -C \"/c/Users/dirkv/OneDrive - AESC/Addins/Construct26\" log --oneline -3)"
+      "Bash(git -C \"/c/Users/dirkv/OneDrive - AESC/Addins/Construct26\" log --oneline -3)",
+      "Bash(git checkout:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"AESCConstruct2026.sln\" -p:Configuration=Debug -verbosity:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" AESCConstruct2026.sln /t:Build /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" AESCConstruct2026.sln /p:Configuration=Debug /t:Build /v:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"AESCConstruct2026.sln\" -t:Build -p:Configuration=Debug -verbosity:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" AESCConstruct2026.sln -p:Configuration=Debug -t:Build -v:minimal)",
+      "Bash(grep:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" AESCConstruct2026.sln -p:Configuration=Debug -verbosity:minimal)"
     ]
   }
 }

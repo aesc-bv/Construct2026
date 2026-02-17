@@ -514,15 +514,6 @@ namespace AESCConstruct2026
                 case "AESCConstruct2026.ActivateNetworkBtn":
                     return Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
 
-                case "AESCConstruct2026.DockBtn":
-                    // Reflect current toggle state by reading the command’s Text,
-                    // which UIManager already sets to a translated string.
-                    var dockCmd = Command.GetCommand("AESCConstruct2026.DockCmd");
-                    if (dockCmd != null && !string.IsNullOrWhiteSpace(dockCmd.Text))
-                        return dockCmd.Text;
-                    // Fallback if command isn’t created yet:
-                    return Localization.Language.Translate("Ribbon.Button.Float");
-
                 default:
                     // If you ever add more ids, they will at least show their id
                     return controlId;

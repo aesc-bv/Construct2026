@@ -150,13 +150,6 @@
 							size="large"/>
 				</group>
 
-				<group id="AESCConstruct2026.UI" getLabel="GetRibbonLabel">
-					<button id="AESCConstruct2026.DockBtn"
-						command="AESCConstruct2026.DockCmd"
-						getLabel="GetRibbonLabel"
-						size="large"/>
-				</group>
-
 				<group id="AESCConstruct2026.Network" getLabel="GetRibbonLabel">
 					<button id="AESCConstruct2026.ActivateNetworkBtn"
 						command="AESCConstruct2026.ActivateNetwork"

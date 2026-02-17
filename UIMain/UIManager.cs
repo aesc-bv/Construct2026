@@ -1,6 +1,6 @@
 ﻿/*
  UIManager centralizes registration and localization of Construct2026 sidebar commands
- and manages their hosting either as docked SpaceClaim panels or in a floating WPF window.
+ and manages their hosting as docked SpaceClaim panels.
 */
 
 using AESCConstruct2026.FrameGenerator.UI;
@@ -10,23 +10,11 @@ using AESCConstruct2026.UI;
 using SpaceClaim.Api.V242;
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;                 // for ImageFormat.Png in GDI → WPF conversion
 using System.IO;
-using System.Threading;
-using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;       // for ElementHost
-using System.Windows.Media;                   // for ImageSource, Brushes, Transform
-using System.Windows.Media.Imaging;           // for BitmapImage
-using System.Windows.Threading;
 using Application = SpaceClaim.Api.V242.Application;
 using Image = System.Drawing.Image;
-
-using WpfWindow = System.Windows.Window;
-// Optional WPF aliases to avoid WinForms collisions
-using WpfBrushes = System.Windows.Media.Brushes;
-using WpfCursors = System.Windows.Input.Cursors;
-using WpfControlTemplate = System.Windows.Controls.ControlTemplate;
 
 
 
@@ -34,10 +22,6 @@ namespace AESCConstruct2026.UIMain
 {
     public static class UIManager
     {
-        // Tracks whether to float or dock
-        private static bool _floatingMode;
-        private static string _lastPanelKey;
-
         // Construct panel
         private const string ConstructPanelCommand = "AESCConstruct2026.ConstructPanel";
         private static Command _constructPanelCmd;
@@ -64,25 +48,8 @@ namespace AESCConstruct2026.UIMain
         public const string CustomPropertiesCommand = "AESCConstruct2026.CustomProperties";
         public const string EngravingCommand = "AESCConstruct2026.EngravingControl";
         public const string ConnectorCommand = "AESCConstruct2026.ConnectorSidebar";
-        public const string DockToggleCommand = "AESCConstruct2026.DockCmd";
 
-        private static Thread _floatingThread;
-        private static Dispatcher _floatingDispatcher;
-        private static WpfWindow _floatingWindow;
-        // Floating window chrome
-        private static System.Windows.Controls.ContentControl _floatingContentHost;
-        private static System.Windows.Rect? _restoreBounds;   // remembers pre-snap size/pos
-
-
-        private static Command DockToggleCommandHolder;
-        // Streams must stay alive for the lifetime of the Bitmap (GDI+ requirement).
-        // These are static app-lifetime objects, so no disposal is needed.
-        private static readonly MemoryStream _undockStream = new MemoryStream(Resources.Menu_Undock);
-        private static readonly MemoryStream _dockStream = new MemoryStream(Resources.Menu_Dock);
-        static Bitmap _undock = new Bitmap(_undockStream);
-        static Bitmap _dock = new Bitmap(_dockStream);
-
-        // Registers all sidebar and dock toggle commands with SpaceClaim and wires them to UI handlers.
+        // Registers all sidebar commands with SpaceClaim and wires them to UI handlers.
         public static void RegisterAll()
         {
             bool valid = ConstructLicenseSpot.IsValid;
@@ -159,15 +126,6 @@ namespace AESCConstruct2026.UIMain
                 valid
             );
 
-            Register(
-                DockToggleCommand,
-                Localization.Language.Translate("Ribbon.Button.Float"),
-                "Toggle between docked panel and floating window",
-                Resources.Menu_Undock,
-                () => ToggleMode(),
-                true
-            );
-
             RegisterConstructPanel();
         }
 
@@ -198,10 +156,6 @@ namespace AESCConstruct2026.UIMain
         private static void Register(string name, string text, string hint, byte[] icon, Action execute, bool enabled)
         {
             var cmd = Command.Create(name);
-
-            if (name == DockToggleCommand)
-                DockToggleCommandHolder = cmd;
-
             cmd.Text = text;
             cmd.Hint = hint;
             cmd.Image = LoadImage(icon);
@@ -210,433 +164,10 @@ namespace AESCConstruct2026.UIMain
             cmd.KeepAlive(true);
         }
 
-        // Toggles between docked and floating UI modes and refreshes the toggle command icon and text.
-        private static void ToggleMode()
-        {
-            _floatingMode = !_floatingMode;
-
-            if (DockToggleCommandHolder != null)
-            {
-                // same icon logic as before
-                DockToggleCommandHolder.Image = _floatingMode ? _dock : _undock;
-
-                // translated label: Dock when floating, Float when docked
-                DockToggleCommandHolder.Text = Localization.Language.Translate(
-                    _floatingMode ? "Ribbon.Button.Dock" : "Ribbon.Button.Float"
-                );
-            }
-
-            if (_floatingMode)
-            {
-                if (_constructPanelCmd != null) _constructPanelCmd.IsVisible = false;
-                ShowFloating(_lastPanelKey);
-            }
-            else
-            {
-                CloseFloatingWindow();
-                ShowDocked(_lastPanelKey);  // EnsureConstructPanel sets IsVisible = true
-            }
-        }
-
-        // Shows the requested panel either in floating or docked mode depending on current state.
+        // Shows the requested panel in the docked Construct panel.
         private static void Show(string panelKey)
         {
-            _lastPanelKey = panelKey;
-            if (_floatingMode)
-            {
-                ShowFloating(panelKey);
-            }
-            else
-            {
-                ShowDocked(panelKey);
-            }
-        }
-
-        // Closes the floating window if it exists by invoking Close on its dispatcher.
-        private static void CloseFloatingWindow()
-        {
-            var dispatcher = _floatingDispatcher;
-            if (dispatcher != null)
-            {
-                dispatcher.BeginInvoke(new Action(() =>
-                {
-                    _floatingWindow?.Close();
-                }));
-                // InvokeShutdown exits Dispatcher.Run(), allowing the thread to finish.
-                dispatcher.InvokeShutdown();
-                _floatingThread?.Join(2000);
-                _floatingDispatcher = null;
-                _floatingThread = null;
-            }
-        }
-
-        // Ensures the floating window exists and shows the requested panel in the floating host.
-        private static void ShowFloating(string key)
-        {
-            Command.Execute("AESC.Construct.SetMode3D");
-
-            if (_floatingThread != null
-                && _floatingThread.IsAlive
-                && _floatingWindow != null)
-            {
-                _floatingDispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (_floatingContentHost != null)
-                        _floatingContentHost.Content = CreateControl(key);
-                    else
-                        _floatingWindow.Content = CreateFloatingRoot(key); // safety fallback
-
-                    _floatingWindow.Tag = key;
-
-                    if (_floatingWindow.WindowState == WindowState.Minimized)
-                        _floatingWindow.WindowState = WindowState.Normal;
-
-                    _floatingWindow.Activate();
-                }));
-                return;
-            }
-
-            // First-time creation (or after user closed the window): spin up STA thread + dispatcher
-            _floatingThread = new Thread(() =>
-            {
-                // capture this thread’s dispatcher
-                _floatingDispatcher = Dispatcher.CurrentDispatcher;
-
-                // build, show, and run the window
-                _floatingWindow = CreateFloatingWindow(key);
-                _floatingWindow.Show();
-                Dispatcher.Run();
-            });
-
-            _floatingThread.SetApartmentState(ApartmentState.STA);
-            _floatingThread.IsBackground = true;
-            _floatingThread.Start();
-        }
-
-        // Creates the top level WPF window that hosts the floating UI root for a given panel key.
-        private static WpfWindow CreateFloatingWindow(string key)
-        {
-            var win = new WpfWindow
-            {
-                Title = "AESC Construct",
-                SizeToContent = SizeToContent.WidthAndHeight,
-                Content = CreateFloatingRoot(key),
-                Tag = key,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen
-            };
-
-            win.Closed += FloatingWindow_Closed;
-            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(win);
-
-            return win;
-        }
-
-        // Builds the WPF visual tree for the floating window: toolbar plus content host.
-        private static System.Windows.FrameworkElement CreateFloatingRoot(string key)
-        {
-            var root = new System.Windows.Controls.DockPanel();
-
-            // --- Toolbar (top) ---
-            var toolbar = new System.Windows.Controls.StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
-                Margin = new Thickness(6, 6, 6, 4)
-            };
-
-            // Use the same toggle icon as the ribbon command for Left/Right
-            var dockToggleIcon = GetDockToggleIconWpf();
-
-            // For Restore, use the requested resource image: Icon_Update
-            var restoreIcon = GetResourceImageWpf(Resources.Icon_Update) ?? dockToggleIcon;
-
-            // Left (rotate 180°)
-            var btnLeft = MakeIconButton(
-                dockToggleIcon,
-                tooltip: "Snap left (full height)",
-                margin: new Thickness(0, 0, 6, 0),
-                onClick: (s, e) => _floatingDispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (_floatingWindow != null) SnapFloatingToSide(_floatingWindow, Side.Left);
-                })),
-                size: 22,
-                rotationDegrees: 180
-            );
-
-            // Right (normal)
-            var btnRight = MakeIconButton(
-                dockToggleIcon,
-                tooltip: "Snap right (full height)",
-                margin: new Thickness(0, 0, 6, 0),
-                onClick: (s, e) => _floatingDispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (_floatingWindow != null) SnapFloatingToSide(_floatingWindow, Side.Right);
-                })),
-                size: 22,
-                rotationDegrees: 0
-            );
-
-            // Restore (Icon_Update)
-            var btnRestore = MakeIconButton(
-                restoreIcon,
-                tooltip: "Restore original size & position",
-                margin: new Thickness(0),
-                onClick: (s, e) => _floatingDispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (_floatingWindow != null) RestoreFloatingBounds(_floatingWindow);
-                })),
-                size: 22,
-                rotationDegrees: 0
-            );
-
-            toolbar.Children.Add(btnLeft);
-            toolbar.Children.Add(btnRestore);
-            toolbar.Children.Add(btnRight);
-
-            System.Windows.Controls.DockPanel.SetDock(toolbar, System.Windows.Controls.Dock.Top);
-            root.Children.Add(toolbar);
-
-            // --- Content host (fills remaining area) ---
-            _floatingContentHost = new System.Windows.Controls.ContentControl
-            {
-                Content = CreateControl(key),
-                Margin = new Thickness(6, 0, 6, 6)
-            };
-            root.Children.Add(_floatingContentHost);
-
-            return root;
-        }
-
-        // Converts embedded byte[] resource data into a WPF ImageSource for use in WPF controls.
-        private static ImageSource GetResourceImageWpf(byte[] bytes)
-        {
-            if (bytes == null || bytes.Length == 0) return null;
-
-            try
-            {
-                using (var ms = new MemoryStream(bytes))
-                {
-                    var bi = new BitmapImage();
-                    bi.BeginInit();
-                    bi.CacheOption = BitmapCacheOption.OnLoad;
-                    bi.StreamSource = ms;
-                    bi.EndInit();
-                    bi.Freeze();
-                    return bi;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-
-        private enum Side { Left, Right }
-
-        // Creates a chrome-less WPF icon button with optional rotation for snapping and restore actions.
-        private static System.Windows.Controls.Button MakeIconButton(
-            ImageSource icon,
-            string tooltip,
-            Thickness margin,
-            RoutedEventHandler onClick,
-            double size = 22,
-            double rotationDegrees = 0
-        )
-        {
-            var img = new System.Windows.Controls.Image
-            {
-                Source = icon,
-                Width = size,
-                Height = size,
-                Stretch = Stretch.Uniform,
-                SnapsToDevicePixels = true,
-                RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
-                RenderTransform = Math.Abs(rotationDegrees % 360) < 0.001
-                    ? Transform.Identity
-                    : new RotateTransform(rotationDegrees)
-            };
-
-            var btn = new System.Windows.Controls.Button
-            {
-                Content = img,
-                ToolTip = tooltip,
-                Margin = margin,
-                Padding = new Thickness(0),
-                Background = WpfBrushes.Transparent,
-                BorderBrush = null,
-                BorderThickness = new Thickness(0),
-                FocusVisualStyle = null,
-                Focusable = false,
-                Cursor = WpfCursors.Hand,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
-                VerticalAlignment = System.Windows.VerticalAlignment.Top
-            };
-
-            // Strip default WPF button chrome
-            var presenter = new FrameworkElementFactory(typeof(System.Windows.Controls.ContentPresenter));
-            btn.Template = new WpfControlTemplate(typeof(System.Windows.Controls.Button))
-            {
-                VisualTree = presenter
-            };
-
-            if (onClick != null) btn.Click += onClick;
-            return btn;
-        }
-
-        // Resolves the dock toggle icon as a WPF ImageSource, preferring the current command image.
-        private static ImageSource GetDockToggleIconWpf()
-        {
-            // 1) Try to pull the current Command image (System.Drawing.Image) and convert to WPF
-            try
-            {
-                if (DockToggleCommandHolder?.Image is Image gdi)
-                {
-                    var src = ToImageSource(gdi);
-                    if (src != null) return src;
-                }
-            }
-            catch { /* ignore */ }
-
-            // 2) Fall back to our cached bitmaps (_undock / _dock)
-            try
-            {
-                var gdi = _floatingMode ? _dock : _undock; // mirrors the ribbon toggle state
-                var src = ToImageSource(gdi);
-                if (src != null) return src;
-            }
-            catch { /* ignore */ }
-
-            // 3) Last resort: reconstruct from resource bytes
-            try
-            {
-                var bytes = _floatingMode ? Resources.Menu_Dock : Resources.Menu_Undock;
-                using (var ms = new MemoryStream(bytes))
-                using (var bmp = new Bitmap(ms))
-                {
-                    return ToImageSource(bmp);
-                }
-            }
-            catch { /* ignore */ }
-
-            return null;
-        }
-
-        // Converts a System.Drawing.Image to a frozen WPF ImageSource for cross-thread reuse.
-        private static ImageSource ToImageSource(Image gdiImage)
-        {
-            try
-            {
-                using (var ms = new MemoryStream())
-                {
-                    gdiImage.Save(ms, ImageFormat.Png);
-                    ms.Position = 0;
-
-                    var bi = new BitmapImage();
-                    bi.BeginInit();
-                    bi.CacheOption = BitmapCacheOption.OnLoad;
-                    bi.StreamSource = ms;
-                    bi.EndInit();
-                    bi.Freeze(); // cross-thread safe
-                    return bi;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-
-        // Positions the floating window snapped to the left or right edge of the current screen.
-        private static void SnapFloatingToSide(WpfWindow win, Side side)
-        {
-            // Save restore bounds (once) before we change anything
-            if (_restoreBounds == null)
-            {
-                double w = double.IsNaN(win.Width) ? (win.ActualWidth > 0 ? win.ActualWidth : 420) : win.Width;
-                double h = double.IsNaN(win.Height) ? (win.ActualHeight > 0 ? win.ActualHeight : 600) : win.Height;
-                _restoreBounds = new System.Windows.Rect(win.Left, win.Top, w, h);
-            }
-
-            // Figure out the current screen’s working area (taskbar-aware)
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(win).Handle;
-            var screen = (hwnd != IntPtr.Zero)
-                ? System.Windows.Forms.Screen.FromHandle(hwnd)
-                : System.Windows.Forms.Screen.PrimaryScreen;
-
-            var wa = screen.WorkingArea; // in device pixels
-
-            // Convert to WPF DIPs (handles DPI scaling correctly)
-            var source = System.Windows.PresentationSource.FromVisual(win);
-            var m = source?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
-            var tl = m.Transform(new System.Windows.Point(wa.Left, wa.Top));
-            var br = m.Transform(new System.Windows.Point(wa.Right, wa.Bottom));
-            var wr = new System.Windows.Rect(tl, br);
-
-            // Freeze width to the current window width (or minimum), grow to full-height
-            double targetWidth = (win.ActualWidth > 0 ? win.ActualWidth : (double.IsNaN(win.Width) ? 420 : win.Width));
-            if (targetWidth < 280) targetWidth = 280;
-
-            win.SizeToContent = SizeToContent.Manual;
-            win.Height = wr.Height;
-            win.Top = wr.Top;
-
-            win.Width = targetWidth;
-            win.Left = (side == Side.Left) ? wr.Left : (wr.Right - targetWidth);
-
-            if (win.WindowState == WindowState.Minimized) win.WindowState = WindowState.Normal;
-            win.Activate();
-        }
-
-        // Restores the floating window to its last saved bounds before snapping.
-        private static void RestoreFloatingBounds(WpfWindow win)
-        {
-            if (_restoreBounds is System.Windows.Rect r)
-            {
-                win.SizeToContent = SizeToContent.Manual;
-                win.Left = r.Left;
-                win.Top = r.Top;
-                win.Width = r.Width;
-                win.Height = r.Height;
-                _restoreBounds = null;
-            }
-
-            if (win.WindowState == WindowState.Minimized) win.WindowState = WindowState.Normal;
-            win.Activate();
-        }
-
-        // Cleans up references when the floating window is closed by the user.
-        private static void FloatingWindow_Closed(object sender, EventArgs e)
-        {
-            var win = (WpfWindow)sender;
-            win.Closed -= FloatingWindow_Closed;
-            _floatingWindow = null;
-            _floatingContentHost = null;
-            _restoreBounds = null;
-            _floatingDispatcher?.InvokeShutdown();
-            _floatingDispatcher = null;
-            _floatingThread = null;
-        }
-
-        // Recursively walks the WPF visual tree and ensures all TextBoxes are enabled and editable.
-        private static void LogAndEnableWpfTextBoxes(DependencyObject parent)
-        {
-            if (parent == null) return;
-            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
-            for (int i = 0; i < count; i++)
-            {
-                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-
-                // Fully qualify WPF TextBox to avoid ambiguity
-                if (child is System.Windows.Controls.TextBox wpfTb)
-                {
-                    wpfTb.IsEnabled = true;
-                    wpfTb.IsReadOnly = false;
-                }
-
-                // Recurse into children
-                LogAndEnableWpfTextBoxes(child);
-            }
+            ShowDocked(panelKey);
         }
 
         // Creates the dedicated Construct panel tab docked on the right side.
@@ -662,6 +193,8 @@ namespace AESCConstruct2026.UIMain
 
             if (_constructPanelTab == null || _constructPanelTab.IsDeleted)
             {
+                if (_constructHost != null)
+                    _constructHost.Child = null;      // detach WPF control before disposing
                 _constructHost?.Dispose();
                 _constructHost = new ElementHost { Dock = DockStyle.Fill };
                 _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
@@ -699,6 +232,7 @@ namespace AESCConstruct2026.UIMain
 
             if (_activeDockedKey != key)
             {
+                _constructHost.Child = null;          // clear old child first
                 _constructHost.Child = control;
                 _activeDockedKey = key;
             }
@@ -714,24 +248,7 @@ namespace AESCConstruct2026.UIMain
             Show(RibCutOutCommand);
         }
 
-        // Creates a new WPF UserControl instance for the requested sidebar key (used for floating mode).
-        private static System.Windows.Controls.UserControl CreateControl(string key)
-        {
-            switch (key)
-            {
-                case ProfileCommand: return new ProfileSelectionControl();
-                case SettingsCommand: return new SettingsControl();
-                case PlateCommand: return new PlatesControl();
-                case FastenerCommand: return new FastenersControl();
-                case RibCutOutCommand: return new RibCutOutControl();
-                case CustomPropertiesCommand: return new CustomComponentControl();
-                case EngravingCommand: return new EngravingControl();
-                case ConnectorCommand: return new ConnectorControl();
-                default: return null;
-            }
-        }
-
-        // Updates localized texts for all sidebar and dock toggle commands.
+        // Updates localized texts for all sidebar commands.
         public static void UpdateCommandTexts()
         {
             // Sidebar buttons
@@ -758,12 +275,6 @@ namespace AESCConstruct2026.UIMain
 
             c = Command.GetCommand(ConnectorCommand);
             if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Connector");
-
-            // Float/Dock toggle
-            if (DockToggleCommandHolder != null)
-            {
-                DockToggleCommandHolder.Text = Localization.Language.Translate("Ribbon.Button.Float");
-            }
         }
 
         // Lazily creates the Profile sidebar control.
