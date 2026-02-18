@@ -63,6 +63,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
@@ -511,9 +512,32 @@
                                    VerticalAlignment="Center" />
                     </Grid>
 
+                    <Grid Grid.Row="18"
+                          Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorShow3DPreview"
+                                  Tag="connector3DPreview"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0"
+                                  Checked="On3DPreviewToggled"
+                                  Unchecked="On3DPreviewToggled" />
+                        <TextBlock Tag="connector3DPreviewText"
+                                   x:Name="connector3DPreviewText"
+                                   Text="3D Preview"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Show a semi-transparent 3D preview of the connector in the viewport." />
+                    </Grid>
+
                     <Button Tag="CreatePlate"
                             Content="Create"
-                            Grid.Row="18"
+                            Grid.Row="19"
                             Style="{StaticResource FooterButtonStyle}"
                             Width="150"
                             HorizontalAlignment="Center"

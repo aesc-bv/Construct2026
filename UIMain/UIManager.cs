@@ -15,6 +15,9 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;       // for ElementHost
 using Application = SpaceClaim.Api.V242.Application;
 using Image = System.Drawing.Image;
+using WpfButton = System.Windows.Controls.Button;
+using WpfDockPanel = System.Windows.Controls.DockPanel;
+using WpfDock = System.Windows.Controls.Dock;
 
 
 
@@ -191,14 +194,27 @@ namespace AESCConstruct2026.UIMain
         {
             if (_constructPanelCmd == null) { RegisterConstructPanel(); return; }
 
-            if (_constructPanelTab == null || _constructPanelTab.IsDeleted)
+            bool panelGone = _constructPanelTab == null;
+            if (!panelGone)
             {
-                if (_constructHost != null)
-                    _constructHost.Child = null;      // detach WPF control before disposing
-                _constructHost?.Dispose();
+                try { panelGone = _constructPanelTab.IsDeleted; }
+                catch { panelGone = true; }   // remoting proxy disconnected = panel is gone
+            }
+
+            if (panelGone)
+            {
+                try
+                {
+                    if (_constructHost != null)
+                        _constructHost.Child = null;  // detach WPF control before disposing
+                    _constructHost?.Dispose();
+                }
+                catch { /* host already disposed by SpaceClaim when it closed the panel */ }
+
                 _constructHost = new ElementHost { Dock = DockStyle.Fill };
                 _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
                 _activeDockedKey = null;
+                ClearCachedControls();
             }
 
             _constructPanelCmd.IsVisible = true;
@@ -224,22 +240,82 @@ namespace AESCConstruct2026.UIMain
         // Displays the requested module in the dedicated Construct panel.
         private static void ShowDocked(string key)
         {
-            Command.Execute("AESC.Construct.SetMode3D");
-            EnsureConstructPanel();
-
-            var control = GetDockedControl(key);
-            if (control == null) return;
-
-            if (_activeDockedKey != key)
+            try
             {
-                _constructHost.Child = null;          // clear old child first
-                _constructHost.Child = control;
-                _activeDockedKey = key;
-            }
+                try { Command.Execute("AESC.Construct.SetMode3D"); }
+                catch (Exception ex) { Logger.Log("[UIManager] SetMode3D non-fatal: " + ex.Message); }
 
-            // Bring the panel tab to the front
-            if (_constructPanelTab != null && !_constructPanelTab.IsDeleted)
-                _constructPanelTab.Activate();
+                EnsureConstructPanel();
+
+                var control = GetDockedControl(key);
+                if (control == null) return;
+
+                if (_activeDockedKey != key)
+                {
+                    _constructHost.Child = null;          // clear old child first
+                    _constructHost.Child = WrapWithCloseButton(control);
+                    _activeDockedKey = key;
+                }
+
+                // Bring the panel tab to the front
+                try
+                {
+                    if (_constructPanelTab != null && !_constructPanelTab.IsDeleted)
+                        _constructPanelTab.Activate();
+                }
+                catch { /* proxy disconnected — panel was just recreated, will activate on next call */ }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UIManager] ShowDocked failed for '" + key + "': " + ex.ToString());
+            }
+        }
+
+        // Wraps a control in a DockPanel with a close button at the top-right.
+        private static WpfDockPanel WrapWithCloseButton(System.Windows.Controls.UserControl control)
+        {
+            // Detach from any previous wrapper parent
+            if (System.Windows.LogicalTreeHelper.GetParent(control) is WpfDockPanel oldParent)
+                oldParent.Children.Remove(control);
+
+            var closeBtn = new WpfButton
+            {
+                Content = "\u2715",
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                VerticalAlignment = System.Windows.VerticalAlignment.Top,
+                Width = 24,
+                Height = 24,
+                FontSize = 14,
+                Padding = new System.Windows.Thickness(0),
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderBrush = System.Windows.Media.Brushes.Transparent,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = "Close panel"
+            };
+            closeBtn.Click += (s, e) => ClosePanel();
+
+            WpfDockPanel.SetDock(closeBtn, WpfDock.Top);
+
+            var panel = new WpfDockPanel();
+            panel.Children.Add(closeBtn);
+            panel.Children.Add(control);
+
+            return panel;
+        }
+
+        // Closes the Construct panel and detaches the active control.
+        public static void ClosePanel()
+        {
+            if (_constructHost != null)
+                _constructHost.Child = null;
+            _activeDockedKey = null;
+
+            try
+            {
+                if (_constructPanelTab != null && !_constructPanelTab.IsDeleted)
+                    _constructPanelTab.Close();
+            }
+            catch { /* proxy already disconnected */ }
         }
 
         // Public entry point for KruisRibCmd to show the RibCutOut panel.
@@ -275,6 +351,19 @@ namespace AESCConstruct2026.UIMain
 
             c = Command.GetCommand(ConnectorCommand);
             if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Connector");
+        }
+
+        // Nulls all cached controls so they are freshly constructed for a new ElementHost.
+        private static void ClearCachedControls()
+        {
+            _profileControl = null;
+            _settingsControl = null;
+            _plateControl = null;
+            _fastenerControl = null;
+            _ribCutOutControl = null;
+            _customPropertiesControl = null;
+            _engravingControl = null;
+            _connectorControl = null;
         }
 
         // Lazily creates the Profile sidebar control.
