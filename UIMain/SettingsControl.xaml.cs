@@ -142,6 +142,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             // Decimals
             DecimalsTextBox.Text = Settings.Default.NameDecimals.ToString();
+            BomDecimalsTextBox.Text = Settings.Default.BomDecimals.ToString();
 
             // Frame color
             LoadFrameColorUI();
@@ -199,6 +200,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
             // Save decimals
             if (int.TryParse(DecimalsTextBox.Text.Trim(), out var dec) && dec >= 0)
                 Settings.Default.NameDecimals = dec;
+            if (int.TryParse(BomDecimalsTextBox.Text.Trim(), out var bomDec) && bomDec >= 0)
+                Settings.Default.BomDecimals = bomDec;
 
             // Save frame color
             Settings.Default.FrameColor = FrameColorCheckBox.IsChecked == true

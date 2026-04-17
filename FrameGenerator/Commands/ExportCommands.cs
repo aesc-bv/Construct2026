@@ -606,14 +606,16 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             }
         }
 
-        // Formats a numeric meters string into the selected unit with a fixed numeric format for BOM/Excel output.
+        // Formats a numeric meters string into the selected unit using Settings.Default.BomDecimals.
         static string FormatLengthFromMetersString(string rawMeters)
         {
             if (TryParseMeters(rawMeters, out var m))
             {
                 var unit = GetSelectedUnit();
                 var val = FromMeters(m, unit);
-                return val.ToString("0.###", CultureInfo.InvariantCulture);
+                int decimals = Math.Max(0, Settings.Default.BomDecimals);
+                var fmt = decimals <= 0 ? "0" : "0." + new string('#', decimals);
+                return val.ToString(fmt, CultureInfo.InvariantCulture);
             }
             return rawMeters;
         }

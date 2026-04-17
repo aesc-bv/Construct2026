@@ -189,7 +189,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
         }
 
         // Maps the profile type + profileData dictionary into the ordered argument list expected by the profile classes.
-        private static string[] GetArgs(string profileType, Dictionary<string, string> pd)
+        internal static string[] GetArgs(string profileType, Dictionary<string, string> pd)
         {
             string g(string k) => pd != null && pd.TryGetValue(k, out var v) ? v : "0";
             switch (profileType)

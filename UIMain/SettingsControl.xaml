@@ -99,6 +99,20 @@
                                 <Grid Margin="0,6,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="60" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Tag="Label_BomDecimals"
+                                               Text="BOM decimals:"
+                                               VerticalAlignment="Center"
+                                               Grid.Column="0" />
+                                    <TextBox x:Name="BomDecimalsTextBox"
+                                             Height="24"
+                                             Margin="5,0,0,0"
+                                             Grid.Column="1" />
+                                </Grid>
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="80" />
                                         <ColumnDefinition Width="20" />
                                     </Grid.ColumnDefinitions>

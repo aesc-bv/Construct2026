@@ -384,5 +384,17 @@ namespace AESCConstruct2026.Properties {
                 this["FrameColor"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int BomDecimals {
+            get {
+                return ((int)(this["BomDecimals"]));
+            }
+            set {
+                this["BomDecimals"] = value;
+            }
+        }
     }
 }
