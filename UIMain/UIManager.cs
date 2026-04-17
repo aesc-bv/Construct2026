@@ -334,6 +334,48 @@ namespace AESCConstruct2026.UIMain
             catch { /* proxy already disconnected */ }
         }
 
+        // Called from Construct2026.Disconnect() when SpaceClaim is unloading our AppDomain.
+        // Must close the PanelTab so the sidebar tab visual is removed from SpaceClaim's UI
+        // before our AppDomain is disposed — otherwise the next AppDomain load creates a
+        // second "AESC Construct" tab alongside the orphaned one.
+        public static void ClosePanelAndDispose()
+        {
+            Logger.Log("[UIManager] ClosePanelAndDispose() called");
+
+            try
+            {
+                if (_constructHost != null)
+                    _constructHost.Child = null;
+            }
+            catch (Exception ex) { Logger.Log("[UIManager] Clear host child failed: " + ex.Message); }
+
+            try
+            {
+                if (_constructPanelTab != null && !_constructPanelTab.IsDeleted)
+                    _constructPanelTab.Close();
+            }
+            catch (Exception ex) { Logger.Log("[UIManager] PanelTab.Close failed: " + ex.Message); }
+
+            try
+            {
+                _constructHost?.Dispose();
+            }
+            catch (Exception ex) { Logger.Log("[UIManager] Host dispose failed: " + ex.Message); }
+
+            try
+            {
+                if (_constructPanelCmd != null)
+                    _constructPanelCmd.IsVisible = false;
+            }
+            catch (Exception ex) { Logger.Log("[UIManager] Hide panel command failed: " + ex.Message); }
+
+            _constructPanelTab = null;
+            _constructHost = null;
+            _activeDockedKey = null;
+
+            Logger.Log("[UIManager] ClosePanelAndDispose() complete");
+        }
+
         // Public entry point for KruisRibCmd to show the RibCutOut panel.
         public static void ShowRibCutOut()
         {

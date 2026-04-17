@@ -337,9 +337,22 @@ namespace AESCConstruct2026
             }
         }
 
-        // Required by IExtensibility; performs no cleanup for this add-in.
+        // Called by SpaceClaim when the addin AppDomain is being unloaded (session end,
+        // addin refresh, or reload after build). Must close the PanelTab here so the
+        // docked tab visual is removed from SpaceClaim's sidebar before our AppDomain
+        // goes away — otherwise a subsequent AppDomain creates a second PanelTab while
+        // the orphaned first one lingers in the UI.
         public void Disconnect()
         {
+            try
+            {
+                Logger.Log("[Construct2026] Disconnect() called — cleaning up panel");
+                UIManager.ClosePanelAndDispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Construct2026] Disconnect cleanup failed: " + ex.ToString());
+            }
         }
 
         // Helper to enable or disable a ribbon command by id.
