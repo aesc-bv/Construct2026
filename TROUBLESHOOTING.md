@@ -4,51 +4,47 @@
 
 ### Symptom
 
-The SpaceClaim right sidebar shows **two** "AESC Construct" panel tabs side by side. The left one is empty (no content, no close behaviour). The right one has the actual panel content (Settings, Frame Generator, etc.). The empty tab cannot be removed through the UI.
+The SpaceClaim right sidebar shows **two or more** "AESC Construct" panel tabs. The extra ones are empty; one has the actual panel content. The empty tabs cannot be removed through the UI.
 
-### Root cause
+### Root cause (confirmed by `barlayout2.xml` inspection)
 
-The addin is registered with `host="NewAppDomain"` in `AESCConstruct2026.xml`. SpaceClaim occasionally reloads the addin in a fresh AppDomain during a running session — not only on startup, but also on events like document switching or internal addin refreshes.
+`UIManager.EnsureConstructPanel()` used to silently call `PanelTab.Create()` every time the SpaceClaim remoting proxy reported `_constructPanelTab.IsDeleted == true` **or** threw a `RemotingException`. That report was unreliable — the visual tab stayed alive in the sidebar, so each recreation stacked a fresh `PanelTab` on top of the still-existing one. Over time `barlayout2.xml` accumulated multiple `<bar name="AESCConstruct2026.ConstructPanel">` entries, each corresponding to an orphaned visual tab.
 
-When an AppDomain is torn down, SpaceClaim *sometimes* calls `Construct2026.Disconnect()` and *sometimes* does not. If `Disconnect()` is not called (or does no cleanup), the old `PanelTab` remains registered in SpaceClaim's persisted layout file:
+A secondary contributor: SpaceClaim skips calling `IExtensibility.Disconnect()` on ~80% of its in-session AppDomain reloads, so cleanup was also not reliably reached from that path.
 
-```
-C:\Users\<user>\AppData\Local\SpaceClaim\SpaceClaim\barlayout2.xml
-```
+### Fix (commit de7533a)
 
-Each un-cleaned reload adds another `<bar name="AESCConstruct2026.ConstructPanel" ...>` entry. On the next startup, SpaceClaim recreates all of them, and the addin additionally calls `PanelTab.Create` once more — producing N+1 tabs.
+1. **Primary** — `UIManager.EnsureConstructPanel` no longer recreates the `PanelTab` based on `IsDeleted`. If the proxy misreports, we log it and reuse the existing tab. Only the `ElementHost` is recreated (if null), attaching into the same `PanelTab` slot.
+2. **Fallback** — `Construct2026.Connect` registers `AppDomain.DomainUnload` and `AppDomain.ProcessExit` handlers that call the same cleanup as `Disconnect()`, catching the reload paths SpaceClaim doesn't notify.
 
-### Current mitigation (commit 2e9a2cd)
+### Recovery if orphans exist from earlier builds
 
-`Construct2026.Disconnect()` now calls `UIManager.ClosePanelAndDispose()`, which calls `PanelTab.Close()` and disposes the `ElementHost`. On the shutdown paths where SpaceClaim does call `Disconnect()`, the bar entry is properly removed from `barlayout2.xml` and no orphan accumulates.
+If you upgrade from a pre-de7533a build, the old `barlayout2.xml` may still contain multiple bars from past silent recreations. One-time recovery:
 
-This is a **partial** fix. Empirically SpaceClaim calls `Disconnect()` on ~1 in 5 AppDomain reloads. In-session silent reloads still leak.
-
-### Recovery when it occurs
-
-1. Close SpaceClaim completely (verify no `SpaceClaim.exe` in Task Manager).
-2. Move the layout file out of the way:
+1. Close SpaceClaim completely (check Task Manager for any `SpaceClaim.exe`).
+2. Move the layout file aside:
    ```
-   move "C:\Users\%USERNAME%\AppData\Local\SpaceClaim\SpaceClaim\barlayout2.xml" "barlayout2.xml.bak"
+   move "%LOCALAPPDATA%\SpaceClaim\SpaceClaim\barlayout2.xml" "%LOCALAPPDATA%\SpaceClaim\SpaceClaim\barlayout2.xml.bak"
    ```
-3. Start SpaceClaim. It regenerates `barlayout2.xml` from `barlayout_default2.xml` (which contains **zero** `AESCConstruct2026.ConstructPanel` entries), and our `RegisterConstructPanel` creates exactly one clean tab.
+3. Start SpaceClaim — it regenerates `barlayout2.xml` from `barlayout_default2.xml` (which has zero `AESCConstruct` entries). Your addin creates exactly one clean tab.
 
 ### Diagnostic
 
-To check if orphans have accumulated:
+Check accumulated bars in the layout file:
 ```
 grep -c "AESCConstruct2026.ConstructPanel" "%LOCALAPPDATA%\SpaceClaim\SpaceClaim\barlayout2.xml"
 ```
-- Expected value: **2** (one `<bar>` and one `<item>` for the live panel).
-- Higher value: orphans have accumulated. Run the recovery steps.
+- Expected value: **2** (one `<bar>`, one `<item>`).
+- Higher value: the fix is not running or old orphans are still there. Run the recovery steps.
 
-### Full fix (not yet viable)
+Check the addin log for the diagnostic line:
+```
+grep "IsDeleted\|RECREATING" "%PROGRAMDATA%\AESCConstruct\AESCConstruct2026_Log.txt"
+```
+- Expected: `IsDeleted=true reported (ignored — not recreating)` entries.
+- If you see `RECREATING PanelTab` lines, the old code path is still in use — check the deployed DLL version.
 
-Switching to `host="SameAppDomain"` in `AESCConstruct2026.xml` eliminates the AppDomain reload entirely and would prevent all orphans. Tried in April 2026 — it broke the ribbon (generic SpaceClaim sketch tools appeared instead of our custom ribbon buttons), likely due to an assembly-loading conflict with the main SpaceClaim AppDomain. Needs dedicated investigation of which references / types conflict before that path is available.
+### Code entry points (do not regress)
 
-### Code entry points
-
-- `Construct2026.cs` — `Disconnect()`
-- `UIMain/UIManager.cs` — `ClosePanelAndDispose()`, `RegisterConstructPanel()`
-
-Do not remove the Disconnect cleanup or downgrade it to a no-op — it is load-bearing for this issue even though the benefit isn't visible until the next SpaceClaim reload.
+- `Construct2026.cs` — `Connect()` registers `DomainUnload`/`ProcessExit`; `Disconnect()` calls `UIManager.ClosePanelAndDispose()`
+- `UIMain/UIManager.cs` — `EnsureConstructPanel()` must NOT call `PanelTab.Create` a second time; `ClosePanelAndDispose()` is the shared cleanup
