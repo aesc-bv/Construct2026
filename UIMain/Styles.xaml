@@ -453,39 +453,42 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="4" />
-                        <Grid>
+
+                        <!-- Full-area toggle: clicking anywhere on the ComboBox opens the dropdown -->
+                        <ToggleButton x:Name="ToggleButton"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                      Focusable="False"
+                                      OverridesDefaultStyle="True">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
+                        <!-- Visible content + arrow, click-through so the ToggleButton receives the mouse -->
+                        <Grid IsHitTestVisible="False">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- Content/Text area -->
                             <ContentPresenter x:Name="ContentSite"
                                               Grid.Column="0"
                                               Margin="6,3,3,3"
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Left"
                                               Content="{TemplateBinding SelectionBoxItem}"
-                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                              IsHitTestVisible="False" />
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
 
-                            <!-- Arrow toggle button area -->
-                            <ToggleButton x:Name="ToggleButton"
-                                          Grid.Column="1"
-                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                          Focusable="False"
-                                          VerticalAlignment="Center"
-                                          Background="Transparent"
-                                          BorderBrush="Transparent"
-                                          BorderThickness="0"
-                                          Margin="0,0,8,0">
-                                <Path Width="8"
-                                      Height="8"
-                                      Fill="{StaticResource TextDark}"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      Data="M0,0 L0,2 L4,6 L8,2 L8,0 L4,4 z" />
-                            </ToggleButton>
+                            <Path Grid.Column="1"
+                                  Width="8"
+                                  Height="8"
+                                  Margin="0,0,8,0"
+                                  Fill="{StaticResource TextDark}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Data="M0,0 L0,2 L4,6 L8,2 L8,0 L4,4 z" />
                         </Grid>
 
                         <Popup Name="Popup"
