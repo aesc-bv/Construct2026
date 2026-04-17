@@ -5,6 +5,7 @@
 
 using AESCConstruct2026.Fastener.Module;
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using System;
 using System.Collections.ObjectModel;
@@ -124,8 +125,8 @@ namespace AESCConstruct2026.UI
             string selectedPath;
             using (var dlg = new OpenFileDialog
             {
-                Title = "Select a Fastener Part to Import",
-                Filter = "SpaceClaim Docs (*.scdoc)|*.scdoc|STEP Files (*.stp)|*.stp|SpaceClaim Docs (*.scdocx)|*.scdocx"
+                Title = Localization.Language.Translate("Fastener_Msg_SelectImportTitle"),
+                Filter = Localization.Language.Translate("Fastener_Msg_ImportFilter")
             })
             {
                 if (dlg.ShowDialog() != DialogResult.OK)
@@ -151,7 +152,7 @@ namespace AESCConstruct2026.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to import custom fastener:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Fastener_Err_ImportFailed"), ex.Message), StatusMessageType.Error, null);
                 return;
             }
 
@@ -160,7 +161,7 @@ namespace AESCConstruct2026.UI
             SelectedCustomFile = Path.GetFileName(selectedPath);
             OnPropertyChanged(nameof(SelectedCustomFile));
 
-            Application.ReportStatus("Custom fastener imported successfully.", StatusMessageType.Information, null);
+            Application.ReportStatus(Localization.Language.Translate("Fastener_Msg_ImportSuccess"), StatusMessageType.Information, null);
         }
 
         // Raises INotifyPropertyChanged for bound properties.

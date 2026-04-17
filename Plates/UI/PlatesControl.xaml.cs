@@ -4,6 +4,7 @@
  and passes validated parameters to PlatesModule.CreatePlateFromUI to build geometry in SpaceClaim.
 */
 
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.Plates.Modules;
 using SpaceClaim.Api.V242;
 using System;
@@ -53,7 +54,7 @@ namespace AESCConstruct2026.UI
                 var csvPath = Settings.Default.PlatesProperties;
 
                 if (!File.Exists(csvPath))
-                    throw new FileNotFoundException($"{Settings.Default.PlatesProperties} not found", csvPath);
+                    throw new FileNotFoundException(string.Format(Localization.Language.Translate("Plates_Err_CsvNotFound"), Settings.Default.PlatesProperties), csvPath);
 
                 int lineNum = 1;
                 foreach (var line in File.ReadAllLines(csvPath).Skip(1))
@@ -83,7 +84,7 @@ namespace AESCConstruct2026.UI
                     }
                     catch (Exception ex)
                     {
-                        Application.ReportStatus($"Error parsing PlatesProperties.csv at line {lineNum}:\n{ex.Message}", StatusMessageType.Error, null);
+                        Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_CsvParse"), lineNum, ex.Message), StatusMessageType.Error, null);
                     }
                 }
 
@@ -94,7 +95,7 @@ namespace AESCConstruct2026.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to load plate properties:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_LoadFailed"), ex.Message), StatusMessageType.Error, null);
             }
 
             if (SelectedProfileType != null)
@@ -336,15 +337,15 @@ namespace AESCConstruct2026.UI
             }
             catch (FormatException ex)
             {
-                Application.ReportStatus($"Invalid input format: {ex.Message}\nPlease check all numeric fields.", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_InvalidInput"), ex.Message), StatusMessageType.Error, null);
             }
             catch (OverflowException ex)
             {
-                Application.ReportStatus($"Input value is too large or too small: {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_Overflow"), ex.Message), StatusMessageType.Error, null);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Unexpected error: {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_Unexpected"), ex.Message), StatusMessageType.Error, null);
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Unsupported;  // for ScriptEnvironment
@@ -305,28 +306,28 @@ else:
             var win = Window.ActiveWindow;
             if (win == null)
             {
-                Application.ReportStatus("No active window found.", StatusMessageType.Information, null);
+                Application.ReportStatus(Language.Translate("Engraving_Msg_NoActiveWindow"), StatusMessageType.Information, null);
                 return;
             }
 
             var context = win.ActiveContext;
             if (context == null)
             {
-                Application.ReportStatus("No active context found.", StatusMessageType.Information, null);
+                Application.ReportStatus(Language.Translate("Engraving_Msg_NoActiveContext"), StatusMessageType.Information, null);
                 return;
             }
 
             var selection = context.Selection;
             if (selection == null || selection.Count == 0)
             {
-                Application.ReportStatus("Please select one or more faces.", StatusMessageType.Information, null);
+                Application.ReportStatus(Language.Translate("Engraving_Msg_SelectFaces"), StatusMessageType.Information, null);
                 return;
             }
 
             Part part = win.Document.MainPart;
             if (part == null)
             {
-                Application.ReportStatus("No root part found.", StatusMessageType.Information, null);
+                Application.ReportStatus(Language.Translate("Engraving_Msg_NoRootPart"), StatusMessageType.Information, null);
                 return;
             }
 
@@ -345,7 +346,7 @@ else:
 
             if (selectedFaces.Count == 0)
             {
-                Application.ReportStatus("Please select one or more faces.", StatusMessageType.Information, null);
+                Application.ReportStatus(Language.Translate("Engraving_Msg_SelectFaces"), StatusMessageType.Information, null);
                 return;
             }
 
@@ -353,14 +354,14 @@ else:
             {
                 if (desFace == null)
                 {
-                    Application.ReportStatus("Please select a single face.", StatusMessageType.Information, null);
+                    Application.ReportStatus(Language.Translate("Engraving_Msg_SelectSingleFace"), StatusMessageType.Information, null);
                     continue;
                 }
 
                 Plane plane = desFace.Shape.Geometry as Plane;
                 if (plane == null)
                 {
-                    Application.ReportStatus("Selected face is not planar.", StatusMessageType.Information, null);
+                    Application.ReportStatus(Language.Translate("Engraving_Msg_FaceNotPlanar"), StatusMessageType.Information, null);
                     continue;
                 }
 
@@ -426,7 +427,7 @@ else:
                     // Create the final annotation plane at the pick point with the face normal
                     if (datumPlane == null)
                     {
-                        Application.ReportStatus("Could not create the target datum plane.", StatusMessageType.Information, null);
+                        Application.ReportStatus(Language.Translate("Engraving_Msg_DatumPlaneFailed"), StatusMessageType.Information, null);
                         return;
                     }
 
@@ -458,7 +459,7 @@ else:
                         catch
                         {
                             Application.ReportStatus(
-                                "Engraving failed. Ensure that the selected face belongs to a sheet metal solid body.",
+                                Language.Translate("Engraving_Msg_EngravingFailed"),
                                 StatusMessageType.Information, null);
                         }
                     }
@@ -474,7 +475,7 @@ else:
                         catch
                         {
                             Application.ReportStatus(
-                                "Cutout failed. Ensure that the selected face belongs to a sheet metal solid body.",
+                                Language.Translate("Engraving_Msg_CutoutFailed"),
                                 StatusMessageType.Information, null);
                         }
                     }

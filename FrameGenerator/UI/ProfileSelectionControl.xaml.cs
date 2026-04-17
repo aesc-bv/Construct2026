@@ -13,6 +13,7 @@
 using AESCConstruct2026.Commands;
 using AESCConstruct2026.FrameGenerator.Commands;
 using AESCConstruct2026.FrameGenerator.Utilities;  // alias our DXFProfile class
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;                        // for SpaceClaim API (Document, Window.ActiveWindow)
 using SpaceClaim.Api.V242.Geometry;               // for ITrimmedCurve, Point, etc.
 using System;
@@ -65,6 +66,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 InitializeComponent();
                 Localization.Language.Translate("ConstructGroup");
                 LocalizeUI();
+                LocalizeTooltips();
                 LoadUserProfiles();
                 WireProfileButtonHandlers();
                 WireJointButtonHandlers();
@@ -72,7 +74,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_InitFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -86,6 +88,31 @@ namespace AESCConstruct2026.FrameGenerator.UI
         private void LocalizeUI()
         {
             Localization.Language.LocalizeFrameworkElement(this);
+        }
+
+        // Assigns localized tooltips to joint radio buttons and restore icons whose Tag is used as an identifier.
+        // Falls back to the design-time XAML tooltip if the key is missing from the CSV (Translate returns the id).
+        private void LocalizeTooltips()
+        {
+            ApplyTooltip(MiterJoint, "Frame_Tooltip_MiterJoint");
+            ApplyTooltip(StraightJoint, "Frame_Tooltip_StraightJoint");
+            ApplyTooltip(StraightJoint2, "Frame_Tooltip_StraightJoint2");
+            ApplyTooltip(TJoint, "Frame_Tooltip_TJoint");
+            ApplyTooltip(NoJoint, "Frame_Tooltip_NoJoint");
+            ApplyTooltip(CutOut, "Frame_Tooltip_CutOut");
+            ApplyTooltip(Trim, "Frame_Tooltip_Trim");
+            ApplyTooltip(RestoreGeometry, "Frame_Tooltip_RestoreGeometry");
+            ApplyTooltip(RestoreJoint, "Frame_Tooltip_RestoreJoint");
+        }
+
+        // Replaces the element's ToolTip with the translation of key, but only if the CSV has it (Translate returns
+        // something other than the key id itself). Keeps the design-time English fallback when the key is missing.
+        private static void ApplyTooltip(FrameworkElement element, string key)
+        {
+            if (element == null) return;
+            var translated = Localization.Language.Translate(key);
+            if (!string.IsNullOrEmpty(translated) && translated != key)
+                element.ToolTip = translated;
         }
 
         // Subscribes built-in profile radio buttons to update the generate button state.
@@ -334,7 +361,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             string filePath = GetProfileCsvPathFromSettings(profileType);
             if (filePath == null || !File.Exists(filePath))
             {
-                Application.ReportStatus($"Could not find CSV for profile type '{profileType}'.", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvNotFound"), profileType), StatusMessageType.Error, null);
                 return;
             }
 
@@ -376,7 +403,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         }
                         else
                         {
-                            Application.ReportStatus($"Mismatched CSV row:\n{line}", StatusMessageType.Error, null);
+                            Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvMismatchedRow"), line), StatusMessageType.Error, null);
                         }
                     }
 
@@ -393,7 +420,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to load CSV:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvLoadFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -528,8 +555,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
             // 1) Ask the user to select a DXF file
             var dlg = new OpenFileDialog
             {
-                Filter = "DXF Files (*.dxf)|*.dxf",
-                Title = "Select a DXF File"
+                Filter = Localization.Language.Translate("Frame_Dialog_DxfFilter"),
+                Title = Localization.Language.Translate("Frame_Dialog_DxfSelectTitle")
             };
             bool? fileOk = dlg.ShowDialog();
             if (fileOk != true)
@@ -557,7 +584,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    Application.ReportStatus($"Failed to open DXF:\n{ex.Message}", StatusMessageType.Information, null);
+                    Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_DxfOpenFailed"), ex.Message), StatusMessageType.Information, null);
                     return;
                 }
 
@@ -575,7 +602,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             // Copy the profile‐string to the clipboard (safe outside WriteBlock)
             try { Clipboard.SetText(profile.ProfileString); } catch (Exception ex) { Logger.Log("Clipboard.SetText failed: " + ex.ToString()); }
 
-            Application.ReportStatus($"DXF → Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
+            Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_DxfProfileSucceeded"), profile.Name), StatusMessageType.Information, null);
 
             // Create UserDXFProfiles folder if needed
             string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
@@ -587,7 +614,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Warning: Could not create folder:\n{userFolder}\n\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_FolderCreateFailed"), userFolder, ex.Message), StatusMessageType.Error, null);
                 return;
             }
 
@@ -607,7 +634,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to save preview image to disk:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_PreviewSaveFailed"), ex.Message), StatusMessageType.Error, null);
                 imageFileName = "";
             }
 
@@ -650,7 +677,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to update CSV:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvUpdateFailed"), ex.Message), StatusMessageType.Error, null);
             }
 
             // Show the saved PNG in a preview dialog (safe outside WriteBlock)
@@ -661,7 +688,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     using var bmp = new System.Drawing.Bitmap(imageFullPath);
                     var previewForm = new System.Windows.Forms.Form
                     {
-                        Text = $"DXF Preview: {profile.Name}",
+                        Text = string.Format(Localization.Language.Translate("Frame_Dialog_DxfPreviewTitle"), profile.Name),
                         ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
                     };
                     var pictureBox = new System.Windows.Forms.PictureBox
@@ -675,7 +702,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 }
                 catch (Exception ex)
                 {
-                    Application.ReportStatus($"Failed to render saved preview image:\n{ex.Message}", StatusMessageType.Error, null);
+                    Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_PreviewRenderFailed"), ex.Message), StatusMessageType.Error, null);
                 }
             }
 
@@ -691,7 +718,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     }
                     catch (Exception ex)
                     {
-                        Application.ReportStatus($"Failed to reopen document:\n{ex.Message}", StatusMessageType.Error, null);
+                        Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_DocReopenFailed"), ex.Message), StatusMessageType.Error, null);
                     }
                 }
             }
@@ -763,7 +790,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                             }
                             catch (Exception ex)
                             {
-                                Application.ReportStatus($"Failed to load image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
+                                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_ProfileImageLoadFailed"), prof.Name, ex.Message), StatusMessageType.Error, null);
                             }
                         }
                     }
@@ -805,7 +832,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         VerticalAlignment = System.Windows.VerticalAlignment.Top,
                         HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
                         Margin = new Thickness(0, 8, 12, 0),
-                        ToolTip = "Remove this profile"
+                        ToolTip = Localization.Language.Translate("Frame_Tooltip_RemoveProfile")
                     };
 
                     // Load the image
@@ -821,8 +848,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     delBtn.Click += (s, e) =>
                     {
                         var confirm = MessageBox.Show(
-                            $"Are you sure you want to delete the custom profile \"{prof.Name}\"?",
-                            "Confirm Deletion",
+                            string.Format(Localization.Language.Translate("Frame_Msg_ConfirmDeleteProfileBody"), prof.Name),
+                            Localization.Language.Translate("Frame_Msg_ConfirmDeleteProfileTitle"),
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Warning
                         );
@@ -839,7 +866,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         }
                         catch (Exception ex)
                         {
-                            Application.ReportStatus($"Failed to update CSV when deleting profile:\n{ex.Message}", StatusMessageType.Error, null);
+                            Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvDeleteFailed"), ex.Message), StatusMessageType.Error, null);
                         }
 
                         if (!string.IsNullOrEmpty(prof.ImgString))
@@ -853,7 +880,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                                 }
                                 catch (Exception ex)
                                 {
-                                    Application.ReportStatus($"Failed to delete image for profile \"{prof.Name}\":\n{ex.Message}", StatusMessageType.Error, null);
+                                    Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_ProfileImageDeleteFailed"), prof.Name, ex.Message), StatusMessageType.Error, null);
                                 }
                             }
                         }
@@ -872,7 +899,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Error loading user profiles:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_UserProfilesLoadFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -901,7 +928,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                      && inputFieldMap.Count == 0
                      && string.IsNullOrEmpty(selectedProfileString))
                     {
-                        Application.ReportStatus("Please select a profile (built-in or user-saved) or load a DXF file before generating.", StatusMessageType.Warning, null);
+                        Application.ReportStatus(Localization.Language.Translate("Frame_Status_SelectProfileFirst"), StatusMessageType.Warning, null);
                         return;
                     }
 
@@ -964,7 +991,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
                         if (curves.Count == 0)
                         {
-                            Application.ReportStatus("Could not reconstruct any curves from the saved profile string.", StatusMessageType.Warning, null);
+                            Application.ReportStatus(Localization.Language.Translate("Frame_Status_NoCurvesReconstructed"), StatusMessageType.Warning, null);
                             return;
                         }
 
@@ -1011,7 +1038,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         catch (Exception ex)
                         {
                             Logger.Log("Extrude user-saved profile failed: " + ex.ToString());
-                            Application.ReportStatus("An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.", StatusMessageType.Error, null);
+                            Application.ReportStatus(Localization.Language.Translate("Frame_Status_ExtrudeUserSavedFailed"), StatusMessageType.Error, null);
                         }
                         return;
                     }
@@ -1053,7 +1080,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         catch (Exception ex)
                         {
                             Logger.Log("Extrude DXF contours failed: " + ex.ToString());
-                            Application.ReportStatus("An error occurred while extruding the DXF contours.\nSee log in addin folder for details.", StatusMessageType.Error, null);
+                            Application.ReportStatus(Localization.Language.Translate("Frame_Status_ExtrudeDxfFailed"), StatusMessageType.Error, null);
                         }
                         return;
                     }
@@ -1121,7 +1148,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     catch (Exception ex)
                     {
                         Logger.Log("Extrude built-in profile failed: " + ex.ToString());
-                        Application.ReportStatus("An error occurred while extruding the built‐in profile.", StatusMessageType.Error, null);
+                        Application.ReportStatus(Localization.Language.Translate("Frame_Status_ExtrudeBuiltInFailed"), StatusMessageType.Error, null);
                     }
                 }
                 finally
@@ -1337,7 +1364,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         var sel = win.ActiveContext?.Selection;
                         if (sel == null || sel.Count == 0)
                         {
-                            Application.ReportStatus("Select a line, edge, face or curve that belongs to a profile component.", StatusMessageType.Warning, null);
+                            Application.ReportStatus(Localization.Language.Translate("Frame_Status_SelectProfileOwnedItem"), StatusMessageType.Warning, null);
                             return;
                         }
 
@@ -1367,7 +1394,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                             comp.Delete();
 
                             Application.ReportStatus(
-                                $"Deleted profile component \"{part.DisplayName}\" and restored original curve visibility (where applicable).",
+                                string.Format(Localization.Language.Translate("Frame_Status_ProfileComponentDeleted"), part.DisplayName),
                                 StatusMessageType.Information, null);
                             //return;
                         }
@@ -1376,7 +1403,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     }
                     catch (Exception ex)
                     {
-                        Application.ReportStatus($"Delete Profile failed: {ex.Message}", StatusMessageType.Error, null);
+                        Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_DeleteProfileFailed"), ex.Message), StatusMessageType.Error, null);
                     }
                 });
             }

@@ -6,6 +6,7 @@
 
 using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Licensing;
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.Properties;
 using Microsoft.Win32;
 using SpaceClaim.Api.V242;
@@ -81,6 +82,18 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             // 2) translate every tagged element in _this_ control
             Localization.Language.LocalizeFrameworkElement(this);
+
+            // DataGrid columns are not in the logical tree walked by LocalizeFrameworkElement.
+            ColType.Header = Localization.Language.Translate("Settings_Grid_Type");
+            ColName.Header = Localization.Language.Translate("Settings_Grid_Name");
+            ColScheme.Header = Localization.Language.Translate("Settings_Grid_NamingScheme");
+
+            // PlaceholderText, ToolTip, and Window.Title are not handled by the walker.
+            SerialPlaceholder.Text = Localization.Language.Translate("Settings_Placeholder_SerialNumber");
+            BtnSave.ToolTip = Localization.Language.Translate("Settings_Tooltip_SaveSettings");
+            BtnImport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ImportSettings");
+            BtnExport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ExportSettings");
+            BtnReset.ToolTip = Localization.Language.Translate("Settings_Tooltip_ResetSettings");
 
             UIMain.UIManager.UpdateCommandTexts();
             Construct2026.UpdateCommandTexts();
@@ -267,11 +280,11 @@ namespace AESCConstruct2026.FrameGenerator.UI
             try
             {
                 Settings.Default.Save();
-                Application.ReportStatus("Settings saved.", StatusMessageType.Information, null);
+                Application.ReportStatus(Localization.Language.Translate("Settings_Msg_Saved"), StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Error saving settings:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Settings_Err_SaveFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -281,7 +294,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             var serial = SerialNumberTextBox.Text.Trim();
             if (string.IsNullOrEmpty(serial))
             {
-                Application.ReportStatus("Please enter a serial number first.", StatusMessageType.Warning, null);
+                Application.ReportStatus(Localization.Language.Translate("Settings_Msg_SerialRequired"), StatusMessageType.Warning, null);
                 return;
             }
 
@@ -302,7 +315,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             Construct2026.RefreshLicenseUI();
 
             if (ok)
-                Application.ReportStatus("License activated.", StatusMessageType.Information, null);
+                Application.ReportStatus(Localization.Language.Translate("Settings_Msg_LicenseActivated"), StatusMessageType.Information, null);
         }
 
         // Updates language setting on selection change and re-localizes the panel and command texts.
@@ -326,27 +339,27 @@ namespace AESCConstruct2026.FrameGenerator.UI
         {
             CsvPathsPanel.Children.Clear();
 
-            // Mapping: Label → Setting Name
+            // Mapping: Translation Key → Setting Name
             var settingMap = new Dictionary<string, string>
             {
-                { "Connector properties", "ConnectorProperties" },
-                { "Component properties", "CompProperties" },
-                { "Bolts", "Bolt" },
-                { "Nuts", "Nut" },
-                { "Washers", "Washer" },
-                { "Plate properties", "PlatesProperties" },
-                { "Profiles - circular", "Profiles_Circular" },
-                { "Profiles - H", "Profiles_H" },
-                { "Profiles - L", "Profiles_L" },
-                { "Profiles - rectangular", "Profiles_Rectangular" },
-                { "Profiles - T", "Profiles_T" },
-                { "Profiles - U", "Profiles_U" },
-                { "Custom profiles", "profiles" }
+                { "Settings_CsvPath_ConnectorProperties", "ConnectorProperties" },
+                { "Settings_CsvPath_ComponentProperties", "CompProperties" },
+                { "Settings_CsvPath_Bolts", "Bolt" },
+                { "Settings_CsvPath_Nuts", "Nut" },
+                { "Settings_CsvPath_Washers", "Washer" },
+                { "Settings_CsvPath_PlateProperties", "PlatesProperties" },
+                { "Settings_CsvPath_ProfilesCircular", "Profiles_Circular" },
+                { "Settings_CsvPath_ProfilesH", "Profiles_H" },
+                { "Settings_CsvPath_ProfilesL", "Profiles_L" },
+                { "Settings_CsvPath_ProfilesRectangular", "Profiles_Rectangular" },
+                { "Settings_CsvPath_ProfilesT", "Profiles_T" },
+                { "Settings_CsvPath_ProfilesU", "Profiles_U" },
+                { "Settings_CsvPath_CustomProfiles", "profiles" }
             };
 
             foreach (var kvp in settingMap)
             {
-                string labelText = kvp.Key;
+                string labelText = Localization.Language.Translate(kvp.Key);
                 string settingKey = kvp.Value;
 
                 string relPath = (string)Settings.Default[settingKey];
@@ -389,7 +402,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     Tag = settingKey + "btn",
                     Background = System.Windows.Media.Brushes.Transparent,
                     BorderBrush = System.Windows.Media.Brushes.Transparent,
-                    ToolTip = "Select new file",
+                    ToolTip = Localization.Language.Translate("Settings_Tooltip_SelectNewFile"),
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(0),
                     VerticalAlignment = System.Windows.VerticalAlignment.Center
@@ -414,7 +427,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     Tag = settingKey + "folderbtn",
                     Background = System.Windows.Media.Brushes.Transparent,
                     BorderBrush = System.Windows.Media.Brushes.Transparent,
-                    ToolTip = "Open file location",
+                    ToolTip = Localization.Language.Translate("Settings_Tooltip_OpenFileLocation"),
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(0),
                     VerticalAlignment = System.Windows.VerticalAlignment.Center
@@ -442,7 +455,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     }
                     else
                     {
-                        Application.ReportStatus("Folder not found.", StatusMessageType.Warning, null);
+                        Application.ReportStatus(Localization.Language.Translate("Settings_Msg_FolderNotFound"), StatusMessageType.Warning, null);
                     }
                 };
                 Grid.SetColumn(folderBtn, 2);
@@ -461,8 +474,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
             var key = (string)btn.Tag;
             var dlg = new OpenFileDialog
             {
-                Title = $"Select CSV for {key}",
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*"
+                Title = string.Format(Localization.Language.Translate("Settings_FileDialog_SelectCsvFor"), key),
+                Filter = Localization.Language.Translate("Settings_FileFilter_Csv") + "|*.csv|" + Localization.Language.Translate("Settings_FileFilter_AllFiles") + "|*.*"
             };
             if (dlg.ShowDialog() != true)
                 return;
@@ -512,8 +525,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
                 var dlg = new SaveFileDialog
                 {
-                    Title = "Export settings to JSON",
-                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    Title = Localization.Language.Translate("Settings_FileDialog_ExportJson"),
+                    Filter = Localization.Language.Translate("Settings_FileFilter_Json") + "|*.json|" + Localization.Language.Translate("Settings_FileFilter_AllFiles") + "|*.*",
                     FileName = "Construct2026.Settings.json",
                     AddExtension = true,
                     DefaultExt = ".json",
@@ -523,12 +536,12 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 if (dlg.ShowDialog() == true)
                 {
                     File.WriteAllText(dlg.FileName, json);
-                    Application.ReportStatus("Settings exported:\n" + dlg.FileName, StatusMessageType.Information, null);
+                    Application.ReportStatus(string.Format(Localization.Language.Translate("Settings_Msg_Exported"), dlg.FileName), StatusMessageType.Information, null);
                 }
             }
             catch (System.Exception ex)
             {
-                Application.ReportStatus("Export failed:\n" + ex.Message, StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Settings_Err_ExportFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -539,8 +552,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
             {
                 var dlg = new OpenFileDialog
                 {
-                    Title = "Import settings from JSON",
-                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                    Title = Localization.Language.Translate("Settings_FileDialog_ImportJson"),
+                    Filter = Localization.Language.Translate("Settings_FileFilter_Json") + "|*.json|" + Localization.Language.Translate("Settings_FileFilter_AllFiles") + "|*.*",
                     CheckFileExists = true,
                     Multiselect = false
                 };
@@ -550,7 +563,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 if (data == null)
                 {
-                    Application.ReportStatus("Invalid JSON.", StatusMessageType.Error, null);
+                    Application.ReportStatus(Localization.Language.Translate("Settings_Err_InvalidJson"), StatusMessageType.Error, null);
                     return;
                 }
 
@@ -587,11 +600,11 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
                 RefreshUIFromSettings();
 
-                Application.ReportStatus("Settings imported.", StatusMessageType.Information, null);
+                Application.ReportStatus(Localization.Language.Translate("Settings_Msg_Imported"), StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus("Import failed:\n" + ex.Message, StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Settings_Err_ImportFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 
@@ -599,11 +612,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
         private void ResetSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show(
-                "Reset all settings to defaults?\n\n" +
-                "This will restore the default part-naming template, profile list, " +
-                "BOM layout, color, CSV paths and language.\n\n" +
-                "Your license activation (serial number) will be preserved.",
-                "Reset settings",
+                Localization.Language.Translate("Settings_Dialog_ResetConfirmBody"),
+                Localization.Language.Translate("Settings_Dialog_ResetConfirmTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
@@ -627,11 +637,11 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
                 RefreshUIFromSettings();
 
-                Application.ReportStatus("Settings reset to defaults.", StatusMessageType.Information, null);
+                Application.ReportStatus(Localization.Language.Translate("Settings_Msg_Reset"), StatusMessageType.Information, null);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus("Reset failed:\n" + ex.Message, StatusMessageType.Error, null);
+                Application.ReportStatus(string.Format(Localization.Language.Translate("Settings_Err_ResetFailed"), ex.Message), StatusMessageType.Error, null);
             }
         }
 

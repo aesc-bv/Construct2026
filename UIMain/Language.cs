@@ -82,12 +82,12 @@ namespace AESCConstruct2026.Localization
                 if (_translations.Columns.Contains(lang))
                 {
                     var txt = row[lang]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(txt)) return txt;
+                    if (!string.IsNullOrWhiteSpace(txt)) return txt.Replace("\\n", "\n");
                 }
                 if (_translations.Columns.Contains("EN"))
                 {
                     var txtEn = row["EN"]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(txtEn)) return txtEn;
+                    if (!string.IsNullOrWhiteSpace(txtEn)) return txtEn.Replace("\\n", "\n");
                 }
             }
             return id;

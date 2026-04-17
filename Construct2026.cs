@@ -518,21 +518,23 @@ namespace AESCConstruct2026
         // Returns localized labels for ribbon controls based on their control id.
         public string GetRibbonLabel(string controlId)
         {
-            // Map only button IDs (you said groups don’t need translation)
             switch (controlId)
             {
+                // Buttons
                 case "AESCConstruct2026.ProfileSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.FrameGenerator");
-
                 case "AESCConstruct2026.ExportSTEPBtn":
                     return Localization.Language.Translate("Ribbon.Button.ExportSTEP");
+                case "AESCConstruct2026.CompareBodiesBtn":
+                    return Localization.Language.Translate("Ribbon.Button.CompareBodies");
+                case "AESCConstruct2026.DetectClashesBtn":
+                    return Localization.Language.Translate("Ribbon.Button.DetectClashes");
                 case "AESCConstruct2026.ExportBOMBtn":
                     return Localization.Language.Translate("Ribbon.Button.GenerateBOM");
                 case "AESCConstruct2026.UpdateBOM":
                     return Localization.Language.Translate("Ribbon.Button.UpdateBOM");
                 case "AESCConstruct2026.ExportExcelBtn":
                     return Localization.Language.Translate("Ribbon.Button.ExportExcel");
-
                 case "AESCConstruct2026.Plate":
                     return Localization.Language.Translate("Ribbon.Button.Plate");
                 case "AESCConstruct2026.Fastener":
@@ -543,11 +545,32 @@ namespace AESCConstruct2026
                     return Localization.Language.Translate("Ribbon.Button.Settings");
                 case "AESCConstruct2026.ConnectorSidebarBtn":
                     return Localization.Language.Translate("Ribbon.Button.Connector");
-                case "AESCConstruct2026.DetectClashesBtn":
-                    return "Detect Clashes";
-
                 case "AESCConstruct2026.ActivateNetworkBtn":
                     return Localization.Language.Translate("Ribbon.Button.ActivateNetwork");
+
+                // Groups
+                case "AESCConstruct2026.Group":
+                    return Localization.Language.Translate("Ribbon.Group.FrameGenerator");
+                case "AESCConstruct2026.ToolsGroup":
+                    return Localization.Language.Translate("Ribbon.Group.SketchTools");
+                case "AESCConstruct2026.ExportGroup":
+                    return Localization.Language.Translate("Ribbon.Group.Export");
+                case "AESCConstruct2026.PlateGroup":
+                    return Localization.Language.Translate("Ribbon.Group.Plate");
+                case "AESCConstruct2026.FastenerGroup":
+                    return Localization.Language.Translate("Ribbon.Group.Fastener");
+                case "AESCConstruct2026.ConnectorGroup":
+                    return Localization.Language.Translate("Ribbon.Group.Connector");
+                case "AESCConstruct2026.RibCutOutGroup":
+                    return Localization.Language.Translate("Ribbon.Group.RibCutOut");
+                case "AESCConstruct2026.Engraving":
+                    return Localization.Language.Translate("Ribbon.Group.Engraving");
+                case "AESCConstruct2026.CustomProperties":
+                    return Localization.Language.Translate("Ribbon.Group.CustomProperties");
+                case "AESCConstruct2026.ToolGroup":
+                    return Localization.Language.Translate("Ribbon.Group.Settings");
+                case "AESCConstruct2026.Network":
+                    return Localization.Language.Translate("Ribbon.Group.Network");
 
                 default:
                     // If you ever add more ids, they will at least show their id

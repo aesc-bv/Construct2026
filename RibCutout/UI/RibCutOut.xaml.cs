@@ -5,6 +5,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;     // RibCutOutSelectionHelper
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Modeler;
 using System.Collections.Generic;
@@ -51,7 +52,7 @@ namespace AESCConstruct2026.UI
                 var pairs = RibCutOutSelectionHelper.GetOverlappingPairs(bodies);
                 if (pairs.Count == 0)
                 {
-                    Application.ReportStatus("Please select two overlapping bodies.", StatusMessageType.Warning, null);
+                    Application.ReportStatus(Localization.Language.Translate("RibCutout_Msg_SelectOverlappingBodies"), StatusMessageType.Warning, null);
                     return;
                 }
 

@@ -57,7 +57,7 @@ namespace AESCConstruct2026.UI
                 if (!NumberParsing.TryParseUserInput(Size, out double sz))
                 {
                     Application.ReportStatus(
-                        "Invalid size — please enter a number (e.g. 5 or 5.0).",
+                        Localization.Language.Translate("Engraving_Msg_InvalidSize"),
                         StatusMessageType.Warning, null);
                     return;
                 }
@@ -73,13 +73,13 @@ namespace AESCConstruct2026.UI
                     Center);
 
                 SpaceClaim.Api.V242.Application.ReportStatus(
-                    "Note placed.",
+                    Localization.Language.Translate("Engraving_Msg_NotePlaced"),
                     StatusMessageType.Information,
                     null);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Engraving_Msg_Error")} {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -89,7 +89,7 @@ namespace AESCConstruct2026.UI
             try { EngravingService.ImprintToEngravingAndExport(); }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Engraving_Msg_Error")} {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -99,7 +99,7 @@ namespace AESCConstruct2026.UI
             try { EngravingService.ImprintBody(); }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Engraving_Msg_Error")} {ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -109,7 +109,7 @@ namespace AESCConstruct2026.UI
             try { EngravingService.ImprintToEngravingAndExport(); }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Engraving Error {ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Engraving_Msg_Error")} {ex.Message}", StatusMessageType.Error, null);
             }
         }
     }

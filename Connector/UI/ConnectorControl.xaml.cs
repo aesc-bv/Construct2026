@@ -111,12 +111,11 @@ namespace AESCConstruct2026.UI
                 };
 
                 DataContext = this;
-                Localization.Language.LocalizeFrameworkElement(this);
                 LocalizeUI();
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to initialize ProfileSelectionControl:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Connector_Err_InitFailed")}\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -180,6 +179,35 @@ namespace AESCConstruct2026.UI
         private void LocalizeUI()
         {
             Localization.Language.LocalizeFrameworkElement(this);
+            LocalizeTooltips();
+        }
+
+        // LocalizeTooltips updates tooltips that are not handled by the WPF tree walker.
+        private void LocalizeTooltips()
+        {
+            try
+            {
+                if (ConnectorDynamicHeightText != null)
+                    ConnectorDynamicHeightText.ToolTip = Localization.Language.Translate("Connector_Tooltip_DynamicHeight");
+                if (connectorToleranceText != null)
+                    connectorToleranceText.ToolTip = Localization.Language.Translate("Connector_Tooltip_Tolerance");
+                if (connectorSpacingText != null)
+                    connectorSpacingText.ToolTip = Localization.Language.Translate("Connector_Tooltip_EndRelief");
+                if (connectorLocationText != null)
+                    connectorLocationText.ToolTip = Localization.Language.Translate("Connector_Tooltip_Location");
+                if (connectorCornerCutoutText != null)
+                    connectorCornerCutoutText.ToolTip = Localization.Language.Translate("Connector_Tooltip_CornerCutout");
+                if (connectorClickLocationText != null)
+                    connectorClickLocationText.ToolTip = Localization.Language.Translate("Connector_Tooltip_ClickLocation");
+                if (connectorRectangularCutText != null)
+                    connectorRectangularCutText.ToolTip = Localization.Language.Translate("Connector_Tooltip_RectangularCut");
+                if (connector3DPreviewText != null)
+                    connector3DPreviewText.ToolTip = Localization.Language.Translate("Connector_Tooltip_3DPreview");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("ConnectorControl LocalizeTooltips failed: " + ex.ToString());
+            }
         }
 
         // === Legacy field (now strongly-typed via alias) ===
@@ -331,7 +359,7 @@ namespace AESCConstruct2026.UI
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to load connector presets:\n{ex.Message}", StatusMessageType.Error, null);
+                Application.ReportStatus($"{Localization.Language.Translate("Connector_Err_PresetsLoadFailed")}\n{ex.Message}", StatusMessageType.Error, null);
             }
         }
 
@@ -903,14 +931,14 @@ namespace AESCConstruct2026.UI
 
                 if (!CheckSelectedEdgeWidth())
                 {
-                    Application.ReportStatus("Bottom width can't be larger than edge width.", StatusMessageType.Error, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Err_BottomWidthTooLarge"), StatusMessageType.Error, null);
                     return;
                 }
 
                 var c = ConnectorModel.CreateConnector(this);
                 if (c == null)
                 {
-                    Application.ReportStatus("Please fill valid numeric values first.", StatusMessageType.Warning, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Msg_FillValidValues"), StatusMessageType.Warning, null);
                     return;
                 }
 
@@ -929,7 +957,7 @@ namespace AESCConstruct2026.UI
                 patternEnabled = patternEnabled && patternQty > 0;
                 if (patternEnabled && patternQty <= 0)
                 {
-                    Application.ReportStatus("Pattern quantity must be at least 1.", StatusMessageType.Error, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Err_PatternQtyMin"), StatusMessageType.Error, null);
                     return;
                 }
 
@@ -957,7 +985,7 @@ namespace AESCConstruct2026.UI
                 }
                 if (iEdges.Count == 0)
                 {
-                    Application.ReportStatus("Select one or more edges.", StatusMessageType.Information, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Msg_SelectEdges"), StatusMessageType.Information, null);
                     return;
                 }
 
@@ -998,7 +1026,7 @@ namespace AESCConstruct2026.UI
 
                 if (allPlacements.Count == 0)
                 {
-                    Application.ReportStatus("No valid edges found to place connectors.", StatusMessageType.Information, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Msg_NoValidEdges"), StatusMessageType.Information, null);
                     return;
                 }
 
@@ -1060,7 +1088,7 @@ namespace AESCConstruct2026.UI
                             if (innerFaceEdge == null || outerFaceEdge == null || axisEdge == null)
                             {
                                 LogRun("CylPair invalid: innerFace or outerFace or axis is null");
-                                Application.ReportStatus($"No inner/outer Face found", StatusMessageType.Information, null);
+                                Application.ReportStatus(Localization.Language.Translate("Connector_Msg_NoInnerOuterFace"), StatusMessageType.Information, null);
                                 continue;
                             }
                         }
@@ -1124,7 +1152,7 @@ namespace AESCConstruct2026.UI
                                     if (outerRadiusEdge * 2 < w1m)
                                     {
                                         LogCyl(edgeCounter, placementIdx, "Abort: width1 exceeds diameter check");
-                                        Application.ReportStatus($"Too wide, width should be less than: {outerRadiusEdge * 2000} mm", StatusMessageType.Information, null);
+                                        Application.ReportStatus($"{Localization.Language.Translate("Connector_Msg_TooWide")} {outerRadiusEdge * 2000} mm", StatusMessageType.Information, null);
                                         continue;
                                     }
 
@@ -1504,7 +1532,7 @@ namespace AESCConstruct2026.UI
                                                 catch (Exception ex) { Logger.Log("ConnectorControl: extension not-attached collision check failed: " + ex.ToString()); }
 
                                                 try { extConnector?.Dispose(); } catch (Exception ex) { Logger.Log("ConnectorControl: extConnector dispose failed: " + ex.ToString()); }
-                                                throw new InvalidOperationException("Connector could not attach to the owner body (after one extension).");
+                                                throw new InvalidOperationException(Localization.Language.Translate("Connector_Err_AttachFailed"));
                                             }
                                         }
                                         finally
@@ -1528,7 +1556,7 @@ namespace AESCConstruct2026.UI
                                 }
                                 catch (Exception exCyl)
                                 {
-                                    Application.ReportStatus($"Connector cylindrical geometry failed: {exCyl}", StatusMessageType.Error, null);
+                                    Application.ReportStatus($"{Localization.Language.Translate("Connector_Err_CylGeometryFailed")}: {exCyl}", StatusMessageType.Error, null);
                                     continue;
                                 }
                             }
@@ -1718,7 +1746,7 @@ namespace AESCConstruct2026.UI
                 //NormalizeStemSuffixes(iDesignBody);
                 if (indepOcc == null)
                 {
-                    Application.ReportStatus("Could not make this body independent.", StatusMessageType.Warning, null);
+                    Application.ReportStatus(Localization.Language.Translate("Connector_Err_MakeIndependentFailed"), StatusMessageType.Warning, null);
                     ownerOccForMapping = iDesignBody;
                     return false;
                 }
@@ -1752,12 +1780,8 @@ namespace AESCConstruct2026.UI
         // AskLinkedChoice prompts the user on how to treat linked owner bodies for connector edits.
         private static LinkedChoice AskLinkedChoice(IDesignBody occ)
         {
-            const string caption = "Linked bodies detected";
-            const string text =
-                "This body is linked to others. Do you want to adjust all linked bodies?\n\n" +
-                "  • Yes  — Adjust ALL linked bodies\n" +
-                "  • No   — Adjust ONLY this body\n" +
-                "  • Cancel — Abort";
+            string caption = Localization.Language.Translate("Connector_Msg_LinkedBodiesCaption");
+            string text = Localization.Language.Translate("Connector_Msg_LinkedBodiesText");
 
             var buttons = System.Windows.Forms.MessageBoxButtons.YesNoCancel;
             var icon = System.Windows.Forms.MessageBoxIcon.Question;
@@ -2031,7 +2055,7 @@ namespace AESCConstruct2026.UI
         {
             //Logger.Log($"ComputePatternCentersOcc called. Looking for {n} connectors");
             if (iEdge == null || iEdge.Shape == null) return new List<(Point, Direction)>();
-            if (n <= 0) throw new ArgumentException("Pattern amount must be greater than 0.");
+            if (n <= 0) throw new ArgumentException(Localization.Language.Translate("Connector_Err_PatternAmountPositive"));
 
             //Logger.Log($"ComputePatternCentersOcc cont");
             // Occupied width along the edge in metres
@@ -2054,7 +2078,7 @@ namespace AESCConstruct2026.UI
                 // capacity check
                 if (L < n * occWidthM - 1e-12)
                     throw new InvalidOperationException(
-                        $"Requested pattern ({n}) does not fit on this edge. Length={L * 1000:0.###} mm, needed={(n * occWidthM) * 1000:0.###} mm.");
+                        string.Format(Localization.Language.Translate("Connector_Err_PatternDoesNotFit"), n, L * 1000, n * occWidthM * 1000));
 
                 // even spacing with “gaps” at ends
                 double gap = (L - n * occWidthM) / (n + 1);
@@ -2389,20 +2413,20 @@ namespace AESCConstruct2026.UI
         {
             reason = null;
 
-            if (!TryReadDouble(connectorWidth1, out var w1)) { reason = "Enter a valid Width1."; return false; }
-            if (!TryReadDouble(connectorWidth2, out var w2)) { reason = "Enter a valid Width2."; return false; }
-            if (!TryReadDouble(connectorSpacing, out var relief)) { reason = "Enter a valid End Relief."; return false; }
+            if (!TryReadDouble(connectorWidth1, out var w1)) { reason = Localization.Language.Translate("Connector_Err_InvalidWidth1"); return false; }
+            if (!TryReadDouble(connectorWidth2, out var w2)) { reason = Localization.Language.Translate("Connector_Err_InvalidWidth2"); return false; }
+            if (!TryReadDouble(connectorSpacing, out var relief)) { reason = Localization.Language.Translate("Connector_Err_InvalidEndRelief"); return false; }
 
             if ((connectorRectangularCut?.IsChecked == false) && relief > 0)
             {
-                reason = "Rectangular cut can’t be used while End Relief > 0.";
+                reason = Localization.Language.Translate("Connector_Err_RectCutAndRelief");
                 return false;
             }
 
             // Only block when relief > 0 AND widths differ
             if (relief > 0 && Math.Abs(w1 - w2) > EPS)
             {
-                reason = "End Relief can only be used if top and bottom width are equal.";
+                reason = Localization.Language.Translate("Connector_Err_ReliefWidthsDiffer");
                 return false;
             }
 
@@ -2419,7 +2443,7 @@ namespace AESCConstruct2026.UI
                 {
                     connectorSpacing.Text = "0";
                     connectorSpacing.IsEnabled = false;
-                    connectorSpacing.ToolTip = "End Relief is disabled while Rectangular cut is on.";
+                    connectorSpacing.ToolTip = Localization.Language.Translate("Connector_Tooltip_EndReliefDisabled");
                 }
             }
             else

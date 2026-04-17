@@ -273,7 +273,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Tag="connectorSpacingText"
+                        <TextBlock Tag="Connector_Label_EndRelief"
                                    x:Name="connectorSpacingText"
                                    Text="End Relief"
                                    Margin="0,0,10,0"
@@ -418,7 +418,7 @@
                                   Margin="0,0,10,0"
                                   VerticalAlignment="Center"
                                   Grid.Column="0" />
-                        <TextBlock Tag="connectorRectangularCutText"
+                        <TextBlock Tag="Connector_Label_RectangularCut"
                                    x:Name="connectorRectangularCutText"
                                    Text="Rectangular cut"
                                    HorizontalAlignment="Left"
@@ -524,7 +524,7 @@
                                   Grid.Column="0"
                                   Checked="On3DPreviewToggled"
                                   Unchecked="On3DPreviewToggled" />
-                        <TextBlock Tag="connector3DPreviewText"
+                        <TextBlock Tag="Connector_Label_3DPreview"
                                    x:Name="connector3DPreviewText"
                                    Text="3D Preview"
                                    HorizontalAlignment="Left"
