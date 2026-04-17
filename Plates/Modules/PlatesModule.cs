@@ -65,6 +65,22 @@ namespace AESCConstruct2026.Plates.Modules
 
             if (selection.Count == 0)
             {
+                var bodiesInView = doc.MainPart.GetDescendants<IDesignBody>().ToList();
+                if (bodiesInView.Count == 0)
+                {
+                    WriteBlock.ExecuteTask("Create part", () =>
+                    {
+                        createPlate(
+                            Point.Origin, Plane.PlaneXY, Plane.PlaneXY.Frame.DirZ,
+                            type, name, angleDeg,
+                            L1, L2, Lnr,
+                            B1, B2, Bnr,
+                            T, Rad, Diam,
+                            insertPlateMid);
+                    });
+                    return;
+                }
+
                 Application.ReportStatus("No selection found. Please select a face.", StatusMessageType.Warning, null);
                 return;
             }
