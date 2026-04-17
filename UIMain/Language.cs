@@ -4,6 +4,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.UIMain;
 using System;
 using System.Data;
 using System.IO;
@@ -99,6 +100,12 @@ namespace AESCConstruct2026.Localization
 
             foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<FrameworkElement>())
             {
+                // InfoIcon refreshes its own tooltip/popup text against the current language.
+                if (child is InfoIcon info)
+                {
+                    info.ApplyLocalization();
+                }
+
                 if (child.Tag is string key && _translations.Rows.Find(key) is DataRow)
                 {
                     var translation = Translate(key);

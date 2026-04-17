@@ -2,6 +2,7 @@
 <UserControl x:Class="AESCConstruct2026.FrameGenerator.UI.SettingsControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AESCConstruct2026.UIMain"
              Width="300"
              Background="White"
              Loaded="UserControl_Loaded">
@@ -52,16 +53,32 @@
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Tag="Label_PartNaming"
                                                Text="Part naming:"
                                                VerticalAlignment="Center"
                                                Grid.Column="0" />
+                                    <local:InfoIcon HelpKey="Help_PartNaming"
+                                                    Grid.Column="1" />
                                     <TextBox x:Name="PartNameTextBox"
                                              Height="30"
                                              Margin="5,0,0,0"
-                                             Grid.Column="1" />
+                                             Grid.Column="2" />
+                                </Grid>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Tag="Label_TypesDataGrid"
+                                               Text="Per-type overrides:"
+                                               VerticalAlignment="Center"
+                                               FontStyle="Italic"
+                                               Grid.Column="0" />
+                                    <local:InfoIcon HelpKey="Help_TypesDataGrid"
+                                                    Grid.Column="1" />
                                 </Grid>
                                 <DataGrid x:Name="TypesDataGrid"
                                           AutoGenerateColumns="False"
@@ -85,19 +102,23 @@
                                 <Grid Margin="0,6,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="60" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Tag="Label_Decimals"
                                                Text="Decimals:"
                                                VerticalAlignment="Center"
                                                Grid.Column="0" />
+                                    <local:InfoIcon HelpKey="Help_Decimals"
+                                                    Grid.Column="1" />
                                     <TextBox x:Name="DecimalsTextBox"
                                              Height="24"
                                              Margin="5,0,0,0"
-                                             Grid.Column="1" />
+                                             Grid.Column="2" />
                                 </Grid>
                                 <Grid Margin="0,6,0,0">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="60" />
                                     </Grid.ColumnDefinitions>
@@ -105,13 +126,16 @@
                                                Text="BOM decimals:"
                                                VerticalAlignment="Center"
                                                Grid.Column="0" />
+                                    <local:InfoIcon HelpKey="Help_BomDecimals"
+                                                    Grid.Column="1" />
                                     <TextBox x:Name="BomDecimalsTextBox"
                                              Height="24"
                                              Margin="5,0,0,0"
-                                             Grid.Column="1" />
+                                             Grid.Column="2" />
                                 </Grid>
                                 <Grid Margin="0,6,0,0">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="80" />
                                         <ColumnDefinition Width="20" />
@@ -123,17 +147,19 @@
                                               Grid.Column="0"
                                               Checked="FrameColorCheckBox_Changed"
                                               Unchecked="FrameColorCheckBox_Changed" />
+                                    <local:InfoIcon HelpKey="Help_FrameColor"
+                                                    Grid.Column="1" />
                                     <TextBox x:Name="FrameColorTextBox"
                                              Height="24"
                                              Margin="5,0,0,0"
-                                             Grid.Column="1"
+                                             Grid.Column="2"
                                              IsEnabled="{Binding IsChecked, ElementName=FrameColorCheckBox}"
                                              TextChanged="FrameColorTextBox_TextChanged" />
                                     <Rectangle x:Name="FrameColorPreview"
                                                Width="16"
                                                Height="16"
                                                Margin="4,0,0,0"
-                                               Grid.Column="2"
+                                               Grid.Column="3"
                                                Stroke="Gray"
                                                StrokeThickness="0.5" />
                                 </Grid>
@@ -163,34 +189,46 @@
                                             <RowDefinition />
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock Tag="Label_AnchorX"
-                                                   Grid.Row="0"
-                                                   Grid.Column="0"
-                                                   Text="Anchor X:"
-                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Row="0"
+                                                    Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Tag="Label_AnchorX"
+                                                       Text="Anchor X:"
+                                                       VerticalAlignment="Center" />
+                                            <local:InfoIcon HelpKey="Help_AnchorX" />
+                                        </StackPanel>
                                         <TextBox x:Name="AnchorXTextBox"
                                                  Grid.Row="0"
                                                  Grid.Column="1"
                                                  Height="20"
                                                  Margin="5,0" />
 
-                                        <TextBlock Tag="Label_AnchorY"
-                                                   Grid.Row="1"
-                                                   Grid.Column="0"
-                                                   Text="Anchor Y:"
-                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Row="1"
+                                                    Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Tag="Label_AnchorY"
+                                                       Text="Anchor Y:"
+                                                       VerticalAlignment="Center" />
+                                            <local:InfoIcon HelpKey="Help_AnchorY" />
+                                        </StackPanel>
                                         <TextBox x:Name="AnchorYTextBox"
                                                  Grid.Row="1"
                                                  Grid.Column="1"
                                                  Height="20"
                                                  Margin="5,0" />
 
-                                        <TextBlock Tag="Label_Corner"
-                                                   Grid.Row="0"
-                                                   Grid.Column="2"
-                                                   Margin="5,0"
-                                                   Text="Corner:"
-                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Row="0"
+                                                    Grid.Column="2"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="5,0">
+                                            <TextBlock Tag="Label_Corner"
+                                                       Text="Corner:"
+                                                       VerticalAlignment="Center" />
+                                            <local:InfoIcon HelpKey="Help_Corner" />
+                                        </StackPanel>
                                         <ComboBox x:Name="CornerComboBox"
                                                   Grid.Row="0"
                                                   Grid.Column="3"
@@ -206,11 +244,15 @@
                                             <RowDefinition />
                                             <RowDefinition />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Tag="Label_BOMAnchor"
-                                                   Grid.Row="0"
-                                                   Grid.Column="0"
-                                                   Text="Drawing sheet anchor:"
-                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Row="0"
+                                                    Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Tag="Label_BOMAnchor"
+                                                       Text="Drawing sheet anchor:"
+                                                       VerticalAlignment="Center" />
+                                            <local:InfoIcon HelpKey="Help_BOMAnchor" />
+                                        </StackPanel>
                                         <ComboBox x:Name="Label_BOMAnchorComboBox"
                                                   Grid.Row="0"
                                                   Grid.Column="1"
@@ -233,11 +275,15 @@
                                         <RowDefinition />
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Tag="Label_BOMLengthUnit"
-                                               Grid.Row="0"
-                                               Grid.Column="0"
-                                               Text="Unit Length:"
-                                               VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="0"
+                                                Grid.Column="0"
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Tag="Label_BOMLengthUnit"
+                                                   Text="Unit Length:"
+                                                   VerticalAlignment="Center" />
+                                        <local:InfoIcon HelpKey="Help_BOMLengthUnit" />
+                                    </StackPanel>
                                     <ComboBox x:Name="Label_BOMLengthUnitComboBox"
                                               Grid.Row="0"
                                               Grid.Column="1"
@@ -256,15 +302,24 @@
                                   Header="Material Inclusion"
                                   Margin="0,10">
                             <StackPanel Margin="4">
-                                <CheckBox x:Name="Checkbox_ExcelMaterial"
-                                          Tag="Checkbox_ExcelMaterial"
-                                          Content="Include material in Excel" />
-                                <CheckBox x:Name="Checkbox_BOMMaterial"
-                                          Tag="Checkbox_BOMMaterial"
-                                          Content="Include material in BOM" />
-                                <CheckBox x:Name="Checkbox_STEPMaterial"
-                                          Tag="Checkbox_STEPMaterial"
-                                          Content="Include material in STEP filename" />
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox x:Name="Checkbox_ExcelMaterial"
+                                              Tag="Checkbox_ExcelMaterial"
+                                              Content="Include material in Excel" />
+                                    <local:InfoIcon HelpKey="Help_MatInExcel" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox x:Name="Checkbox_BOMMaterial"
+                                              Tag="Checkbox_BOMMaterial"
+                                              Content="Include material in BOM" />
+                                    <local:InfoIcon HelpKey="Help_MatInBOM" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox x:Name="Checkbox_STEPMaterial"
+                                              Tag="Checkbox_STEPMaterial"
+                                              Content="Include material in STEP filename" />
+                                    <local:InfoIcon HelpKey="Help_MatInSTEP" />
+                                </StackPanel>
                             </StackPanel>
                         </GroupBox>
                     </Expander>
@@ -272,9 +327,13 @@
                               Header="Language"
                               IsExpanded="False">
                         <StackPanel Margin="8">
-                            <TextBlock Tag="Label_SelectLanguage"
-                                       Text="Select language:"
-                                       Margin="0,0,0,4" />
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="0,0,0,4">
+                                <TextBlock Tag="Label_SelectLanguage"
+                                           Text="Select language:"
+                                           VerticalAlignment="Center" />
+                                <local:InfoIcon HelpKey="Help_Language" />
+                            </StackPanel>
                             <ComboBox x:Name="ComboBox_Language"
                                       SelectionChanged="ComboBox_Language_SelectionChanged"
                                       Style="{StaticResource ComboBoxFlatStyle}" />
@@ -287,16 +346,25 @@
                               Tag="CSVFilePaths"
                               Name="CsvFileExpander"
                               IsExpanded="False">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      Height="250"
-                                      Margin="0,5,0,5">
-                            <!-- Adjust height as needed -->
-                            <StackPanel x:Name="CsvPathsPanel"
-                                        Margin="0,8,0,6">
-                                <!-- Rows will be added dynamically -->
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal"
+                                        Margin="0,5,0,0">
+                                <TextBlock Tag="Label_CSVFilePaths_Intro"
+                                           Text="Paths to runtime CSV data files:"
+                                           FontStyle="Italic"
+                                           VerticalAlignment="Center" />
+                                <local:InfoIcon HelpKey="Help_CSVFilePaths" />
                             </StackPanel>
-                        </ScrollViewer>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Height="250"
+                                          Margin="0,5,0,5">
+                                <StackPanel x:Name="CsvPathsPanel"
+                                            Margin="0,8,0,6">
+                                    <!-- Rows will be added dynamically -->
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
                     </Expander>
 
                     <!-- License -->
@@ -388,11 +456,15 @@
                                                Tag="Label_LicenseDetailsValue"
                                                Text=""
                                                VerticalAlignment="Center" />
-                                    <TextBlock Tag="Label_SerialNumber"
-                                               Grid.Row="5"
-                                               Grid.Column="0"
-                                               Text="Serial Number:"
-                                               VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="5"
+                                                Grid.Column="0"
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Tag="Label_SerialNumber"
+                                                   Text="Serial Number:"
+                                                   VerticalAlignment="Center" />
+                                        <local:InfoIcon HelpKey="Help_SerialNumber" />
+                                    </StackPanel>
                                 </Grid>
                                 <Grid Grid.Row="1"
                                       Grid.Column="1">
@@ -421,13 +493,18 @@
                                     </TextBlock>
                                 </Grid>
                             </Grid>
-                            <Button Tag="Button_ActivateLicense"
-                                    Grid.Row="1"
-                                    Grid.Column="0"
-                                    Style="{StaticResource FooterButtonStyle}"
-                                    Content="Activate"
-                                    Click="ActivateLicenseButton_Click"
-                                    Width="70" />
+                            <StackPanel Grid.Row="1"
+                                        Grid.Column="0"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Left">
+                                <Button Tag="Button_ActivateLicense"
+                                        Style="{StaticResource FooterButtonStyle}"
+                                        Content="Activate"
+                                        Click="ActivateLicenseButton_Click"
+                                        Width="70" />
+                                <local:InfoIcon HelpKey="Help_ActivateLicense"
+                                                VerticalAlignment="Center" />
+                            </StackPanel>
                         </Grid>
                     </Expander>
                 </StackPanel>

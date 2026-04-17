@@ -181,6 +181,9 @@
     <Compile Include="UIMain\SettingsControl.xaml.cs">
       <DependentUpon>SettingsControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UIMain\InfoIcon.xaml.cs">
+      <DependentUpon>InfoIcon.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UIMain\UIManager.cs" />
     <Compile Include="Utilities\CompNameHelper.cs" />
     <Compile Include="Utilities\DXFImportHelper.cs" />
@@ -232,6 +235,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UIMain\SettingsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UIMain\InfoIcon.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
