@@ -63,25 +63,17 @@ namespace AESCConstruct2026.UI
                 bool reverseDirection = ReverseDirection != null && ReverseDirection.IsChecked == true;
                 bool addWeldRound = AddWeldRound != null && AddWeldRound.IsChecked == true;
 
-                // Parse tolerance (mm)
-                if (!double.TryParse(
-                        ToleranceInput.Text,
-                        NumberStyles.Any,
-                        CultureInfo.InvariantCulture,
-                        out double toleranceMM))
+                // Parse tolerance (mm), tolerant of ',' or '.' decimal mark
+                if (!NumberParsing.TryParseUserInput(ToleranceInput.Text, out double toleranceMM))
                 {
                     toleranceMM = 0.0;
                 }
 
-                // Parse weld radius (mm)
+                // Parse weld radius (mm), tolerant of ',' or '.' decimal mark
                 double weldRadiusMM = 0.0;
                 if (addWeldRound && RadiusInput != null)
                 {
-                    double.TryParse(
-                        RadiusInput.Text,
-                        NumberStyles.Any,
-                        CultureInfo.InvariantCulture,
-                        out weldRadiusMM);
+                    NumberParsing.TryParseUserInput(RadiusInput.Text, out weldRadiusMM);
                     if (weldRadiusMM < 0) weldRadiusMM = 0;
                 }
 

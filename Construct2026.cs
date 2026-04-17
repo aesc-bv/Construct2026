@@ -37,7 +37,8 @@ namespace AESCConstruct2026
             try
             {
                 Api.Initialize();
-                Logger.Log("API 1.1 Initialized");
+                var apiAsm = typeof(Application).Assembly;
+                Logger.Log($"API 1.1 Initialized — {apiAsm.GetName().Version} from {apiAsm.Location}");
                 return true;
             }
             catch (Exception ex)

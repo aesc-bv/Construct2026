@@ -1,4 +1,5 @@
 ﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -213,12 +214,13 @@ namespace AESCConstruct2026.FrameGenerator.Commands
         {
             try
             {
+                var api = EngravingService.GetHostApiVersion();
 
-                string script = @"
+                string script = $@"
 from System import DateTime
 import random
-from SpaceClaim.Api.V242 import PartType
-from SpaceClaim.Api.V242 import ProgressTracker
+from SpaceClaim.Api.V{api} import PartType
+from SpaceClaim.Api.V{api} import ProgressTracker
 import sys
 
 ## CheckLicense
@@ -529,9 +531,7 @@ if nrBodies > 0:
 
                 var env = ScriptEnvironment.GetOrCreate(false);
                 ScriptEnvironment.ActiveEnvironment = env;
-                // Logger.Log($"API = {env.ApiVersion}");
-                env.ApiVersion = 242;
-                // Logger.Log($"API = {env.ApiVersion}");
+                env.ApiVersion = api;
                 var success = env.RunCommand(script);
 
             }

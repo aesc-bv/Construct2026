@@ -20,7 +20,6 @@
         </Grid.ColumnDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Height="588"
                       Grid.Column="0">
             <Grid Margin="20">
                 <Grid.RowDefinitions>
@@ -331,11 +330,12 @@
                                     <TextBlock Grid.Row="0"
                                                Grid.Column="0"
                                                Text="AESC Construct" />
-                                    <TextBlock Tag="Label_Version"
+                                    <TextBlock x:Name="VersionLabel"
+                                               Tag="Label_Version"
                                                Grid.Row="1"
                                                Grid.ColumnSpan="2"
                                                Grid.Column="0"
-                                               Text="Version 2025.1.5"
+                                               Text="Version"
                                                VerticalAlignment="Center" />
                                     <TextBlock Tag="Label_LicenseStatus"
                                                Grid.Row="2"

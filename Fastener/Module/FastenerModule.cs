@@ -1,4 +1,5 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
@@ -126,7 +127,7 @@ namespace AESCConstruct2026.Fastener.Module
 
         public void SetBoltType(string t) => boltType = t;
         public void SetBoltSize(string s) => boltSize = s;
-        public void SetBoltLength(string len) => parBoltL = double.Parse(len);
+        public void SetBoltLength(string len) => parBoltL = NumberParsing.TryParseInvariant(len, out var v) ? v : 0.0;
         public void SetIncludeWasherTop(bool inc) => includeWasherTop = inc;
         public void SetWasherTopType(string t) => washerTopType = t;
         public void SetWasherTopSize(string s) => washerTopSize = s;

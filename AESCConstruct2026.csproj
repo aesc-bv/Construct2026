@@ -21,7 +21,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\</OutputPath>
+    <OutputPath>..\..\..\..\..\Program Files\ANSYS Inc\v242\scdm\Addins\AESCConstruct2026\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -56,14 +56,14 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.10.0.1\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="SpaceClaim.Api.V242, Version=242.1.22911.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
+    <Reference Include="SpaceClaim.Api.V242, Version=242.1.22413.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\SpaceClaim.Api.V242\SpaceClaim.Api.V242.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v242\scdm\SpaceClaim.Api.V242\SpaceClaim.Api.V242.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="SpaceClaim.Geometry, Version=14.1.22911.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
+    <Reference Include="SpaceClaim.Geometry, Version=14.1.22413.0, Culture=neutral, PublicKeyToken=7210645d4d5e3a39, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\SpaceClaim.Geometry.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\ANSYS Inc\v242\scdm\SpaceClaim.Geometry.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="System" />
@@ -184,6 +184,7 @@
     <Compile Include="UIMain\UIManager.cs" />
     <Compile Include="Utilities\CompNameHelper.cs" />
     <Compile Include="Utilities\DXFImportHelper.cs" />
+    <Compile Include="Utilities\NumberParsing.cs" />
     <Compile Include="FrameGenerator\Modules\JointModule.cs" />
     <Compile Include="FrameGenerator\Utilities\JointCurveHelper.cs" />
     <Compile Include="FrameGenerator\Utilities\JointSelectionHelper.cs" />

@@ -648,7 +648,7 @@ namespace AESCConstruct2026.Plates.Modules
             {
                 if (!props.TryGetValue(kv.Key, out var pr))
                     return false;
-                if (!double.TryParse(pr.Value.ToString(), out var a))
+                if (!NumberParsing.TryParseInvariant(pr.Value.ToString(), out var a))
                     return false;
                 if (Math.Abs(a - kv.Value) > tol)
                     return false;

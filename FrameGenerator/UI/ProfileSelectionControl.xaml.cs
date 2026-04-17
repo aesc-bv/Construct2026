@@ -890,12 +890,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
                   .GetChildren<Component>()
                   .ToHashSet();
 
-                double.TryParse(
-                    RotationAngleTextBox.Text,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out rotationAngle
-                );
+                NumberParsing.TryParseUserInput(RotationAngleTextBox.Text, out rotationAngle);
 
                 var oldOri = Application.UserOptions.WorldOrientation;
                 Application.UserOptions.WorldOrientation = WorldOrientation.UpIsY;
@@ -1066,31 +1061,27 @@ namespace AESCConstruct2026.FrameGenerator.UI
                     //
                     // ─── 3) BUILT‐IN SHAPES (Rectangular, Circular, H, L, U, T) ───────────────────────────────
                     //
+                    double ReadDimMm(string key) =>
+                        inputFieldMap.ContainsKey(key)
+                            && NumberParsing.TryParseUserInput(inputFieldMap[key].Text, out var mm)
+                            ? mm / 1000.0
+                            : 0.0;
+
                     double wBuilt = 0, hBuilt = 0;
                     if (selectedProfile == "Circular")
                     {
-                        wBuilt = inputFieldMap.ContainsKey("D")
-                            ? double.Parse(inputFieldMap["D"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                            : 0.0;
+                        wBuilt = ReadDimMm("D");
                         hBuilt = wBuilt;
                     }
                     else if (selectedProfile == "L")
                     {
-                        wBuilt = inputFieldMap.ContainsKey("b")
-                            ? double.Parse(inputFieldMap["b"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                            : 0.0;
-                        hBuilt = inputFieldMap.ContainsKey("a")
-                            ? double.Parse(inputFieldMap["a"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                            : 0.0;
+                        wBuilt = ReadDimMm("b");
+                        hBuilt = ReadDimMm("a");
                     }
                     else
                     {
-                        wBuilt = inputFieldMap.ContainsKey("w")
-                            ? double.Parse(inputFieldMap["w"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                            : 0.0;
-                        hBuilt = inputFieldMap.ContainsKey("h")
-                            ? double.Parse(inputFieldMap["h"].Text.Replace(',', '.'), CultureInfo.InvariantCulture) / 1000
-                            : 0.0;
+                        wBuilt = ReadDimMm("w");
+                        hBuilt = ReadDimMm("h");
                     }
 
                     double offsetXB = 0, offsetYB = 0;
@@ -1175,9 +1166,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 if (window == null)
                     return;
 
-                // parse gap (mm → m)
+                // parse gap (mm → m), tolerant of ',' or '.' decimal mark
                 double spacing = 0;
-                if (double.TryParse(Gap.Text, out var mm))
+                if (NumberParsing.TryParseUserInput(Gap.Text, out var mm))
                     spacing = mm / 1000.0;
 
                 // pick joint type

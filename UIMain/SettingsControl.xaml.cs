@@ -17,6 +17,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -85,6 +86,23 @@ namespace AESCConstruct2026.FrameGenerator.UI
             Construct2026.UpdateCommandTexts();
 
             PopulateCsvFilePathFields();
+
+            SetVersionLabel();
+        }
+
+        private void SetVersionLabel()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var version = asm.GetName().Version;
+                var buildDate = File.GetLastWriteTime(asm.Location);
+                VersionLabel.Text = $"Version {version}  (build {buildDate:yyyy-MM-dd HH:mm})";
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("SetVersionLabel failed: " + ex.Message);
+            }
         }
 
         // Handles subsequent load: populates all fields from Settings and refreshes bindings and license info.
@@ -207,10 +225,10 @@ namespace AESCConstruct2026.FrameGenerator.UI
             Construct2026.RefreshLicenseUI();
 
             // --- Persist BOM placement settings ---
-            if (double.TryParse(AnchorXTextBox.Text, out var ax))
+            if (NumberParsing.TryParseUserInput(AnchorXTextBox.Text, out var ax))
                 Settings.Default.TableAnchorX = ax;
 
-            if (double.TryParse(AnchorYTextBox.Text, out var ay))
+            if (NumberParsing.TryParseUserInput(AnchorYTextBox.Text, out var ay))
                 Settings.Default.TableAnchorY = ay;
 
             if (CornerComboBox.SelectedItem is string cp)

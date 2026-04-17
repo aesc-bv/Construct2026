@@ -567,7 +567,10 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             try
             {
                 var (x0, z0, x1, z1) = GetProfileCutAngles(comp);
-                string result = $"X: {x0:F1}/Z: {z0:F1}, X: {x1:F1}/Z: {z1:F1}";
+                string result = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "X: {0:F1}/Z: {1:F1}, X: {2:F1}/Z: {3:F1}",
+                    x0, z0, x1, z1);
                 return result;
             }
             catch (Exception ex)
@@ -584,21 +587,10 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             return string.IsNullOrWhiteSpace(u) ? "mm" : u;
         }
 
-        // Parses a length string that is stored as raw meters into a double value (culture tolerant).
+        // Parses a length string stored as raw meters, tolerant of ',' or '.' decimal marks.
         static bool TryParseMeters(string text, out double meters)
         {
-            meters = 0;
-            if (string.IsNullOrWhiteSpace(text)) return false;
-
-            // stored as raw numeric meters (e.g., "0.06")
-            // be tolerant of culture
-            if (double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ||
-                double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out v))
-            {
-                meters = v;
-                return true;
-            }
-            return false;
+            return NumberParsing.TryParseUserInput(text?.Trim(), out meters);
         }
 
         // Converts a length in meters to the configured output unit (mm/cm/m/inch) for BOM display.

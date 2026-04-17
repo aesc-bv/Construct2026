@@ -3,6 +3,7 @@
  for engravings or cut-outs, and delegates the actual operations to EngravingService.
 */
 
+using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using System;
@@ -53,8 +54,13 @@ namespace AESCConstruct2026.UI
         {
             try
             {
-                double sz = double.Parse(
-                    Size, System.Globalization.CultureInfo.InvariantCulture);
+                if (!NumberParsing.TryParseUserInput(Size, out double sz))
+                {
+                    Application.ReportStatus(
+                        "Invalid size — please enter a number (e.g. 5 or 5.0).",
+                        StatusMessageType.Warning, null);
+                    return;
+                }
 
                 EngravingService.AddNote(
                     sz,

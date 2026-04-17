@@ -176,17 +176,28 @@ namespace AESCConstruct2026.UIMain
         // Creates the dedicated Construct panel tab docked on the right side.
         private static void RegisterConstructPanel()
         {
-            _constructPanelCmd = Command.Create(ConstructPanelCommand);
-            _constructPanelCmd.Text = "AESC Construct";
-            _constructPanelCmd.Hint = "AESC Construct tools panel";
-            _constructPanelCmd.Image = LoadImage(Resources.FrameGen);
-            _constructPanelCmd.IsEnabled = true;
-            _constructPanelCmd.IsVisible = false;   // hidden until first use
-            _constructPanelCmd.KeepAlive(true);
+            try
+            {
+                var preExisting = Command.GetCommand(ConstructPanelCommand);
+                Logger.Log($"[UIManager] RegisterConstructPanel start. _constructPanelCmd={(_constructPanelCmd == null ? "null" : "set")}, preExistingCommand={(preExisting == null ? "null" : "FOUND")}");
 
-            _constructHost = new ElementHost { Dock = DockStyle.Fill };
+                _constructPanelCmd = Command.Create(ConstructPanelCommand);
+                _constructPanelCmd.Text = "AESC Construct";
+                _constructPanelCmd.Hint = "AESC Construct tools panel";
+                _constructPanelCmd.Image = LoadImage(Resources.FrameGen);
+                _constructPanelCmd.IsEnabled = true;
+                _constructPanelCmd.IsVisible = false;   // hidden until first use
+                _constructPanelCmd.KeepAlive(true);
 
-            _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
+                _constructHost = new ElementHost { Dock = DockStyle.Fill };
+
+                _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
+                Logger.Log($"[UIManager] RegisterConstructPanel OK. PanelTab={(_constructPanelTab == null ? "null" : "created")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UIManager] RegisterConstructPanel FAILED: " + ex.ToString());
+            }
         }
 
         // Re-creates the Construct panel if the user closed it.
@@ -242,13 +253,16 @@ namespace AESCConstruct2026.UIMain
         {
             try
             {
+                Logger.Log($"[UIManager] ShowDocked('{key}') start");
+
                 try { Command.Execute("AESC.Construct.SetMode3D"); }
                 catch (Exception ex) { Logger.Log("[UIManager] SetMode3D non-fatal: " + ex.Message); }
 
                 EnsureConstructPanel();
+                Logger.Log($"[UIManager] After EnsureConstructPanel: panelCmd={(_constructPanelCmd == null ? "null" : "set")}, panelTab={(_constructPanelTab == null ? "null" : "set")}, host={(_constructHost == null ? "null" : "set")}");
 
                 var control = GetDockedControl(key);
-                if (control == null) return;
+                if (control == null) { Logger.Log($"[UIManager] GetDockedControl returned null for '{key}'"); return; }
 
                 if (_activeDockedKey != key)
                 {
@@ -264,6 +278,8 @@ namespace AESCConstruct2026.UIMain
                         _constructPanelTab.Activate();
                 }
                 catch { /* proxy disconnected — panel was just recreated, will activate on next call */ }
+
+                Logger.Log($"[UIManager] ShowDocked('{key}') complete");
             }
             catch (Exception ex)
             {

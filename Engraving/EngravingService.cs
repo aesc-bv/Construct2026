@@ -33,7 +33,7 @@ namespace AESCConstruct2026.UIMain
 
             Logger.Log($"RunScript('{logicalName}') returned {ok}");
         }
-        private static int GetHostApiVersion()
+        public static int GetHostApiVersion()
         {
             var env = ScriptEnvironment.GetOrCreate(false);
             ScriptEnvironment.ActiveEnvironment = env;
