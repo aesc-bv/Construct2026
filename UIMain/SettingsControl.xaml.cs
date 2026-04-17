@@ -585,63 +585,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
                 s.Save();
 
-                ComboBox_Language.ItemsSource = new[] { "EN", "NL", "FR", "DE", "IT", "ES" };
-                ComboBox_Language.SelectedItem = Settings.Default.Construct_Language;
-
-                Label_BOMLengthUnitComboBox.ItemsSource = new[] { "mm", "cm", "m", "inch" };
-                Label_BOMLengthUnitComboBox.SelectedItem = Settings.Default.LengthUnit;
-
-                Label_BOMAnchorComboBox.ItemsSource = new[] { "TopLeft", "TopRight", "BottomLeft", "BottomRight" };
-                Label_BOMAnchorComboBox.SelectedItem = Settings.Default.DocumentAnchor;
-
-                CornerComboBox.ItemsSource = new[] { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner" };
-                CornerComboBox.SelectedItem = Settings.Default.TableLocationPoint;
-
-                // Text fields
-                PartNameTextBox.Text = Settings.Default.NameString ?? string.Empty;
-                SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? "";
-
-                var lic = ConstructLicenseSpot.CurrentLicense;
-                LicenseTypeValue.Text = lic == null
-                    ? string.Empty
-                    : (lic.IsNetwork ? "Network" : "Local");
-
-                // Checkboxes
-                Checkbox_ExcelMaterial.IsChecked = Settings.Default.MatInExcel;
-                Checkbox_BOMMaterial.IsChecked = Settings.Default.MatInBOM;
-                Checkbox_STEPMaterial.IsChecked = Settings.Default.MatInSTEP;
-
-                // Anchor coordinates
-                AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
-                AnchorYTextBox.Text = Settings.Default.TableAnchorY.ToString();
-
-                // Rebuild the type/name/template grid from TypeString
-                _pairs.Clear();
-                var raw = Settings.Default.TypeString ?? "";
-                foreach (var entry in raw.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var parts = entry.Split('@');
-                    _pairs.Add(new TypeNamePair
-                    {
-                        Type = parts.Length >= 1 ? parts[0] : entry,
-                        Name = parts.Length >= 2 ? parts[1] : "",
-                        Template = parts.Length >= 3 ? parts[2] : ""
-                    });
-                }
-
-                // Decimals
-                DecimalsTextBox.Text = Settings.Default.NameDecimals.ToString();
-
-                // Frame color
-                LoadFrameColorUI();
-
-                // Rebuild CSV path rows from settings
-                PopulateCsvFilePathFields();
-
-                // If language changed via import, re-localize UI and refresh command texts
-                Localization.Language.LocalizeFrameworkElement(this);
-                UIMain.UIManager.UpdateCommandTexts();
-                Construct2026.UpdateCommandTexts();
+                RefreshUIFromSettings();
 
                 Application.ReportStatus("Settings imported.", StatusMessageType.Information, null);
             }
@@ -649,6 +593,101 @@ namespace AESCConstruct2026.FrameGenerator.UI
             {
                 Application.ReportStatus("Import failed:\n" + ex.Message, StatusMessageType.Error, null);
             }
+        }
+
+        // Resets all settings to defaults, preserving license and network-log fields, and rebuilds the UI.
+        private void ResetSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Reset all settings to defaults?\n\n" +
+                "This will restore the default part-naming template, profile list, " +
+                "BOM layout, color, CSV paths and language.\n\n" +
+                "Your license activation (serial number) will be preserved.",
+                "Reset settings",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var s = Settings.Default;
+
+                var savedSerial = s.SerialNumber;
+                var savedValid = s.LicenseValid;
+                var savedNetLog = s.NetworkLogUser_Enabled;
+
+                s.Reset();
+
+                s.SerialNumber = savedSerial;
+                s.LicenseValid = savedValid;
+                s.NetworkLogUser_Enabled = savedNetLog;
+
+                s.Save();
+
+                RefreshUIFromSettings();
+
+                Application.ReportStatus("Settings reset to defaults.", StatusMessageType.Information, null);
+            }
+            catch (Exception ex)
+            {
+                Application.ReportStatus("Reset failed:\n" + ex.Message, StatusMessageType.Error, null);
+            }
+        }
+
+        // Rebuilds all UI controls to match the current Settings.Default values and re-localizes.
+        private void RefreshUIFromSettings()
+        {
+            ComboBox_Language.ItemsSource = new[] { "EN", "NL", "FR", "DE", "IT", "ES" };
+            ComboBox_Language.SelectedItem = Settings.Default.Construct_Language;
+
+            Label_BOMLengthUnitComboBox.ItemsSource = new[] { "mm", "cm", "m", "inch" };
+            Label_BOMLengthUnitComboBox.SelectedItem = Settings.Default.LengthUnit;
+
+            Label_BOMAnchorComboBox.ItemsSource = new[] { "TopLeft", "TopRight", "BottomLeft", "BottomRight" };
+            Label_BOMAnchorComboBox.SelectedItem = Settings.Default.DocumentAnchor;
+
+            CornerComboBox.ItemsSource = new[] { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner" };
+            CornerComboBox.SelectedItem = Settings.Default.TableLocationPoint;
+
+            PartNameTextBox.Text = Settings.Default.NameString ?? string.Empty;
+            SerialNumberTextBox.Text = Settings.Default.SerialNumber ?? "";
+
+            var lic = ConstructLicenseSpot.CurrentLicense;
+            LicenseTypeValue.Text = lic == null
+                ? string.Empty
+                : (lic.IsNetwork ? "Network" : "Local");
+
+            Checkbox_ExcelMaterial.IsChecked = Settings.Default.MatInExcel;
+            Checkbox_BOMMaterial.IsChecked = Settings.Default.MatInBOM;
+            Checkbox_STEPMaterial.IsChecked = Settings.Default.MatInSTEP;
+
+            AnchorXTextBox.Text = Settings.Default.TableAnchorX.ToString();
+            AnchorYTextBox.Text = Settings.Default.TableAnchorY.ToString();
+
+            _pairs.Clear();
+            var raw = Settings.Default.TypeString ?? "";
+            foreach (var entry in raw.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = entry.Split('@');
+                _pairs.Add(new TypeNamePair
+                {
+                    Type = parts.Length >= 1 ? parts[0] : entry,
+                    Name = parts.Length >= 2 ? parts[1] : "",
+                    Template = parts.Length >= 3 ? parts[2] : ""
+                });
+            }
+
+            DecimalsTextBox.Text = Settings.Default.NameDecimals.ToString();
+            BomDecimalsTextBox.Text = Settings.Default.BomDecimals.ToString();
+
+            LoadFrameColorUI();
+
+            PopulateCsvFilePathFields();
+
+            Localization.Language.LocalizeFrameworkElement(this);
+            UIMain.UIManager.UpdateCommandTexts();
+            Construct2026.UpdateCommandTexts();
         }
 
         // Loads the FrameColor setting into the checkbox, textbox, and preview rectangle.

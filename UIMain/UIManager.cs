@@ -200,35 +200,48 @@ namespace AESCConstruct2026.UIMain
             }
         }
 
-        // Re-creates the Construct panel if the user closed it.
+        // Ensures the Construct panel exists. Previously this recreated the PanelTab if
+        // IsDeleted reported true, but that turned out to stack up duplicate tabs because
+        // the SpaceClaim remoting proxy reports IsDeleted=true spuriously (the visual tab
+        // is still alive in the UI, so creating another PanelTab adds a second orphan).
+        // We now only (re)register if we've never created one in this AppDomain.
         private static void EnsureConstructPanel()
         {
-            if (_constructPanelCmd == null) { RegisterConstructPanel(); return; }
-
-            bool panelGone = _constructPanelTab == null;
-            if (!panelGone)
+            if (_constructPanelCmd == null)
             {
-                try { panelGone = _constructPanelTab.IsDeleted; }
-                catch { panelGone = true; }   // remoting proxy disconnected = panel is gone
+                Logger.Log("[UIManager] EnsureConstructPanel: _constructPanelCmd is null → RegisterConstructPanel");
+                RegisterConstructPanel();
+                return;
             }
 
-            if (panelGone)
+            // Keep the panel command visible on the side strip.
+            try { _constructPanelCmd.IsVisible = true; } catch { }
+
+            // Diagnostic only — do NOT recreate based on this. IsDeleted is unreliable
+            // (remoting proxy can claim deletion while the real tab persists).
+            if (_constructPanelTab != null)
             {
                 try
                 {
-                    if (_constructHost != null)
-                        _constructHost.Child = null;  // detach WPF control before disposing
-                    _constructHost?.Dispose();
+                    if (_constructPanelTab.IsDeleted)
+                        Logger.Log("[UIManager] EnsureConstructPanel: IsDeleted=true reported (ignored — not recreating)");
                 }
-                catch { /* host already disposed by SpaceClaim when it closed the panel */ }
+                catch (Exception ex)
+                {
+                    Logger.Log("[UIManager] EnsureConstructPanel: IsDeleted threw " + ex.GetType().Name + " (ignored)");
+                }
+            }
 
+            // If the host is gone for some reason (e.g. SpaceClaim disposed it), recreate
+            // the host only — re-attach into the existing PanelTab slot rather than
+            // creating a new PanelTab.
+            if (_constructHost == null)
+            {
+                Logger.Log("[UIManager] EnsureConstructPanel: host is null → creating new ElementHost (keeping existing PanelTab)");
                 _constructHost = new ElementHost { Dock = DockStyle.Fill };
-                _constructPanelTab = PanelTab.Create(_constructPanelCmd, _constructHost, DockLocation.Right, 300, false);
                 _activeDockedKey = null;
                 ClearCachedControls();
             }
-
-            _constructPanelCmd.IsVisible = true;
         }
 
         // Returns the WPF control for a given command key, creating it on demand.

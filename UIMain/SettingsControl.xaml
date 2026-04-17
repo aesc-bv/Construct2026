@@ -16,18 +16,17 @@
     </UserControl.Resources>
 
     <Grid Margin="0,0,0,0">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Grid.Column="0">
+                      Grid.Row="0">
             <Grid Margin="20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="50" />
-                    <RowDefinition Height="50" />
                 </Grid.RowDefinitions>
 
                 <!-- Title -->
@@ -509,34 +508,73 @@
                     </Expander>
                 </StackPanel>
 
-                <!-- Save button -->
-                <Button Tag="Button_Save"
-                        Grid.Row="2"
-                        Content="Save"
-                        Style="{StaticResource FooterButtonStyle}"
-                        HorizontalAlignment="Center"
-                        Margin="0,10"
-                        Click="SaveButton_Click" />
-                <!-- Save button -->
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            Width="260"
-                            Grid.Row="3">
-                    <Button Tag="ImportSettings"
-                            Content="Import settings"
-                            Style="{StaticResource FooterButtonStyle}"
-                            HorizontalAlignment="Center"
-                            Margin="0,10,10,10"
-                            Click="ImportSettingsButton_Click" />
-
-                    <Button Tag="ExportSettings"
-                            Content="Export settings"
-                            Style="{StaticResource FooterButtonStyle}"
-                            HorizontalAlignment="Center"
-                            Margin="10,10, 0, 10"
-                            Click="ExportSettingsButton_Click" />
-                </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <!-- Pinned bottom action bar -->
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="{StaticResource BorderBrushLight}"
+                BorderThickness="0,1,0,0"
+                Padding="0,8">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <Button Style="{StaticResource SmallIconButton}"
+                        Background="{StaticResource DarkGreyBrush}"
+                        Foreground="{StaticResource TextLight}"
+                        Width="34"
+                        Height="34"
+                        Margin="6,0"
+                        ToolTip="Save settings"
+                        Click="SaveButton_Click">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE74E;"
+                               FontSize="16"
+                               Foreground="{StaticResource TextLight}" />
+                </Button>
+
+                <Button Style="{StaticResource SmallIconButton}"
+                        Background="{StaticResource DarkGreyBrush}"
+                        Foreground="{StaticResource TextLight}"
+                        Width="34"
+                        Height="34"
+                        Margin="6,0"
+                        ToolTip="Import settings from JSON file"
+                        Click="ImportSettingsButton_Click">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE8B5;"
+                               FontSize="16"
+                               Foreground="{StaticResource TextLight}" />
+                </Button>
+
+                <Button Style="{StaticResource SmallIconButton}"
+                        Background="{StaticResource DarkGreyBrush}"
+                        Foreground="{StaticResource TextLight}"
+                        Width="34"
+                        Height="34"
+                        Margin="6,0"
+                        ToolTip="Export settings to JSON file"
+                        Click="ExportSettingsButton_Click">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xEDE1;"
+                               FontSize="16"
+                               Foreground="{StaticResource TextLight}" />
+                </Button>
+
+                <Button Style="{StaticResource SmallIconButton}"
+                        Background="{StaticResource DarkGreyBrush}"
+                        Foreground="{StaticResource TextLight}"
+                        Width="34"
+                        Height="34"
+                        Margin="6,0"
+                        ToolTip="Reset all settings to defaults (license preserved)"
+                        Click="ResetSettingsButton_Click">
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE72C;"
+                               FontSize="16"
+                               Foreground="{StaticResource TextLight}" />
+                </Button>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

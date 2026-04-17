@@ -39,12 +39,33 @@ namespace AESCConstruct2026
                 Api.Initialize();
                 var apiAsm = typeof(Application).Assembly;
                 Logger.Log($"API 1.1 Initialized — {apiAsm.GetName().Version} from {apiAsm.Location}");
+
+                // Fallback cleanup: SpaceClaim does not always call Disconnect() when it
+                // reloads our addin in a new AppDomain during a running session. Hooking
+                // DomainUnload gives us a second chance to close the PanelTab so the bar
+                // entry is removed from barlayout2.xml, preventing orphan sidebar tabs.
+                AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
+                AppDomain.CurrentDomain.ProcessExit += OnDomainUnload;
+
                 return true;
             }
             catch (Exception ex)
             {
                 Logger.Log("Connect() failed: " + ex.Message);
                 return false;
+            }
+        }
+
+        private static void OnDomainUnload(object sender, EventArgs e)
+        {
+            try
+            {
+                Logger.Log("[Construct2026] DomainUnload fired — running panel cleanup");
+                UIManager.ClosePanelAndDispose();
+            }
+            catch (Exception ex)
+            {
+                try { Logger.Log("[Construct2026] DomainUnload cleanup failed: " + ex.Message); } catch { }
             }
         }
 
