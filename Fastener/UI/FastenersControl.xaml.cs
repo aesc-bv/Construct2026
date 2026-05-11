@@ -350,12 +350,9 @@ namespace AESCConstruct2026.UI
         }
 
 
-        //private void GetSizesButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    // you can call your CheckSize logic here
-        //    FastenerModule.CheckSize();
-        //}
         // Handles the Get Sizes button by reading the selected hole and auto-selecting closest M-sizes in all combos.
+        // Reports the detected diameter; if any combo has no M-size that fits, snaps to the nearest available size
+        // and surfaces a consolidated warning so the user can verify before inserting.
         private void GetSizesButton_Click(object sender, RoutedEventArgs e)
         {
             Window window = Window.ActiveWindow;
@@ -369,50 +366,38 @@ namespace AESCConstruct2026.UI
                 return;
 
             double radiusMM = FastenerModule.GetSizeCircle(window, out double depthMM);
-            // Logger.Log($"radiusMM - {radiusMM}");
-
             if (radiusMM == 0)
                 return;
 
-            void SelectClosestSize(System.Windows.Controls.ComboBox comboBox)
+            double diameterMM = radiusMM * 2.0;
+            string diameterText = diameterMM.ToString("0.##", CultureInfo.InvariantCulture);
+
+            Application.ReportStatus(
+                string.Format(Localization.Language.Translate("Fastener_Status_DetectedDiameter"), diameterText),
+                StatusMessageType.Information, null);
+
+            var snappedLabels = new System.Collections.Generic.List<string>();
+
+            void Apply(System.Windows.Controls.ComboBox combo, string sectionLabelKey)
             {
-                if (comboBox == null || comboBox.Items.Count == 0)
-                    return;
-
-                double maxSize = 0.0;
-                int selectedIndex = -1;
-
-                for (int i = 0; i < comboBox.Items.Count; i++)
-                {
-                    string item = comboBox.Items[i].ToString().Trim();
-
-                    if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
-                        NumberParsing.TryParseUserInput(item.Substring(1), out double diameter))
-                    {
-                        // Logger.Log($"====");
-                        // Logger.Log($"diameter / 2.0 = {diameter / 2.0}");
-                        // Logger.Log($"radiusMM = {radiusMM}");
-                        // Logger.Log($"diameter = {diameter}");
-                        // Logger.Log($"maxSize = {maxSize}");
-                        // Logger.Log($"(diameter / 2.0) - radiusMM < 1e-6 = {(diameter / 2.0) - radiusMM < 1e-6}");
-                        // Logger.Log($"diameter > maxSize = {diameter > maxSize}");
-                        if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)
-                        {
-                            maxSize = diameter;
-                            selectedIndex = i;
-                        }
-                    }
-                }
-
-                if (selectedIndex != -1)
-                    comboBox.SelectedIndex = selectedIndex;
+                if (SelectClosestSize(combo, radiusMM, snapToNearest: true) == SizeFitResult.Snapped)
+                    snappedLabels.Add(Localization.Language.Translate(sectionLabelKey));
             }
 
-            // Apply to all relevant ComboBoxes:
-            SelectClosestSize(BoltSizeCombo);
-            SelectClosestSize(NutSizeCombo);
-            SelectClosestSize(WasherTopSizeCombo);
-            SelectClosestSize(WasherBottomSizeCombo);
+            Apply(BoltSizeCombo, "Bolt");
+            Apply(NutSizeCombo, "Nut");
+            Apply(WasherTopSizeCombo, "WasherTop");
+            Apply(WasherBottomSizeCombo, "WasherBottom");
+
+            if (snappedLabels.Count > 0)
+            {
+                Application.ReportStatus(
+                    string.Format(
+                        Localization.Language.Translate("Fastener_Status_NoExactFit"),
+                        string.Join(", ", snappedLabels),
+                        diameterText),
+                    StatusMessageType.Warning, null);
+            }
         }
 
         // Gathers all UI selections and delegates fastener creation to the FastenerModule.
@@ -554,34 +539,55 @@ namespace AESCConstruct2026.UI
             return radiusMM > 0;
         }
 
+        private enum SizeFitResult { Fit, Snapped, Empty }
+
         // Selects the largest M-size in the given combo whose radius fits inside the given hole radius.
-        private static void SelectClosestSize(System.Windows.Controls.ComboBox comboBox, double radiusMM)
+        // When no size fits and snapToNearest is true, snaps to the M-size with the smallest absolute
+        // diameter difference and returns Snapped so callers can warn the user.
+        private static SizeFitResult SelectClosestSize(System.Windows.Controls.ComboBox comboBox, double radiusMM, bool snapToNearest = false)
         {
             if (comboBox == null || comboBox.Items.Count == 0)
-                return;
+                return SizeFitResult.Empty;
 
-            double maxSize = 0.0;
-            int selectedIndex = -1;
+            double largestFitDiameter = 0.0;
+            int largestFitIndex = -1;
+            double nearestDiff = double.MaxValue;
+            int nearestIndex = -1;
 
             for (int i = 0; i < comboBox.Items.Count; i++)
             {
                 string item = comboBox.Items[i]?.ToString()?.Trim();
                 if (string.IsNullOrEmpty(item)) continue;
+                if (!item.StartsWith("M", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!NumberParsing.TryParseUserInput(item.Substring(1), out double diameter)) continue;
 
-                if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
-                    NumberParsing.TryParseUserInput(item.Substring(1), out double diameter))
+                if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > largestFitDiameter)
                 {
-                    // pick the largest diameter where diameter/2 <= radiusMM
-                    if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)
-                    {
-                        maxSize = diameter;
-                        selectedIndex = i;
-                    }
+                    largestFitDiameter = diameter;
+                    largestFitIndex = i;
+                }
+
+                double diff = Math.Abs(diameter - 2.0 * radiusMM);
+                if (diff < nearestDiff)
+                {
+                    nearestDiff = diff;
+                    nearestIndex = i;
                 }
             }
 
-            if (selectedIndex != -1)
-                comboBox.SelectedIndex = selectedIndex;
+            if (largestFitIndex >= 0)
+            {
+                comboBox.SelectedIndex = largestFitIndex;
+                return SizeFitResult.Fit;
+            }
+
+            if (snapToNearest && nearestIndex >= 0)
+            {
+                comboBox.SelectedIndex = nearestIndex;
+                return SizeFitResult.Snapped;
+            }
+
+            return SizeFitResult.Empty;
         }
 
         // Automatically picks an appropriate bolt size based on selected hole radius, with fallback to first item.

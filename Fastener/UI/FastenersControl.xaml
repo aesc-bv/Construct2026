@@ -1,6 +1,7 @@
 ﻿<UserControl x:Class="AESCConstruct2026.UI.FastenersControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AESCConstruct2026.UIMain"
              MinWidth="300"
              Background="White">
 
@@ -35,22 +36,27 @@
             </Grid.RowDefinitions>
 
             <!-- 0) Get Sizes -->
-            <Button x:Name="GetSizesButton"
-                    Tag="GetSizes"
-                    Grid.Row="0"
-                    Content="Get Sizes"
-                    HorizontalAlignment="Right"
-                    Style="{StaticResource FooterButtonStyle}"
-                    Click="GetSizesButton_Click"
-                    Margin="0,0,0,10" />
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,0,0,10">
+                <Button x:Name="GetSizesButton"
+                        Tag="GetSizes"
+                        Content="Get Sizes"
+                        Style="{StaticResource FooterButtonStyle}"
+                        Click="GetSizesButton_Click" />
+                <local:InfoIcon HelpKey="Help_Fastener_GetSizes" />
+            </StackPanel>
 
-            <TextBlock Grid.Row="1"
-                       Style="{StaticResource TitleTextStyle}"
-                       Tag="Bolt"
-                       Text="Bolt"
-                       Width="230"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,0" />
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleTextStyle}"
+                           Tag="Bolt"
+                           Text="Bolt"
+                           VerticalAlignment="Center" />
+                <local:InfoIcon HelpKey="Help_Fastener_Bolt" />
+            </StackPanel>
             <!-- Bolt Section -->
             <StackPanel x:Name="BoltGroup"
                         Tag="grpFastenersBolt"
@@ -64,7 +70,7 @@
                     <!-- now a Grid with same columns & margins as BoltGroup -->
                     <Grid Margin="10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50" />
+                            <ColumnDefinition Width="Auto" MinWidth="50" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -73,9 +79,15 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Tag="lblFasteners_Type"
-                                   Text="Name"
-                                   VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center">
+                            <TextBlock Tag="lblFasteners_Type"
+                                       Text="Name"
+                                       VerticalAlignment="Center" />
+                            <local:InfoIcon HelpKey="Help_Fastener_BoltStandard" />
+                        </StackPanel>
                         <ComboBox x:Name="BoltTypeCombo"
                                   Grid.Column="1"
                                   Tag="FastenersText"
@@ -97,10 +109,15 @@
                                   Margin="5,5,0,0"
                                   Style="{StaticResource ComboBoxFlatStyle}" />
 
-                        <TextBlock Tag="lblFasteners_Bolt_Length"
-                                   Grid.Row="2"
-                                   Text="Length"
-                                   VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center">
+                            <TextBlock Tag="lblFasteners_Bolt_Length"
+                                       Text="Length"
+                                       VerticalAlignment="Center" />
+                            <local:InfoIcon HelpKey="Help_Fastener_BoltLength" />
+                        </StackPanel>
                         <TextBox x:Name="BoltLengthTextBox"
                              HorizontalAlignment="Left"
                              Grid.Row="2"
@@ -119,13 +136,15 @@
             </Grid>
         </StackPanel>
 
-        <TextBlock Grid.Row="3"
-                       Style="{StaticResource TitleTextStyle}"
-                       Tag="WasherTop"
-                       Text="Washer Top"
-                       Width="230"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,0" />
+        <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleTextStyle}"
+                           Tag="WasherTop"
+                           Text="Washer Top"
+                           VerticalAlignment="Center" />
+                <local:InfoIcon HelpKey="Help_Fastener_WasherTop" />
+            </StackPanel>
             <!-- Washer Top -->
             <StackPanel x:Name="WasherTopGroup"
                         Tag="grpFastenersWasherTop"
@@ -186,16 +205,18 @@
                 </Grid>
             </StackPanel>
 
-            <TextBlock Grid.Row="5"
-                       Style="{StaticResource TitleTextStyle}"
-                       Tag="WasherBottom"
-                       Text="Washer Bottom"
-                       Width="230"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,0" />
+            <StackPanel Grid.Row="5"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleTextStyle}"
+                           Tag="WasherBottom"
+                           Text="Washer Bottom"
+                           VerticalAlignment="Center" />
+                <local:InfoIcon HelpKey="Help_Fastener_WasherBottom" />
+            </StackPanel>
             <!-- Washer Bottom -->
             <StackPanel x:Name="WasherBottomGroup"
-                        Tag="grpFastenersWahserBottom"
+                        Tag="grpFastenersWasherBottom"
                         Grid.Row="6"
                         Margin="0,0,0,0">
                 <CheckBox x:Name="WasherBottomCheckbox"
@@ -253,13 +274,15 @@
                 </Grid>
             </StackPanel>
 
-            <TextBlock Grid.Row="7"
-                       Style="{StaticResource TitleTextStyle}"
-                       Tag="Nut"
-                       Text="Nut"
-                       Width="230"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,0" />
+            <StackPanel Grid.Row="7"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center">
+                <TextBlock Style="{StaticResource TitleTextStyle}"
+                           Tag="Nut"
+                           Text="Nut"
+                           VerticalAlignment="Center" />
+                <local:InfoIcon HelpKey="Help_Fastener_Nut" />
+            </StackPanel>
             <!-- Nut -->
             <StackPanel x:Name="NutGroup"
                         Tag="grpFastenersNut"
@@ -351,19 +374,27 @@
                         <RowDefinition />
                         <RowDefinition />
                     </Grid.RowDefinitions>
-                    <CheckBox x:Name="CustomCheckbox"
-                              Tag="grpFastenersCustom"
-                              IsChecked="{Binding UseCustomPart, Mode=TwoWay}"
-                              Content="Use custom part"
-                              Grid.Row="0"
-                              VerticalAlignment="Center" />
-                    <Button Content="Browse"
-                            Tag="BrowseCustomButtonFstnr"
-                            Click="BrowseCustomButton_Click"
-                            Style="{StaticResource FooterButtonStyle}"
-                            IsEnabled="{Binding UseCustomPart}"
-                            Grid.Row="1"
-                            HorizontalAlignment="Left" />
+                    <StackPanel Orientation="Horizontal"
+                                Grid.Row="0"
+                                VerticalAlignment="Center">
+                        <CheckBox x:Name="CustomCheckbox"
+                                  Tag="grpFastenersCustom"
+                                  IsChecked="{Binding UseCustomPart, Mode=TwoWay}"
+                                  Content="Use custom part"
+                                  VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Fastener_UseCustom" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                Grid.Row="1"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                        <Button Content="Browse"
+                                Tag="BrowseCustomButtonFstnr"
+                                Click="BrowseCustomButton_Click"
+                                Style="{StaticResource FooterButtonStyle}"
+                                IsEnabled="{Binding UseCustomPart}" />
+                        <local:InfoIcon HelpKey="Help_Fastener_CustomBrowse" />
+                    </StackPanel>
                 </Grid>
                 <Separator Margin="0,5,0,5" />
 
@@ -373,10 +404,12 @@
                     <TextBlock Tag="lblFasteners_Distance"
                                Text="Distance"
                                VerticalAlignment="Center"
-                               Margin="0,0,5,0" />
+                               Margin="0,0,2,0" />
+                    <local:InfoIcon HelpKey="Help_Fastener_Distance" />
                     <TextBox x:Name="DistanceTextBox"
                              Tag="lblFasteners_Distance"
                              Width="60"
+                             Margin="3,0,0,0"
                              Text="{Binding DistanceMm}" />
                     <CheckBox Content="Clamping distance"
                               Tag="lblFasteners_overwriteDist"
@@ -384,6 +417,7 @@
                               IsChecked="{Binding OverwriteDistance}"
                               Margin="5,0,0,0"
                               VerticalAlignment="Center" />
+                    <local:InfoIcon HelpKey="Help_Fastener_ClampingDistance" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Center"
@@ -394,6 +428,7 @@
                               IsChecked="{Binding LockDistance}"
                               Margin="10,0,0,0"
                               VerticalAlignment="Center" />
+                    <local:InfoIcon HelpKey="Help_Fastener_Lock" />
                     <Button x:Name="InsertButton"
                             Tag="btnFastenersInsert"
                             Style="{StaticResource FooterButtonStyle}"
