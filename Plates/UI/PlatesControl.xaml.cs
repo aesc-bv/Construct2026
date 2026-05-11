@@ -4,6 +4,7 @@
  and passes validated parameters to PlatesModule.CreatePlateFromUI to build geometry in SpaceClaim.
 */
 
+using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Localization;
 using AESCConstruct2026.Plates.Modules;
 using SpaceClaim.Api.V242;
@@ -280,11 +281,10 @@ namespace AESCConstruct2026.UI
             SelectedImageSource = $"/AESCConstruct2026;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
         }
 
-        // Parses a string to double using invariant culture, returning 0 on failure.
+        // Parses a string to double accepting both '.' and ',' as decimal mark; returns 0 on failure.
         private double ParseDoubleSafe(string text)
         {
-            double val;
-            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out val) ? val : 0;
+            return NumberParsing.TryParseUserInput(text, out double val) ? val : 0;
         }
 
         // Checks whether the string is numeric (optionally with decimal separator).

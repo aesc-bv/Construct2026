@@ -65,10 +65,10 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                         isHollow = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
                         break;
                     case "offsetX":
-                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetX);
+                        NumberParsing.TryParseUserInput(val, out offsetX);
                         break;
                     case "offsetY":
-                        double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out offsetY);
+                        NumberParsing.TryParseUserInput(val, out offsetY);
                         break;
                     case "DXFPath":
                         dxfPath = val;

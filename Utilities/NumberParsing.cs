@@ -27,10 +27,17 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             return double.TryParse(s, DefaultStyles, CultureInfo.InvariantCulture, out value);
         }
 
-        // Tolerant parse for user-typed text: tries the canonical form first (so that
-        // "12.5" always wins regardless of the current OS locale), then normalises a
-        // lone ',' to '.' and retries. Does NOT fall through to CurrentCulture — doing
-        // so would reintroduce the "12.5 -> 125" trap on nl-NL.
+        // Tolerant parse for user-typed text. CAD dimensions never carry thousands
+        // separators (nobody types "1,234.5 mm"), so we normalise a lone ',' to '.'
+        // up-front and then parse with NumberStyles.Float — no AllowThousands.
+        // Two reasons for this order:
+        //   1. Parsing "12,3" with InvariantCulture + AllowThousands SUCCEEDS and
+        //      returns 123 (',' treated as a grouping separator), which silently
+        //      multiplies every Dutch-typed dimension by ~10×. Doing the replace
+        //      first sidesteps that trap.
+        //   2. Never calling TryParse with CurrentCulture avoids the inverse trap
+        //      where "12.5" on nl-NL parses to 125.0 (',' is decimal, '.' becomes
+        //      a thousands separator).
         public static bool TryParseUserInput(string s, out double value)
         {
             if (string.IsNullOrWhiteSpace(s))
@@ -39,18 +46,29 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                 return false;
             }
 
-            if (double.TryParse(s, DefaultStyles, CultureInfo.InvariantCulture, out value))
-                return true;
+            // A lone ',' is always a decimal mark in this codebase. If both ',' and
+            // '.' are present we assume the user typed canonical form ("1,234.5" is
+            // grouped) and leave it alone for the parser to reject — that case is
+            // not a supported input shape.
+            string normalised = s;
+            if (s.IndexOf('.') < 0 && s.IndexOf(',') >= 0)
+                normalised = s.Replace(',', '.');
 
-            bool hasComma = s.IndexOf(',') >= 0;
-            bool hasDot = s.IndexOf('.') >= 0;
-            if (hasComma && !hasDot)
+            return double.TryParse(normalised, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        }
+
+        // Integer variant of TryParseUserInput. Accepts "5" and "5.0"/"5,0" but rejects
+        // "5.3". Range-checks against Int32 to avoid silent overflow. Named distinctly
+        // from the double overload so that existing `out var` callers stay unambiguous.
+        public static bool TryParseUserInputInt(string s, out int value)
+        {
+            if (TryParseUserInput(s, out double d)
+                && d >= int.MinValue && d <= int.MaxValue
+                && d == System.Math.Truncate(d))
             {
-                string normalised = s.Replace(',', '.');
-                if (double.TryParse(normalised, DefaultStyles, CultureInfo.InvariantCulture, out value))
-                    return true;
+                value = (int)d;
+                return true;
             }
-
             value = 0;
             return false;
         }

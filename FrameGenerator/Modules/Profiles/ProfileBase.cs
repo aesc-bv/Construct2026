@@ -1,4 +1,5 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
 using System.Collections.Generic;
@@ -31,8 +32,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Profiles
                 double[] convertedSizes = new double[sizeValues.Length];
                 for (int i = 0; i < sizeValues.Length; i++)
                 {
-                    var normalized = sizeValues[i].Replace(',', '.');
-                    convertedSizes[i] = double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+                    convertedSizes[i] = NumberParsing.TryParseUserInput(sizeValues[i], out double parsed)
                         ? parsed / 1000.0
                         : 0.0;
                 }

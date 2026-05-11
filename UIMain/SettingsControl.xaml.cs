@@ -211,9 +211,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
             Settings.Default.TypeString = serialized;
 
             // Save decimals
-            if (int.TryParse(DecimalsTextBox.Text.Trim(), out var dec) && dec >= 0)
+            if (NumberParsing.TryParseUserInputInt(DecimalsTextBox.Text, out int dec) && dec >= 0)
                 Settings.Default.NameDecimals = dec;
-            if (int.TryParse(BomDecimalsTextBox.Text.Trim(), out var bomDec) && bomDec >= 0)
+            if (NumberParsing.TryParseUserInputInt(BomDecimalsTextBox.Text, out int bomDec) && bomDec >= 0)
                 Settings.Default.BomDecimals = bomDec;
 
             // Save frame color
@@ -767,35 +767,37 @@ namespace AESCConstruct2026.FrameGenerator.UI
                         return je.GetBoolean();
                     var s = je.ToString();
                     if (bool.TryParse(s, out var b)) return b;
-                    if (double.TryParse(s, System.Globalization.NumberStyles.Float,
-                                        System.Globalization.CultureInfo.InvariantCulture, out var n))
+                    if (NumberParsing.TryParseUserInput(s, out double n))
                         return Math.Abs(n) > double.Epsilon;
                     return false;
                 }
                 else if (targetType == typeof(int))
                 {
                     if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var i)) return i;
-                    return int.Parse(je.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    if (NumberParsing.TryParseUserInputInt(je.ToString(), out int parsed)) return parsed;
+                    return 0;
                 }
                 else if (targetType == typeof(long))
                 {
                     if (je.ValueKind == JsonValueKind.Number && je.TryGetInt64(out var l)) return l;
-                    return long.Parse(je.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    return long.Parse(je.ToString().Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
                 }
                 else if (targetType == typeof(double))
                 {
                     if (je.ValueKind == JsonValueKind.Number && je.TryGetDouble(out var d)) return d;
-                    return double.Parse(je.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    if (NumberParsing.TryParseUserInput(je.ToString(), out double parsed)) return parsed;
+                    return 0.0;
                 }
                 else if (targetType == typeof(float))
                 {
                     if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var f)) return f;
-                    return float.Parse(je.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    if (NumberParsing.TryParseUserInput(je.ToString(), out double parsed)) return (float)parsed;
+                    return 0f;
                 }
                 else if (targetType == typeof(decimal))
                 {
                     if (je.ValueKind == JsonValueKind.Number && je.TryGetDecimal(out var m)) return m;
-                    return decimal.Parse(je.ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                    return decimal.Parse(je.ToString().Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
                 }
                 else if (targetType.IsEnum)
                 {

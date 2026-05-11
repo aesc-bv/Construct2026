@@ -387,7 +387,7 @@ namespace AESCConstruct2026.UI
                     string item = comboBox.Items[i].ToString().Trim();
 
                     if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
-                        double.TryParse(item.Substring(1), NumberStyles.Any, CultureInfo.InvariantCulture, out double diameter))
+                        NumberParsing.TryParseUserInput(item.Substring(1), out double diameter))
                     {
                         // Logger.Log($"====");
                         // Logger.Log($"diameter / 2.0 = {diameter / 2.0}");
@@ -569,7 +569,7 @@ namespace AESCConstruct2026.UI
                 if (string.IsNullOrEmpty(item)) continue;
 
                 if (item.StartsWith("M", StringComparison.OrdinalIgnoreCase) &&
-                    double.TryParse(item.Substring(1), NumberStyles.Any, CultureInfo.InvariantCulture, out double diameter))
+                    NumberParsing.TryParseUserInput(item.Substring(1), out double diameter))
                 {
                     // pick the largest diameter where diameter/2 <= radiusMM
                     if ((diameter / 2.0) - radiusMM < 1e-6 && diameter > maxSize)

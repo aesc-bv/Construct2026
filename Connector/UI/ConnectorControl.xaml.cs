@@ -450,11 +450,11 @@ namespace AESCConstruct2026.UI
             catch (Exception ex) { Logger.Log("ConnectorControl: CSV column parse failed for key '" + key + "': " + ex.ToString()); return fallback; }
         }
 
-        // GetDouble parses a nullable double from a CSV column using invariant culture semantics.
+        // GetDouble parses a nullable double from a CSV column, tolerating both '.' and ','.
         private static double? GetDouble(Dictionary<string, int> headers, string[] cols, string key)
         {
             if (!headers.TryGetValue(key, out var i) || i < 0 || i >= cols.Length) return null;
-            if (double.TryParse(cols[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return v;
+            if (NumberParsing.TryParseUserInput(cols[i], out double v)) return v;
             return null;
         }
 
@@ -953,7 +953,7 @@ namespace AESCConstruct2026.UI
 
                 int patternQty = 0;
                 if (patternEnabled)
-                    int.TryParse(connectorPatternValue?.Text ?? "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out patternQty);
+                    NumberParsing.TryParseUserInputInt(connectorPatternValue?.Text, out patternQty);
                 patternEnabled = patternEnabled && patternQty > 0;
                 if (patternEnabled && patternQty <= 0)
                 {
@@ -2394,18 +2394,12 @@ namespace AESCConstruct2026.UI
 
         private const double EPS = 1e-6;
 
-        // TryReadDouble parses a double from a TextBox using current or invariant cultures, with last-chance normalization.
+        // TryReadDouble parses a double from a TextBox accepting both '.' and ',' as decimal mark.
         private bool TryReadDouble(TextBox tb, out double v)
         {
             v = 0;
             if (tb == null) return false;
-            var s = (tb.Text ?? "").Trim();
-            // current culture OR invariant
-            if (double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out v)) return true;
-            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v)) return true;
-            // last-chance normalize
-            s = s.Replace(',', '.');
-            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+            return NumberParsing.TryParseUserInput(tb.Text, out v);
         }
 
         // IsReliefAllowed enforces End Relief constraints against current width settings and rectangular cut options.
@@ -2456,7 +2450,7 @@ namespace AESCConstruct2026.UI
             }
 
             // If user types End Relief > 0, auto-turn Off Rectangular cut (vice-versa)
-            if (connectorSpacing != null && double.TryParse(connectorSpacing.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rel) && rel > 0)
+            if (connectorSpacing != null && NumberParsing.TryParseUserInput(connectorSpacing.Text, out double rel) && rel > 0)
             {
                 if (connectorRectangularCut != null)
                     connectorRectangularCut.IsChecked = true;
@@ -2566,7 +2560,7 @@ namespace AESCConstruct2026.UI
         private void EnforceCornerCoupling()
         {
             // If there’s a main corner radius/chamfer value, disable the top-pair “cutout radius” feature.
-            if (double.TryParse(connectorRadiusChamfer?.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var rc) && rc > 0)
+            if (NumberParsing.TryParseUserInput(connectorRadiusChamfer?.Text, out double rc) && rc > 0)
             {
                 if (connectorCornerCutoutRadius != null) connectorCornerCutoutRadius.IsChecked = false; // the checkbox
                 if (connectorCornerCutoutRadiusValue != null) connectorCornerCutoutRadiusValue.Text = "0";
@@ -2892,7 +2886,7 @@ namespace AESCConstruct2026.UI
             bool patternEnabled = (connectorPattern?.IsChecked == true);
             int patternQty = 0;
             if (patternEnabled)
-                int.TryParse(connectorPatternValue?.Text ?? "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out patternQty);
+                NumberParsing.TryParseUserInputInt(connectorPatternValue?.Text, out patternQty);
             patternEnabled = patternEnabled && patternQty > 0;
 
             // Collect edges (same logic as createConnector)

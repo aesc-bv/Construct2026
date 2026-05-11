@@ -88,27 +88,9 @@ public class Connector
         {
             double ParseWithTrace(string label, string s)
             {
-                string raw = s ?? "<null>";
-
-                // Accept current culture, invariant, and comma→dot fallback
-                if (!string.IsNullOrWhiteSpace(s))
-                {
-                    if (double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out var v1))
-                    {
-                        return v1;
-                    }
-                    if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v2))
-                    {
-                        return v2;
-                    }
-                    var norm = s.Replace(',', '.');
-                    if (double.TryParse(norm, NumberStyles.Float, CultureInfo.InvariantCulture, out var v3))
-                    {
-                        return v3;
-                    }
-                }
-
-                throw new FormatException($"Invalid number for {label}: \"{raw}\"");
+                if (NumberParsing.TryParseUserInput(s, out double v))
+                    return v;
+                throw new FormatException($"Invalid number for {label}: \"{s ?? "<null>"}\"");
             }
 
             // --- parse textboxes ---

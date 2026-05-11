@@ -140,7 +140,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
 
             // Positional [p1]..[pN]
             if (key.Length >= 2 && (key[0] == 'p' || key[0] == 'P')
-                && int.TryParse(key.Substring(1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)
+                && NumberParsing.TryParseUserInputInt(key.Substring(1), out int n)
                 && n >= 1 && n <= positional.Length)
             {
                 var v = FormatIfNumeric(positional[n - 1], decimals);
@@ -203,8 +203,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         private static string FormatIfNumeric(string raw, int decimals)
         {
             if (string.IsNullOrEmpty(raw)) return "";
-            var normalized = raw.Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+            if (NumberParsing.TryParseUserInput(raw, out double v))
                 return FormatMm(v, decimals);
             return raw;
         }

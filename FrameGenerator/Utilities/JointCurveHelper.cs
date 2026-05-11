@@ -67,7 +67,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         static double GetCustomDimension(Component comp, string key, double defaultWidth)
         {
             if (comp.Template.CustomProperties.TryGetValue(key, out var cp)
-             && double.TryParse(cp.Value.ToString().Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var mm)
+             && NumberParsing.TryParseUserInput(cp.Value?.ToString(), out double mm)
              && mm > 0)
                 return mm * 0.001;
             return defaultWidth;
@@ -177,10 +177,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             double angleDeg = 0;
             if (component.Template.CustomProperties
                          .TryGetValue("RotationAngle", out var rotProp)
-             && double.TryParse(rotProp.Value.ToString(),
-                                NumberStyles.Float,
-                                CultureInfo.InvariantCulture,
-                                out var a))
+             && NumberParsing.TryParseUserInput(rotProp.Value?.ToString(), out double a))
             {
                 // ensure positive
                 angleDeg = (a % 360 + 360) % 360;
@@ -356,8 +353,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             {
                 meters = 0.0;
                 if (c.Template.CustomProperties.TryGetValue(key, out var prop)
-                    && double.TryParse(prop.Value.ToString().Replace(',', '.'),
-                                       NumberStyles.Any, CultureInfo.InvariantCulture, out var mm)
+                    && NumberParsing.TryParseUserInput(prop.Value?.ToString(), out double mm)
                     && mm > 0)
                 {
                     meters = mm * 0.001;
@@ -369,8 +365,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             // Read rotation (default 0)
             double angleDeg = 0.0;
             if (comp.Template.CustomProperties.TryGetValue("RotationAngle", out var rotProp))
-                double.TryParse(rotProp.Value.ToString().Replace(',', '.'),
-                                NumberStyles.Float, CultureInfo.InvariantCulture, out angleDeg);
+                NumberParsing.TryParseUserInput(rotProp.Value?.ToString(), out angleDeg);
 
             // Normalize to [0,360)
             angleDeg = (angleDeg % 360 + 360) % 360;
@@ -407,8 +402,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         {
             if (!comp.Template.CustomProperties.TryGetValue(key, out var prop))
                 return 0.0;
-            var s = prop.Value.ToString().Replace(',', '.');
-            return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)
+            return NumberParsing.TryParseUserInput(prop.Value?.ToString(), out double v)
                  ? v
                  : 0.0;
         }
