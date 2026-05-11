@@ -61,6 +61,15 @@ namespace AESCConstruct2026.FrameGenerator.UI
             DataContext = this;
         }
 
+        // Collapses sibling expanders so only one section is open at a time.
+        private void Expander_Opened(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Expander opened) || !(opened.Parent is System.Windows.Controls.Panel parent)) return;
+            foreach (var child in parent.Children)
+                if (child is Expander other && !ReferenceEquals(other, opened))
+                    other.IsExpanded = false;
+        }
+
         // Handles first-time control load: initializes comboboxes, localization and CSV path fields.
         private void SettingsControl_Loaded(object sender, RoutedEventArgs e)
         {

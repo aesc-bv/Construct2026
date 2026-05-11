@@ -34,7 +34,6 @@
                            Grid.Row="0"
                            Style="{StaticResource TitleTextStyle}"
                            Text="Settings"
-                           HorizontalAlignment="Center"
                            Margin="0,0,0,10" />
 
                 <StackPanel Grid.Row="1"
@@ -44,7 +43,8 @@
                     <!-- Part naming -->
                     <Expander Tag="Expander_PartNaming"
                               Header="Part naming"
-                              IsExpanded="False">
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
                         <GroupBox Tag="Group_NamingScheme"
                                   Header="Naming scheme"
                                   Margin="0,10">
@@ -111,7 +111,7 @@
                                     <local:InfoIcon HelpKey="Help_Decimals"
                                                     Grid.Column="1" />
                                     <TextBox x:Name="DecimalsTextBox"
-                                             Height="24"
+                                             Style="{StaticResource CompactTextBox}"
                                              Margin="5,0,0,0"
                                              Grid.Column="2" />
                                 </Grid>
@@ -128,7 +128,7 @@
                                     <local:InfoIcon HelpKey="Help_BomDecimals"
                                                     Grid.Column="1" />
                                     <TextBox x:Name="BomDecimalsTextBox"
-                                             Height="24"
+                                             Style="{StaticResource CompactTextBox}"
                                              Margin="5,0,0,0"
                                              Grid.Column="2" />
                                 </Grid>
@@ -149,7 +149,7 @@
                                     <local:InfoIcon HelpKey="Help_FrameColor"
                                                     Grid.Column="1" />
                                     <TextBox x:Name="FrameColorTextBox"
-                                             Height="24"
+                                             Style="{StaticResource CompactTextBox}"
                                              Margin="5,0,0,0"
                                              Grid.Column="2"
                                              IsEnabled="{Binding IsChecked, ElementName=FrameColorCheckBox}"
@@ -169,7 +169,8 @@
                     <!-- BOM placement -->
                     <Expander Tag="Expander_BOMPlacement"
                               Header="BOM settings"
-                              IsExpanded="False">
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
                         <StackPanel>
                             <GroupBox Tag="Group_CoordinatesOrigin"
                                       Header="Coordinates and origin"
@@ -200,7 +201,7 @@
                                         <TextBox x:Name="AnchorXTextBox"
                                                  Grid.Row="0"
                                                  Grid.Column="1"
-                                                 Height="20"
+                                                 Style="{StaticResource CompactTextBox}"
                                                  Margin="5,0" />
 
                                         <StackPanel Grid.Row="1"
@@ -215,7 +216,7 @@
                                         <TextBox x:Name="AnchorYTextBox"
                                                  Grid.Row="1"
                                                  Grid.Column="1"
-                                                 Height="20"
+                                                 Style="{StaticResource CompactTextBox}"
                                                  Margin="5,0" />
 
                                         <StackPanel Grid.Row="0"
@@ -296,35 +297,33 @@
                     <!-- Material options -->
                     <Expander Tag="Expander_MaterialOptions"
                               Header="Material options"
-                              IsExpanded="False">
-                        <GroupBox Tag="Group_MaterialInclusion"
-                                  Header="Material Inclusion"
-                                  Margin="0,10">
-                            <StackPanel Margin="4">
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox x:Name="Checkbox_ExcelMaterial"
-                                              Tag="Checkbox_ExcelMaterial"
-                                              Content="Include material in Excel" />
-                                    <local:InfoIcon HelpKey="Help_MatInExcel" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox x:Name="Checkbox_BOMMaterial"
-                                              Tag="Checkbox_BOMMaterial"
-                                              Content="Include material in BOM" />
-                                    <local:InfoIcon HelpKey="Help_MatInBOM" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox x:Name="Checkbox_STEPMaterial"
-                                              Tag="Checkbox_STEPMaterial"
-                                              Content="Include material in STEP filename" />
-                                    <local:InfoIcon HelpKey="Help_MatInSTEP" />
-                                </StackPanel>
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
+                        <StackPanel Margin="8,8,4,4">
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="Checkbox_ExcelMaterial"
+                                          Tag="Checkbox_ExcelMaterial"
+                                          Content="Include material in Excel" />
+                                <local:InfoIcon HelpKey="Help_MatInExcel" />
                             </StackPanel>
-                        </GroupBox>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="Checkbox_BOMMaterial"
+                                          Tag="Checkbox_BOMMaterial"
+                                          Content="Include material in BOM" />
+                                <local:InfoIcon HelpKey="Help_MatInBOM" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="Checkbox_STEPMaterial"
+                                          Tag="Checkbox_STEPMaterial"
+                                          Content="Include material in STEP filename" />
+                                <local:InfoIcon HelpKey="Help_MatInSTEP" />
+                            </StackPanel>
+                        </StackPanel>
                     </Expander>
                     <Expander Tag="Expander_Language"
                               Header="Language"
-                              IsExpanded="False">
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
                         <StackPanel Margin="8">
                             <StackPanel Orientation="Horizontal"
                                         Margin="0,0,0,4">
@@ -339,12 +338,11 @@
                         </StackPanel>
                     </Expander>
 
-                    <!-- Language -->
-
                     <Expander Header="CSV File Paths"
                               Tag="CSVFilePaths"
                               Name="CsvFileExpander"
-                              IsExpanded="False">
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal"
                                         Margin="0,5,0,0">
@@ -354,22 +352,18 @@
                                            VerticalAlignment="Center" />
                                 <local:InfoIcon HelpKey="Help_CSVFilePaths" />
                             </StackPanel>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          Height="250"
-                                          Margin="0,5,0,5">
-                                <StackPanel x:Name="CsvPathsPanel"
-                                            Margin="0,8,0,6">
-                                    <!-- Rows will be added dynamically -->
-                                </StackPanel>
-                            </ScrollViewer>
+                            <StackPanel x:Name="CsvPathsPanel"
+                                        Margin="0,8,0,6">
+                                <!-- Rows will be added dynamically -->
+                            </StackPanel>
                         </StackPanel>
                     </Expander>
 
                     <!-- License -->
                     <Expander Tag="Expander_License"
                               Header="License"
-                              IsExpanded="False">
+                              IsExpanded="False"
+                              Expanded="Expander_Opened">
                         <Grid Margin="0,8,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -433,9 +427,7 @@
                                                Grid.Row="3"
                                                Grid.Column="0"
                                                Text="License Expiration:"
-                                               VerticalAlignment="Center"
-                                               Grid.ColumnSpan="2"
-                                               Margin="0,0,103,0" />
+                                               VerticalAlignment="Center" />
                                     <TextBlock x:Name="LicenseDetailsValue"
                                                Grid.Row="3"
                                                Grid.Column="1"
@@ -446,9 +438,7 @@
                                                Grid.Row="4"
                                                Grid.Column="0"
                                                Text="License type:"
-                                               VerticalAlignment="Center"
-                                               Grid.ColumnSpan="2"
-                                               Margin="0,0,103,0" />
+                                               VerticalAlignment="Center" />
                                     <TextBlock x:Name="LicenseTypeValue"
                                                Grid.Row="4"
                                                Grid.Column="1"
