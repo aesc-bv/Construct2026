@@ -335,8 +335,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 Settings.Default.Construct_Language = langCode;
                 Settings.Default.Save();
 
-                // re-translate this panel
-                Localization.Language.LocalizeFrameworkElement(this);
+                // re-translate this panel and every other cached module panel
+                UIMain.UIManager.RelocalizeAll();
 
                 UIMain.UIManager.UpdateCommandTexts();
                 Construct2026.UpdateCommandTexts();

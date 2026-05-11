@@ -395,6 +395,25 @@ namespace AESCConstruct2026.UIMain
             Show(RibCutOutCommand);
         }
 
+        // Re-applies the current language to every already-constructed module control.
+        // Called after the user picks a new language in Settings so cached panels refresh
+        // without requiring a SpaceClaim restart.
+        public static void RelocalizeAll()
+        {
+            var controls = new System.Windows.Controls.UserControl[]
+            {
+                _profileControl, _settingsControl, _plateControl, _fastenerControl,
+                _ribCutOutControl, _customPropertiesControl, _engravingControl, _connectorControl
+            };
+
+            foreach (var ctl in controls)
+            {
+                if (ctl == null) continue;
+                try { Localization.Language.LocalizeFrameworkElement(ctl); }
+                catch (Exception ex) { Logger.Log("[UIManager] RelocalizeAll: " + ctl.GetType().Name + " failed: " + ex.Message); }
+            }
+        }
+
         // Updates localized texts for all sidebar commands.
         public static void UpdateCommandTexts()
         {
