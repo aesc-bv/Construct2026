@@ -24,6 +24,14 @@ namespace AESCConstruct2026.UI
 {
     public partial class PlatesControl : UserControl, INotifyPropertyChanged
     {
+        // Wraps a plate type name with its illustrative thumbnail for the type dropdown.
+        public class ProfileTypeItem
+        {
+            public string Name { get; set; }
+            public string ImagePath { get; set; }
+            public override string ToString() => Name;
+        }
+
         // Represents one row in PlatesProperties.csv
         private class PlateRecord
         {
@@ -90,17 +98,14 @@ namespace AESCConstruct2026.UI
                 }
 
                 foreach (var t in _records.Select(r => r.Type).Distinct().OrderBy(x => x))
-                    ProfileTypes.Add(t);
+                    ProfileTypes.Add(new ProfileTypeItem { Name = t, ImagePath = GetImagePathForType(t) });
 
-                SelectedProfileType = ProfileTypes.FirstOrDefault();
+                SelectedProfileTypeItem = ProfileTypes.FirstOrDefault();
             }
             catch (Exception ex)
             {
                 Application.ReportStatus(string.Format(Localization.Language.Translate("Plates_Err_LoadFailed"), ex.Message), StatusMessageType.Error, null);
             }
-
-            if (SelectedProfileType != null)
-                SelectedProfileType = SelectedProfileType;
 
             PopulateBottomFields();
         }
@@ -113,25 +118,27 @@ namespace AESCConstruct2026.UI
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         #endregion
 
-        public ObservableCollection<string> ProfileTypes { get; } = new ObservableCollection<string>();
+        public ObservableCollection<ProfileTypeItem> ProfileTypes { get; } = new ObservableCollection<ProfileTypeItem>();
         public ObservableCollection<string> ProfileSizes { get; } = new ObservableCollection<string>();
 
-        private string _selectedProfileType;
-        public string SelectedProfileType
+        private ProfileTypeItem _selectedProfileTypeItem;
+        public ProfileTypeItem SelectedProfileTypeItem
         {
-            get => _selectedProfileType;
+            get => _selectedProfileTypeItem;
             set
             {
-                if (_selectedProfileType == value) return;
-                _selectedProfileType = value;
+                if (_selectedProfileTypeItem == value) return;
+                _selectedProfileTypeItem = value;
+                OnPropertyChanged(nameof(SelectedProfileTypeItem));
                 OnPropertyChanged(nameof(SelectedProfileType));
 
                 UpdatePlateImage();
 
                 ProfileSizes.Clear();
 
+                var typeName = value?.Name;
                 var names = _records
-                    .Where(r => r.Type == value)
+                    .Where(r => r.Type == typeName)
                     .Select(r => r.Name)
                     .Distinct()
                     .ToList();
@@ -149,6 +156,8 @@ namespace AESCConstruct2026.UI
                 UpdateFieldLabelsAndVisibility();
             }
         }
+
+        public string SelectedProfileType => _selectedProfileTypeItem?.Name;
 
         private string _selectedImageSource;
         public string SelectedImageSource
@@ -269,7 +278,13 @@ namespace AESCConstruct2026.UI
         // Updates the measure image path according to the selected plate type.
         private void UpdatePlateImage()
         {
-            string imageSuffix = SelectedProfileType switch
+            SelectedImageSource = GetImagePathForType(SelectedProfileType);
+        }
+
+        // Maps a plate type to the matching parametric illustration image (shared by the dropdown thumbnail and the main illustration).
+        private static string GetImagePathForType(string type)
+        {
+            string imageSuffix = type switch
             {
                 "HEA base" or "HEA cap" or "IPE base" or "IPE cap" or "HEA support" or "HEB support" => "2",
                 "UNP" => "3",
@@ -278,7 +293,7 @@ namespace AESCConstruct2026.UI
                 _ => "1"
             };
 
-            SelectedImageSource = $"/AESCConstruct2026;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
+            return $"/AESCConstruct2026;component/Plates/UI/Images/Img_Measures_Plate_{imageSuffix}.png";
         }
 
         // Parses a string to double accepting both '.' and ',' as decimal mark; returns 0 on failure.
