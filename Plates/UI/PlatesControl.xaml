@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinWidth="300"
              Background="White"
-             xmlns:local="clr-namespace:AESCConstruct2026.UI">
+             xmlns:local="clr-namespace:AESCConstruct2026.UIMain">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -48,7 +48,8 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal">
                     <ComboBox ItemsSource="{Binding ProfileTypes}"
                               SelectedItem="{Binding SelectedProfileTypeItem}"
                               TextSearch.TextPath="Name"
@@ -66,6 +67,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                    <local:InfoIcon HelpKey="Help_Plate_ProfileType" />
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
@@ -76,11 +78,15 @@
                            Margin="0,0,5,0" />
                     <TextBox Text="{Binding Angle}"
                              Width="40" />
+                    <local:InfoIcon HelpKey="Help_Plate_Angle" />
                 </StackPanel>
-                <StackPanel Grid.Row="1">
+                <StackPanel Grid.Row="1"
+                            Orientation="Horizontal">
                     <ComboBox ItemsSource="{Binding ProfileSizes}"
                               SelectedItem="{Binding SelectedProfileSize}"
-                              Style="{StaticResource ComboBoxFlatStyle}" />
+                              Style="{StaticResource ComboBoxFlatStyle}"
+                              MinWidth="120" />
+                    <local:InfoIcon HelpKey="Help_Plate_ProfileSize" />
                 </StackPanel>
 
                 <!--<StackPanel>
@@ -209,17 +215,23 @@
             <UniformGrid Columns="1"
                          Rows="2"
                          Grid.Row="4">
-                <Button Tag="CreatePlate"
-                        Content="Create"
-                        Style="{StaticResource FooterButtonStyle}"
-                        Width="100"
-                        HorizontalAlignment="Left"
-                        Click="CreateButton_Click"
-                        Margin="0,5,0,5" />
-                <CheckBox Tag="PlaceInMiddle"
-                          Content="Add to middle"
-                          IsChecked="{Binding InsertInMiddle}"
-                          VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Tag="CreatePlate"
+                            Content="Create"
+                            Style="{StaticResource FooterButtonStyle}"
+                            Width="100"
+                            HorizontalAlignment="Left"
+                            Click="CreateButton_Click"
+                            Margin="0,5,0,5" />
+                    <local:InfoIcon HelpKey="Help_Plate_Create" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Tag="PlaceInMiddle"
+                              Content="Add to middle"
+                              IsChecked="{Binding InsertInMiddle}"
+                              VerticalAlignment="Center" />
+                    <local:InfoIcon HelpKey="Help_Plate_AddToMiddle" />
+                </StackPanel>
             </UniformGrid>
         </Grid>
     </ScrollViewer>

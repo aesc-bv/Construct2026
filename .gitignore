@@ -6,3 +6,6 @@
 # Ignore WPF auto-generated code-behind (XAML → .g.cs)
 /**/*.g.cs
 /**/*.g.i.cs
+
+# Translation hand-off staging (transient; final values live in the runtime CSV)
+/.translation_staging/
