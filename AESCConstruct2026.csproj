@@ -29,7 +29,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\..\..\..\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026\</OutputPath>
+    <OutputPath>..\..\..\..\..\Program Files\ANSYS Inc\v242\scdm\Addins\AESCConstruct2026\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -187,6 +187,7 @@
     <Compile Include="UIMain\UIManager.cs" />
     <Compile Include="Utilities\CompNameHelper.cs" />
     <Compile Include="Utilities\DXFImportHelper.cs" />
+    <Compile Include="Utilities\InputDialog.cs" />
     <Compile Include="Utilities\NumberParsing.cs" />
     <Compile Include="FrameGenerator\Modules\JointModule.cs" />
     <Compile Include="FrameGenerator\Utilities\JointCurveHelper.cs" />

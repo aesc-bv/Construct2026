@@ -20,6 +20,10 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         public string Name { get; set; }
         public string ProfileString { get; set; }
         public string ImgString { get; set; }
+        // Magnitude of the contour bounding-box center, in millimetres. Non-zero means
+        // the DXF was drawn off-origin; the extruded profile will sit far from where
+        // the user likely expects.
+        public double CenterOffsetMm { get; set; }
     }
 
     public static class DXFImportHelper
@@ -119,6 +123,42 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             return (width, height);
         }
 
+        /// <summary>
+        /// Returns the bounding-box centre of the given contours in document units (metres).
+        /// </summary>
+        public static (double cx, double cy) GetDXFCenter(List<ITrimmedCurve> contours)
+        {
+            if (contours == null || contours.Count == 0)
+                return (0, 0);
+
+            Point min = Point.Origin;
+            Point max = Point.Origin;
+            bool initialized = false;
+
+            foreach (var curve in contours)
+            {
+                if (curve is CurveSegment segment)
+                {
+                    Point[] pts = { segment.StartPoint, segment.EndPoint };
+                    foreach (var p in pts)
+                    {
+                        if (!initialized)
+                        {
+                            min = max = p;
+                            initialized = true;
+                        }
+                        else
+                        {
+                            min = Point.Create(Math.Min(min.X, p.X), Math.Min(min.Y, p.Y), 0);
+                            max = Point.Create(Math.Max(max.X, p.X), Math.Max(max.Y, p.Y), 0);
+                        }
+                    }
+                }
+            }
+
+            return ((min.X + max.X) / 2.0, (min.Y + max.Y) / 2.0);
+        }
+
         //
         // ─── 3) “DXF → PROFILE” (GENERATE PROFILE STRING + PREVIEW IMAGE) ─────────────────
         //
@@ -205,12 +245,18 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                     }
                     catch (Exception ex) { Logger.Log("DXFImportHelper: failed to close temp document windows: " + ex.ToString()); }
 
-                    // 3) Build the DXFProfile object
+                    // 3) Compute bounding-box centre offset (mm) so the caller can warn if
+                    //    the DXF was drawn far from origin.
+                    var (cx, cy) = GetDXFCenter(itcList);
+                    double centerOffsetMm = System.Math.Sqrt(cx * cx + cy * cy) * 1000.0;
+
+                    // 4) Build the DXFProfile object
                     dxfProfile = new DXFProfile
                     {
                         Name = datumPlane.Name,
                         ProfileString = bodyString,
-                        ImgString = imgString
+                        ImgString = imgString,
+                        CenterOffsetMm = centerOffsetMm
                     };
 
                     // 4) Store in session for later "Save CSV"
@@ -408,11 +454,16 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
         /// 
         public static Point PointFromString(string pointString)
         {
-            // pointString is like “13.66025_-6.83013” (dot decimal)
+            // pointString is like "13.66025_-6.83013"; tolerate ',' decimals from
+            // non-English DXF exports as well.
             string[] parts = pointString.Split('_');
-            double x = double.Parse(parts[0], CultureInfo.InvariantCulture) * 0.001;
-            double y = double.Parse(parts[1], CultureInfo.InvariantCulture) * 0.001;
-            return Point.Create(x, y, 0);
+            if (parts.Length < 2
+                || !NumberParsing.TryParseUserInput(parts[0], out double xv)
+                || !NumberParsing.TryParseUserInput(parts[1], out double yv))
+            {
+                throw new FormatException($"Invalid DXF point string: \"{pointString}\"");
+            }
+            return Point.Create(xv * 0.001, yv * 0.001, 0);
         }
 
         //

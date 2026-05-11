@@ -36,7 +36,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             double offsetY,
             string dxfFilePath = "",
             bool updateBOM = false,
-            string selectedProfileString = ""
+            string selectedProfileString = "",
+            string csvProfileName = ""
         )
         {
             try
@@ -151,7 +152,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                                 dxfContours,
                                 reuseComponent: null,
                                 csvProfileString: selectedProfileString,
-                                createdCurves: createdCurves
+                                createdCurves: createdCurves,
+                                csvProfileName: csvProfileName
                             );
 
                             var selectedCurves = win.ActiveContext.Selection

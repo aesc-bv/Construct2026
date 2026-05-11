@@ -44,7 +44,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             List<ITrimmedCurve> dxfContours = null,
             Component reuseComponent = null,
             string csvProfileString = null,
-            List<DesignCurve> createdCurves = null
+            List<DesignCurve> createdCurves = null,
+            string csvProfileName = null
         )
         {
             var doc = window?.Document;
@@ -147,13 +148,13 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                             dxfContours,
                             dxfFilePath,
                             csvProfileString,
-                            createdCurves
+                            createdCurves,
+                            csvProfileName
                         );
 
-            // 8) Wipe out any old "ExtrudedProfile" bodies
-            foreach (var old in comp.Template.Bodies
-                                             .Where(b => b.Name == "ExtrudedProfile")
-                                             .ToList())
+            // 8) Wipe out any old extruded-profile bodies (legacy "ExtrudedProfile" plus
+            //    bodies previously named after the part itself) so we replace them in place.
+            foreach (var old in comp.Template.Bodies.ToList())
                 old.Delete();
 
             // 9) If we're creating a brand-new component, set its Placement now;
@@ -163,8 +164,12 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 comp.Placement = compPlacement;
             }
 
-            // 10) Finally add the fresh body at local (0,0,0)→+Z
-            var db = DesignBody.Create(comp.Template, "ExtrudedProfile", outerBody);
+            // 10) Finally add the fresh body at local (0,0,0)→+Z, naming it after the part
+            //     so the body in the structure tree mirrors its component label.
+            string bodyName = !string.IsNullOrWhiteSpace(comp.Template?.Name)
+                ? comp.Template.Name
+                : "ExtrudedProfile";
+            var db = DesignBody.Create(comp.Template, bodyName, outerBody);
             string frameColor = Settings.Default.FrameColor ?? "";
             if (!string.IsNullOrWhiteSpace(frameColor))
             {
@@ -234,7 +239,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             List<ITrimmedCurve> dxfContourVal,
             string dxfFilePath,
             string csvProfileString,
-            List<DesignCurve> createdCurves = null
+            List<DesignCurve> createdCurves = null,
+            string csvProfileName = null
         )
         {
             // clone so we don’t mutate caller’s dictionary
@@ -250,8 +256,16 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // 2) Express length in millimetres (integer)
             string lengthMm = ((int)(len * 1000)).ToString();
 
-            // 3) Base partName
-            string baseName = $"{profileType}_{dataString}_{lengthMm}";
+            // 3) Base partName — for CSV profiles, prefer the user-given profile name over the generic "CSV" tag.
+            string namePrefix = profileType;
+            if (string.Equals(profileType, "CSV", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(csvProfileName))
+            {
+                namePrefix = Regex.Replace(csvProfileName.Trim(), @"\s+", "_");
+            }
+            string baseName = string.IsNullOrWhiteSpace(dataString)
+                ? $"{namePrefix}_{lengthMm}"
+                : $"{namePrefix}_{dataString}_{lengthMm}";
 
             // 4) Make sure it’s unique in this document
             string partName = baseName;
@@ -266,6 +280,24 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // 5) Finally create it
             Part part = Part.Create(doc, partName);
             Component comp = Component.Create(doc.MainPart, part);
+
+            // Set the "Name" custom property BEFORE SetNameAndLength so the template engine
+            // resolves [name] to the user-given profile name (for CSV) or profileData["Name"]
+            // (for built-in profiles) instead of falling back to the literal profile type.
+            string preRawName;
+            if (string.Equals(profileType, "CSV", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(csvProfileName))
+            {
+                preRawName = csvProfileName;
+            }
+            else
+            {
+                preRawName = GetProfileName(profileData) ?? "";
+            }
+            string preProfileName = Regex.Replace(preRawName.Trim(), @"\s+", "_");
+            if (!string.IsNullOrWhiteSpace(preProfileName))
+                CreateCustomProperty(part, "Name", preProfileName);
+
             CompNameHelper.SetNameAndLength(
                 comp,
                 profileType,
@@ -299,14 +331,12 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 hiddenFramesLayer = Layer.Create(doc, "Construct (hidden)", gray);
                 hiddenFramesLayer.SetVisible(null, false);
             }
-            string rawName = GetProfileName(profileData) ?? "";
-            string profileName = Regex.Replace(rawName.Trim(), @"\s+", "_");
             // store metadata
             CreateCustomProperty(part, "Type", profileType);
             CreateCustomProperty(part, "Hollow", isHollow.ToString().ToLower());
             CreateCustomProperty(part, "offsetX", offsetX);
             CreateCustomProperty(part, "offsetY", offsetY);
-            CreateCustomProperty(part, "Name", profileName);
+            CreateCustomProperty(part, "Name", preProfileName);
 
             // helper to parse a numeric parameter
             // Parses a numeric value from profileData[key] using invariant culture, returning 0.0 on failure.
@@ -315,16 +345,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 if (!profileData.TryGetValue(key, out var raw))
                     return 0.0;
 
-                // 1) replace any comma decimal-separator with a dot
-                var normalized = raw.Replace(',', '.');
-
-                // 2) parse with InvariantCulture
-                if (double.TryParse(
-                        normalized,
-                        NumberStyles.Any,
-                        CultureInfo.InvariantCulture,
-                        out var v
-                    ))
+                if (NumberParsing.TryParseUserInput(raw, out double v))
                     return v;
 
                 return 0.0;

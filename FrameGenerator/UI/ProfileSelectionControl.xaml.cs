@@ -599,6 +599,32 @@ namespace AESCConstruct2026.FrameGenerator.UI
             if (profile == null)
                 return;
 
+            // Origin proximity check — warn if the DXF was drawn far from (0,0).
+            string promptText = Localization.Language.Translate("Frame_Dialog_ProfileNamePrompt");
+            double offsetMagMm = profile.CenterOffsetMm;
+            if (offsetMagMm > 1.0) // > 1 mm from origin is suspicious
+            {
+                string warning = string.Format(
+                    Localization.Language.Translate("Frame_Dialog_ProfileOriginWarning"),
+                    offsetMagMm.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture));
+                promptText = warning + "\n\n" + promptText;
+            }
+
+            // Ask the user how this profile should be named (used as part-name prefix when extruded).
+            string defaultName = string.IsNullOrWhiteSpace(profile.Name)
+                ? Path.GetFileNameWithoutExtension(dxfPath)
+                : profile.Name;
+            string enteredName = InputDialog.Show(
+                promptText,
+                Localization.Language.Translate("Frame_Dialog_ProfileNameTitle"),
+                defaultName,
+                owner: null,
+                previewImageBase64: profile.ImgString);
+            if (enteredName == null)
+                return; // user cancelled
+            if (!string.IsNullOrWhiteSpace(enteredName))
+                profile.Name = enteredName.Trim();
+
             // Copy the profile‐string to the clipboard (safe outside WriteBlock)
             try { Clipboard.SetText(profile.ProfileString); } catch (Exception ex) { Logger.Log("Clipboard.SetText failed: " + ex.ToString()); }
 
@@ -678,32 +704,6 @@ namespace AESCConstruct2026.FrameGenerator.UI
             catch (Exception ex)
             {
                 Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_CsvUpdateFailed"), ex.Message), StatusMessageType.Error, null);
-            }
-
-            // Show the saved PNG in a preview dialog (safe outside WriteBlock)
-            if (!string.IsNullOrEmpty(imageFullPath) && File.Exists(imageFullPath))
-            {
-                try
-                {
-                    using var bmp = new System.Drawing.Bitmap(imageFullPath);
-                    var previewForm = new System.Windows.Forms.Form
-                    {
-                        Text = string.Format(Localization.Language.Translate("Frame_Dialog_DxfPreviewTitle"), profile.Name),
-                        ClientSize = new System.Drawing.Size(bmp.Width, bmp.Height)
-                    };
-                    var pictureBox = new System.Windows.Forms.PictureBox
-                    {
-                        Dock = System.Windows.Forms.DockStyle.Fill,
-                        Image = new System.Drawing.Bitmap(bmp),
-                        SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-                    };
-                    previewForm.Controls.Add(pictureBox);
-                    previewForm.ShowDialog();
-                }
-                catch (Exception ex)
-                {
-                    Application.ReportStatus(string.Format(Localization.Language.Translate("Frame_Status_PreviewRenderFailed"), ex.Message), StatusMessageType.Error, null);
-                }
             }
 
             // Smart reopen: only if the original document isn't already the active one
@@ -1031,7 +1031,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
                                 offsetY,
                                 "",       // no DXF file path in this branch
                                 updateBOM,
-                                selectedProfileString
+                                selectedProfileString,
+                                selectedProfile    // user-given profile name → part-name prefix
                             );
                             //});
                         }
