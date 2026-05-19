@@ -19,6 +19,14 @@ namespace AESCConstruct2026.UIMain
     public static class EngravingService
     {
         private static int version = 0;
+
+        // Escapes a localized string for safe embedding inside a Python double-quoted
+        // literal that is built via a C# verbatim interpolated (@$"...") script string.
+        private static string Py(string s) => (s ?? string.Empty)
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", string.Empty)
+            .Replace("\n", "\\n");
         private static void RunPythonScriptFromString(string logicalName, string scriptBody)
         {
             var tempRoot = Path.Combine(Path.GetTempPath(), "AESCConstruct2026", "Scripts");
@@ -54,6 +62,7 @@ namespace AESCConstruct2026.UIMain
         {
             Logger.Log($"Detected Host API Version: {GetHostApiVersion()}");
             var api = GetHostApiVersion();
+            string pSaveDxfTitle = Py(L.T("Engraving_Py_SaveDxfTitle"));
             var script = @$"
 # Python Script, API Version = V{api}
 from SpaceClaim.Api.V{api} import Layer
@@ -68,7 +77,7 @@ def length2points(point1, point2):
 ############# Check where to save the DXF
 dialog = SaveFileDialog()
 dialog.Filter = ""DXF|*.dxf""
-dialog.Title = ""Please select a file to save the DXF.""
+dialog.Title = ""{pSaveDxfTitle}""
 result = dialog.Show()
 if result == True:
 
@@ -172,6 +181,14 @@ if result == True:
         {
             Logger.Log($"Detected Host API Version: {GetHostApiVersion()}");
             var api = GetHostApiVersion();
+            string pSelTwo = Py(L.T("Engraving_Py_SelectTwoBodies"));
+            string pSolidOnly = Py(L.T("Engraving_Py_SolidBodiesOnly"));
+            string pNotInComp = Py(L.T("Engraving_Py_BodyNotInComponent"));
+            string pNoFaces = Py(L.T("Engraving_Py_NoTouchingFaces"));
+            string pUnsupported = Py(L.T("Engraving_Py_Unsupported"));
+            string pImprintDone = Py(L.T("Engraving_Py_ImprintFinished"));
+            string pTitleWarn = Py(L.T("Common_Title_Warning"));
+            string pTitleInfo = Py(L.T("Common_Title_Information"));
             var script = @$"
 # Python Script, API Version = V{api}
 from System.Collections.Generic import List
@@ -183,7 +200,7 @@ ctx = win.ActiveContext
 sel = ctx.Selection
 
 if sel.Count < 2:
-    MessageBox.Show(""Select at least two solid bodies (source first, then one or more targets)."", ""Warning"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
+    MessageBox.Show(""{pSelTwo}"", ""{pTitleWarn}"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
     raise SystemExit(0)
 
 firstSel = sel[0]
@@ -196,10 +213,10 @@ if is_body(firstSel):
     # validate selection
     for s in sel:
         if not is_body(s):
-            MessageBox.Show(""Select solid bodies only."", ""Warning"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
+            MessageBox.Show(""{pSolidOnly}"", ""{pTitleWarn}"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
             raise SystemExit(0)
         if s.Root == s.Parent:
-            MessageBox.Show(""Body not in a component."", ""Warning"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
+            MessageBox.Show(""{pNotInComp}"", ""{pTitleWarn}"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
             raise SystemExit(0)
 
     body1 = sel[0]
@@ -236,9 +253,9 @@ if is_body(firstSel):
             totalPairs += 1
 
     if totalPairs == 0:
-        MessageBox.Show(""No touching faces were found to imprint. Ensure bodies actually touch (coincident faces)."", ""Information"", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        MessageBox.Show(""{pNoFaces}"", ""{pTitleInfo}"", MessageBoxButtons.OK, MessageBoxIcon.Information)
     else:
-        Application.ReportStatus(""Imprint finished"", StatusMessageType.Information, None)
+        Application.ReportStatus(""{pImprintDone}"", StatusMessageType.Information, None)
 
 # curve-to-face imprint: curves first, face last
 elif isinstance(firstSel, IDesignCurve) and isinstance(sel[-1], IDesignFace):
@@ -250,10 +267,10 @@ elif isinstance(firstSel, IDesignCurve) and isinstance(sel[-1], IDesignFace):
     selSet = selSet + Selection.Create(face)
     pts = List[Point]()
     FixImprint.FixSpecific(selSet, pts)
-    Application.ReportStatus(""Imprint finished"", StatusMessageType.Information, None)
+    Application.ReportStatus(""{pImprintDone}"", StatusMessageType.Information, None)
 
 else:
-    MessageBox.Show(""Unsupported selection."", ""Warning"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
+    MessageBox.Show(""{pUnsupported}"", ""{pTitleWarn}"", MessageBoxButtons.OK, MessageBoxIcon.Exclamation)
     raise SystemExit(0)
 ";
             //if (GetHostApiVersion() < 252)

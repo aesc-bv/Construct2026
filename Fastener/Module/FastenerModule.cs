@@ -1,4 +1,5 @@
 ﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -35,7 +36,7 @@ namespace AESCConstruct2026.Fastener.Module
             catch (Exception ex)
             {
                 AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load bolt CSV: " + ex.ToString());
-                Application.ReportStatus("Failed to load bolt data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                L.Status("Fastener_Err_LoadBoltData", StatusMessageType.Warning);
                 _bolts = new List<Bolt>();
             }
 
@@ -47,7 +48,7 @@ namespace AESCConstruct2026.Fastener.Module
             catch (Exception ex)
             {
                 AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load washer CSV: " + ex.ToString());
-                Application.ReportStatus("Failed to load washer data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                L.Status("Fastener_Err_LoadWasherData", StatusMessageType.Warning);
                 _washers = new List<Washer>();
             }
 
@@ -59,7 +60,7 @@ namespace AESCConstruct2026.Fastener.Module
             catch (Exception ex)
             {
                 AESCConstruct2026.FrameGenerator.Utilities.Logger.Log("Failed to load nut CSV: " + ex.ToString());
-                Application.ReportStatus("Failed to load nut data. Check CSV path in settings.", StatusMessageType.Warning, null);
+                L.Status("Fastener_Err_LoadNutData", StatusMessageType.Warning);
                 _nuts = new List<Nut>();
             }
         }
@@ -207,13 +208,13 @@ namespace AESCConstruct2026.Fastener.Module
             // 1) Make sure we actually have something selected
             if (selection == null || selection.Count == 0)
             {
-                Application.ReportStatus("No objects selected.", StatusMessageType.Information, null);
+                L.Status("Fastener_Msg_NoObjectsSelected", StatusMessageType.Information);
                 return null;
             }
 
             if (selection.Count > 1 && secondSelection.Count > 0)
             {
-                Application.ReportStatus("Please select a single edge when selecting faces.", StatusMessageType.Information, null);
+                L.Status("Fastener_Msg_SelectSingleEdge", StatusMessageType.Information);
                 return null;
             }
 
@@ -225,13 +226,13 @@ namespace AESCConstruct2026.Fastener.Module
                     var selface = dobj as IDesignFace;
                     if (selface == null)
                     {
-                        Application.ReportStatus("Second selection must be planar face(s).", StatusMessageType.Information, null);
+                        L.Status("Fastener_Msg_SecondSelectionPlanar", StatusMessageType.Information);
                         return null;
                     }
                     var planarFace = selface.Shape.GetGeometry<Plane>();
                     if (planarFace == null)
                     {
-                        Application.ReportStatus("Second selection must be planar face(s).", StatusMessageType.Information, null);
+                        L.Status("Fastener_Msg_SecondSelectionPlanar", StatusMessageType.Information);
                         return null;
                     }
                     planarFaces.Add(selface);
@@ -247,7 +248,7 @@ namespace AESCConstruct2026.Fastener.Module
                 var edge = dobj as IDesignEdge;
                 if (edge == null)
                 {
-                    Application.ReportStatus("Selection contains non‐edge objects.", StatusMessageType.Information, null);
+                    L.Status("Fastener_Msg_NonEdgeObjects", StatusMessageType.Information);
                     return null;
                 }
 
@@ -255,7 +256,7 @@ namespace AESCConstruct2026.Fastener.Module
                 var circle = edge.Shape.GetGeometry<Circle>();
                 if (circle == null)
                 {
-                    Application.ReportStatus("All selected edges must be circles.", StatusMessageType.Information, null);
+                    L.Status("Fastener_Msg_EdgesMustBeCircles", StatusMessageType.Information);
                     return null;
                 }
 
@@ -303,7 +304,7 @@ namespace AESCConstruct2026.Fastener.Module
             foreach (IDesignBody idb in mainPart.GetDescendants<IDesignBody>())
                 if (idb.Shape.ContainsPoint(origin))
                 {
-                    Application.ReportStatus("There is an object in the hole, no fastener created.", StatusMessageType.Information, null);
+                    L.Status("Fastener_Msg_ObjectInHole", StatusMessageType.Information);
                     return null;
                 }
 
@@ -373,7 +374,7 @@ namespace AESCConstruct2026.Fastener.Module
 
             if (selection.Count > 1 && secSelection.Count > 0)
             {
-                Application.ReportStatus("Please select only one circle when selecting faces", StatusMessageType.Information, null);
+                L.Status("Fastener_Msg_SelectOneCircle", StatusMessageType.Information);
                 return;
             }
 
@@ -381,7 +382,7 @@ namespace AESCConstruct2026.Fastener.Module
             List<PlacementData> placementDatas = GetPlacementDataSelection(selection, secSelection);
             if (placementDatas == null)
             {
-                Application.ReportStatus("Could not find correct placement(s)", StatusMessageType.Information, null);
+                L.Status("Fastener_Msg_NoPlacement", StatusMessageType.Information);
                 return;
             }
 
@@ -397,7 +398,7 @@ namespace AESCConstruct2026.Fastener.Module
                     Bolt _bolt = listBolt.FirstOrDefault();
                     if (_bolt == null)
                     {
-                        Application.ReportStatus("No bolt data available.", StatusMessageType.Error, null);
+                        L.Status("Fastener_Err_NoBoltData", StatusMessageType.Error);
                         return;
                     }
 
@@ -422,7 +423,7 @@ namespace AESCConstruct2026.Fastener.Module
                     Washer _washerTop = listWasherTop.FirstOrDefault();
                     if (_washerBottom == null || _washerTop == null)
                     {
-                        Application.ReportStatus("No washer data available.", StatusMessageType.Error, null);
+                        L.Status("Fastener_Err_NoWasherData", StatusMessageType.Error);
                         return;
                     }
 
@@ -443,7 +444,7 @@ namespace AESCConstruct2026.Fastener.Module
                     Nut _nut = listNut.FirstOrDefault();
                     if (_nut == null)
                     {
-                        Application.ReportStatus("No nut data available.", StatusMessageType.Error, null);
+                        L.Status("Fastener_Err_NoNutData", StatusMessageType.Error);
                         return;
                     }
                     foreach (Nut nut in listNut)
@@ -797,7 +798,7 @@ namespace AESCConstruct2026.Fastener.Module
             if (selection == null || selection.Count == 0 ||
                 (singleSelection && selection.Count != 1))
             {
-                Application.ReportStatus("Please select a circle.", StatusMessageType.Information, null);
+                L.Status("Fastener_Msg_SelectCircle", StatusMessageType.Information);
                 return false;
             }
 
@@ -820,7 +821,7 @@ namespace AESCConstruct2026.Fastener.Module
             {
                 if (GetCircle(obj) == null)
                 {
-                    Application.ReportStatus("Please select a circle.", StatusMessageType.Information, null);
+                    L.Status("Fastener_Msg_SelectCircle", StatusMessageType.Information);
                     return false;
                 }
             }
@@ -876,7 +877,7 @@ namespace AESCConstruct2026.Fastener.Module
                 }
                 else
                 {
-                    Application.ReportStatus("Please select a circle.", StatusMessageType.Information, null);
+                    L.Status("Fastener_Msg_SelectCircle", StatusMessageType.Information);
                 }
 
             }

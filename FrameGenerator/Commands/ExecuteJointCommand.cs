@@ -11,6 +11,7 @@
 using AESCConstruct2026.FrameGenerator.Modules;
 using AESCConstruct2026.FrameGenerator.Modules.Joints;
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -34,7 +35,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
             if (sel == null || sel.Count == 0)
             {
-                Application.ReportStatus("Trim requires: select at least one profile (body/component/edge) and one face for the cutter.", StatusMessageType.Warning, null);
+                L.Status("Frame_Joint_Msg_TrimRequiresSelection", StatusMessageType.Warning);
                 return false;
             }
 
@@ -51,7 +52,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
             if (!hasTarget || faceCount < 1)
             {
-                Application.ReportStatus("Trim requires: at least one profile (body/component/edge of target body) and one face for the cutter.\nPlease adjust your selection and try again.", StatusMessageType.Warning, null);
+                L.Status("Frame_Joint_Msg_TrimRequiresSelection2", StatusMessageType.Warning);
                 return false;
             }
 
@@ -65,7 +66,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
             if (selectedComponents.Count < 1)
             {
-                Application.ReportStatus("Select at least two components to apply a joint.", StatusMessageType.Warning, null);
+                L.Status("Frame_Joint_Msg_SelectTwoComponents", StatusMessageType.Warning);
                 return;
             }
 
@@ -260,7 +261,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 }
                 else
                 {
-                    Application.ReportStatus("No joint pair found, check line connections.", StatusMessageType.Warning, null);
+                    L.Status("Frame_Joint_Msg_NoJointPair", StatusMessageType.Warning);
                 }
             }
             if (updateBOM == true)
@@ -275,7 +276,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             List<Component> selectedComponents = JointSelectionHelper.GetSelectedComponents(window);
             if (selectedComponents.Count == 0)
             {
-                Application.ReportStatus("Select at least one component to restore geometry.", StatusMessageType.Warning, null);
+                L.Status("Frame_Joint_Msg_SelectOneRestoreGeometry", StatusMessageType.Warning);
                 return;
             }
 
@@ -291,7 +292,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 var selected = JointSelectionHelper.GetSelectedComponents(window);
                 if (selected.Count < 2)
                 {
-                    Application.ReportStatus("Select at least two components to restore joints.", StatusMessageType.Warning, null);
+                    L.Status("Frame_Joint_Msg_SelectTwoRestoreJoints", StatusMessageType.Warning);
                     return;
                 }
 
@@ -381,7 +382,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             var comps = JointSelectionHelper.GetSelectedComponents(window);
             if (comps == null || comps.Count < 2)
             {
-                Application.ReportStatus("Select at least two profiles. The last selected will be cut by the others.", StatusMessageType.Warning, null);
+                L.Status("Frame_Joint_Msg_SelectTwoProfiles", StatusMessageType.Warning);
                 return;
             }
 

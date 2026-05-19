@@ -1,4 +1,5 @@
-﻿using SpaceClaim.Api.V242;
+﻿using AESCConstruct2026.Localization;
+using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
 using System;
@@ -182,7 +183,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             var window = Window.ActiveWindow;
             if (window == null)
             {
-                Application.ReportStatus("No active window.", StatusMessageType.Warning, null);
+                L.Status("DXF_Msg_NoActiveWindow", StatusMessageType.Warning);
                 return null;
             }
 
@@ -192,20 +193,20 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             // Must have exactly one datum plane
             if (mainPart.DatumPlanes.Count() != 1)
             {
-                Application.ReportStatus("DXF should have a single datum plane", StatusMessageType.Warning, null);
+                L.Status("DXF_Msg_SingleDatumPlane", StatusMessageType.Warning);
                 return null;
             }
 
             var datumPlane = mainPart.DatumPlanes.FirstOrDefault();
             if (datumPlane == null)
             {
-                Application.ReportStatus("DXF has no datum plane.", StatusMessageType.Warning, null);
+                L.Status("DXF_Msg_NoDatumPlane", StatusMessageType.Warning);
                 return null;
             }
             // Ensure that plane is aligned with XY
             if (!((Plane)datumPlane.Shape.Geometry).Frame.DirZ.IsParallel(Direction.DirZ))
             {
-                Application.ReportStatus("Plane is not aligned to XY frame", StatusMessageType.Warning, null);
+                L.Status("DXF_Msg_PlaneNotAligned", StatusMessageType.Warning);
                 return null;
             }
 
@@ -274,7 +275,7 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
 
             if (body == null)
             {
-                Application.ReportStatus("Invalid profile—check the DXF contours.", StatusMessageType.Error, null);
+                L.Status("DXF_Err_InvalidProfile", StatusMessageType.Error);
             }
             return dxfProfile;
         }

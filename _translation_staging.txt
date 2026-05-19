@@ -1,0 +1,369 @@
+# Translation staging — ~162 new keys for languageConstruct.csv
+# Format: KEY<TAB>EN_text
+# Notes for translators:
+#  - {0}, {1} are runtime placeholders — keep as-is
+#  - \n inside strings means newline — keep the two-char sequence \n (not an actual line break)
+#  - Technical terms to KEEP IN ENGLISH: CSV, JSON, DXF, STEP, BOM, SpaceClaim, ANSYS, AESC, mm, Construct
+#  - Preserve punctuation (trailing colon, exclamation, period, ellipsis)
+#  - Case: lowercase/Title-case follow the original English convention
+#  - For button labels, keep terse (< ~20 chars) when possible
+
+# === SETTINGS (orphans already-tagged) ===
+Label_Decimals	Decimals:
+Label_BomDecimals	BOM decimals:
+Checkbox_FrameColor	Profile color:
+
+# === SETTINGS (new keys) ===
+Settings_Label_LicenseType	License type:
+Settings_Grid_Type	Type
+Settings_Grid_Name	Name
+Settings_Grid_NamingScheme	Naming scheme
+Settings_Placeholder_SerialNumber	Enter serial number Here
+Settings_Tooltip_SaveSettings	Save settings
+Settings_Tooltip_ImportSettings	Import settings from JSON file
+Settings_Tooltip_ExportSettings	Export settings to JSON file
+Settings_Tooltip_ResetSettings	Reset all settings to defaults (license preserved)
+Settings_Tooltip_SelectNewFile	Select new file
+Settings_Tooltip_OpenFileLocation	Open file location
+Settings_CsvPath_ConnectorProperties	Connector properties
+Settings_CsvPath_ComponentProperties	Component properties
+Settings_CsvPath_Bolts	Bolts
+Settings_CsvPath_Nuts	Nuts
+Settings_CsvPath_Washers	Washers
+Settings_CsvPath_PlateProperties	Plate properties
+Settings_CsvPath_ProfilesCircular	Profiles - circular
+Settings_CsvPath_ProfilesH	Profiles - H
+Settings_CsvPath_ProfilesL	Profiles - L
+Settings_CsvPath_ProfilesRectangular	Profiles - rectangular
+Settings_CsvPath_ProfilesT	Profiles - T
+Settings_CsvPath_ProfilesU	Profiles - U
+Settings_CsvPath_CustomProfiles	Custom profiles
+Settings_Msg_Saved	Settings saved.
+Settings_Msg_SerialRequired	Please enter a serial number first.
+Settings_Msg_LicenseActivated	License activated.
+Settings_Msg_FolderNotFound	Folder not found.
+Settings_Msg_Exported	Settings exported:\n{0}
+Settings_Msg_Imported	Settings imported.
+Settings_Msg_Reset	Settings reset to defaults.
+Settings_Err_SaveFailed	Error saving settings:\n{0}
+Settings_Err_ExportFailed	Export failed:\n{0}
+Settings_Err_ImportFailed	Import failed:\n{0}
+Settings_Err_InvalidJson	Invalid JSON.
+Settings_Err_ResetFailed	Reset failed:\n{0}
+Settings_FileDialog_SelectCsvFor	Select CSV for {0}
+Settings_FileDialog_ExportJson	Export settings to JSON
+Settings_FileDialog_ImportJson	Import settings from JSON
+Settings_FileFilter_Csv	CSV files (*.csv)
+Settings_FileFilter_Json	JSON files (*.json)
+Settings_FileFilter_AllFiles	All files (*.*)
+Settings_Dialog_ResetConfirmTitle	Reset settings
+Settings_Dialog_ResetConfirmBody	Reset all settings to defaults?\n\nThis will restore the default part-naming template, profile list, BOM layout, color, CSV paths and language.\n\nYour license activation (serial number) will be preserved.
+
+# === FASTENER ===
+Fastener_Msg_SelectImportTitle	Select a Fastener Part to Import
+Fastener_Msg_ImportFilter	SpaceClaim Docs (*.scdoc)|*.scdoc|STEP Files (*.stp)|*.stp|SpaceClaim Docs (*.scdocx)|*.scdocx
+Fastener_Msg_ImportSuccess	Custom fastener imported successfully.
+Fastener_Err_ImportFailed	Failed to import custom fastener:\n{0}
+
+# === RIBCUTOUT ===
+RibCutout_Msg_SelectOverlappingBodies	Please select two overlapping bodies.
+
+# === PLATES ===
+Plates_Err_CsvNotFound	{0} not found
+Plates_Err_CsvParse	Error parsing PlatesProperties.csv at line {0}:\n{1}
+Plates_Err_LoadFailed	Failed to load plate properties:\n{0}
+Plates_Err_InvalidInput	Invalid input format: {0}\nPlease check all numeric fields.
+Plates_Err_Overflow	Input value is too large or too small: {0}
+Plates_Err_Unexpected	Unexpected error: {0}
+
+# === FRAMEGENERATOR (orphan) ===
+DeleteProfileButtonText	Delete Profile
+
+# === FRAMEGENERATOR (new) ===
+Frame_Tooltip_MiterJoint	Miter joint
+Frame_Tooltip_StraightJoint	Straight joint. Selection 1: long part, selection 2: shortened part. End cut perpendicular to selection 1.
+Frame_Tooltip_StraightJoint2	Straight joint. Selection 1: long part, selection 2: shortened part. End cut parallel to selection 2.
+Frame_Tooltip_TJoint	T joint. Selection 1: long part, selection 2: shortened part.
+Frame_Tooltip_NoJoint	No joint
+Frame_Tooltip_CutOut	Cutout selected profiles
+Frame_Tooltip_Trim	Cutout on selected planes
+Frame_Tooltip_RestoreGeometry	Reset full geometry
+Frame_Tooltip_RestoreJoint	Reset halves of profile part of selected joint
+Frame_Tooltip_RemoveProfile	Remove this profile
+Frame_Dialog_DxfSelectTitle	Select a DXF File
+Frame_Dialog_DxfFilter	DXF Files (*.dxf)|*.dxf
+Frame_Dialog_DxfPreviewTitle	DXF Preview: {0}
+Frame_Msg_ConfirmDeleteProfileTitle	Confirm Deletion
+Frame_Msg_ConfirmDeleteProfileBody	Are you sure you want to delete the custom profile "{0}"?
+Frame_Status_InitFailed	Failed to initialize ProfileSelectionControl:\n{0}
+Frame_Status_UserProfilesLoadFailed	Error loading user profiles:\n{0}
+Frame_Status_PreviewRenderFailed	Failed to render saved preview image:\n{0}
+Frame_Status_PreviewSaveFailed	Failed to save preview image to disk:\n{0}
+Frame_Status_FolderCreateFailed	Warning: Could not create folder:\n{0}\n\n{1}
+Frame_Status_NoCurvesReconstructed	Could not reconstruct any curves from the saved profile string.
+Frame_Status_CsvLoadFailed	Failed to load CSV:\n{0}
+Frame_Status_CsvNotFound	Could not find CSV for profile type '{0}'.
+Frame_Status_CsvMismatchedRow	Mismatched CSV row:\n{0}
+Frame_Status_CsvUpdateFailed	Failed to update CSV:\n{0}
+Frame_Status_CsvDeleteFailed	Failed to update CSV when deleting profile:\n{0}
+Frame_Status_DeleteProfileFailed	Delete Profile failed: {0}
+Frame_Status_ProfileComponentDeleted	Deleted profile component "{0}" and restored original curve visibility (where applicable).
+Frame_Status_ProfileImageLoadFailed	Failed to load image for profile "{0}":\n{1}
+Frame_Status_ProfileImageDeleteFailed	Failed to delete image for profile "{0}":\n{1}
+Frame_Status_SelectProfileFirst	Please select a profile (built-in or user-saved) or load a DXF file before generating.
+Frame_Status_SelectProfileOwnedItem	Select a line, edge, face or curve that belongs to a profile component.
+Frame_Status_DxfOpenFailed	Failed to open DXF:\n{0}
+Frame_Status_DxfProfileSucceeded	DXF → Profile succeeded.\n\nName = {0}\n(Profile string copied to clipboard.)
+Frame_Status_DocReopenFailed	Failed to reopen document:\n{0}
+Frame_Status_ExtrudeBuiltInFailed	An error occurred while extruding the built-in profile.
+Frame_Status_ExtrudeDxfFailed	An error occurred while extruding the DXF contours.\nSee log in addin folder for details.
+Frame_Status_ExtrudeUserSavedFailed	An error occurred while extruding the user-saved profile.\nSee log in addin folder for details.
+
+# === ENGRAVING ===
+Engraving_Msg_InvalidSize	Invalid size — please enter a number (e.g. 5 or 5.0).
+Engraving_Msg_NotePlaced	Note placed.
+Engraving_Msg_Error	Engraving Error
+Engraving_Msg_NoActiveWindow	No active window found.
+Engraving_Msg_NoActiveContext	No active context found.
+Engraving_Msg_SelectFaces	Please select one or more faces.
+Engraving_Msg_NoRootPart	No root part found.
+Engraving_Msg_SelectSingleFace	Please select a single face.
+Engraving_Msg_FaceNotPlanar	Selected face is not planar.
+Engraving_Msg_DatumPlaneFailed	Could not create the target datum plane.
+Engraving_Msg_EngravingFailed	Engraving failed. Ensure that the selected face belongs to a sheet metal solid body.
+Engraving_Msg_CutoutFailed	Cutout failed. Ensure that the selected face belongs to a sheet metal solid body.
+
+# === CONNECTOR (XAML labels, pre-existing tags needing CSV rows) ===
+Connector_Label_3DPreview	3D Preview
+Connector_Label_EndRelief	End Relief
+Connector_Label_RectangularCut	Rectangular cut
+
+# === CONNECTOR (tooltips — code-behind) ===
+Connector_Tooltip_3DPreview	Show a semi-transparent 3D preview of the connector in the viewport.
+Connector_Tooltip_ClickLocation	If unchecked, connector gets placed on the center of the selected edge. If checked, the connector gets placed on the point you selected on the edge.
+Connector_Tooltip_CornerCutout	Circular cutout on bottom of connector.
+Connector_Tooltip_DynamicHeight	If available height is smaller than input height, adjust automatically.
+Connector_Tooltip_EndRelief	Relief at the connector end; keeps the cut height as-is.
+Connector_Tooltip_EndReliefDisabled	End Relief is disabled while Rectangular cut is off.
+Connector_Tooltip_Location	Offset value. Can be positive or negative.
+Connector_Tooltip_RectangularCut	If unchecked, connector follows the shape of the connector. If checked, the cut is rectangular.
+Connector_Tooltip_Tolerance	Distance between connector and target body.
+
+# === CONNECTOR (messages / errors — code-behind) ===
+Connector_Err_AttachFailed	Failed to attach connector to target body.
+Connector_Err_BottomWidthTooLarge	Bottom width exceeds the available edge width.
+Connector_Err_CylGeometryFailed	Cylindrical geometry creation failed
+Connector_Err_InitFailed	Connector control initialization failed.
+Connector_Err_InvalidEndRelief	Invalid End Relief value.
+Connector_Err_InvalidWidth1	Invalid Width 1 value.
+Connector_Err_InvalidWidth2	Invalid Width 2 value.
+Connector_Err_MakeIndependentFailed	Could not make the body independent from its linked master.
+Connector_Err_PatternAmountPositive	Pattern amount must be a positive integer.
+Connector_Err_PatternDoesNotFit	Pattern of {0} connectors does not fit on edge length {1} mm (total width {2} mm).
+Connector_Err_PatternQtyMin	Pattern quantity must be at least 1.
+Connector_Err_PresetsLoadFailed	Failed to load Connector presets.
+Connector_Err_RectCutAndRelief	End Relief requires Rectangular cut to be enabled.
+Connector_Err_ReliefWidthsDiffer	End Relief requires Width 1 and Width 2 to be equal.
+Connector_Msg_FillValidValues	Please fill in valid values for all Connector parameters.
+Connector_Msg_LinkedBodiesCaption	Linked bodies
+Connector_Msg_LinkedBodiesText	The target body is linked to other bodies. Apply this connector to all linked bodies? Yes = all linked, No = this body only, Cancel = abort.
+Connector_Msg_NoInnerOuterFace	Could not identify inner/outer face or axis on the selected cylindrical edge.
+Connector_Msg_NoValidEdges	No valid edges were found for connector placement.
+Connector_Msg_SelectEdges	Please select one or more edges to place connectors on.
+Connector_Msg_TooWide	Connector width exceeds the cylinder diameter, max allowed:
+
+# === RIBBON (buttons) ===
+Ribbon.Button.FrameGenerator	Frame Generator
+Ribbon.Button.CompareBodies	Compare Bodies
+Ribbon.Button.DetectClashes	Detect Clashes
+Ribbon.Button.GenerateBOM	Generate BOM
+Ribbon.Button.UpdateBOM	Update BOM
+Ribbon.Button.Fastener	Fastener
+Ribbon.Button.RibCutOut	Rib Cut-Out
+Ribbon.Button.Settings	Settings
+Ribbon.Button.ActivateNetwork	Toggle network license
+Ribbon.Button.CustomProperties	Custom Properties
+
+# === RIBBON (groups) ===
+Ribbon.Group.FrameGenerator	Frame Generator
+Ribbon.Group.SketchTools	Sketch Tools
+Ribbon.Group.Export	Export
+Ribbon.Group.Plate	Plate
+Ribbon.Group.Fastener	Fastener
+Ribbon.Group.Connector	Connector
+Ribbon.Group.RibCutOut	Rib Cut-Out
+Ribbon.Group.Engraving	Engraving
+Ribbon.Group.CustomProperties	Custom Properties
+Ribbon.Group.Settings	Settings
+Ribbon.Group.Network	License
+
+# ============================================================================
+# === BATCH 2 — full-codebase sweep (status messages, hints, dialogs, Python)
+# === Added 2026-05-19. Same rules as the header above.
+# ============================================================================
+
+# === CLASH DETECTION ===
+ClashDetection_Msg_NoDocument	No document open.
+ClashDetection_Msg_Need2Bodies	Need at least 2 bodies for clash detection.
+ClashDetection_Msg_NotEnoughValid	Not enough valid bodies for clash detection.
+ClashDetection_Msg_Found	Found {0} clash(es) involving {1} bodies. Clashing bodies selected.
+ClashDetection_Msg_None	No clashes detected.
+ClashDetection_Err_Failed	Clash detection failed: {0}
+
+# === COMMON / SHARED (identical English reused across modules) ===
+Common_Msg_NoActiveWindow	No active window found.
+Common_Msg_NoActiveDocument	No active document.
+Common_Btn_OK	OK
+Common_Btn_Cancel	Cancel
+Common_Title_Warning	Warning
+Common_Title_Information	Information
+
+# === DXF (DXFImportHelper + Construct2026) ===
+DXF_Msg_NoActiveWindow	No active window.
+DXF_Msg_SingleDatumPlane	DXF should have a single datum plane
+DXF_Msg_NoDatumPlane	DXF has no datum plane.
+DXF_Msg_PlaneNotAligned	Plane is not aligned to XY frame
+DXF_Err_InvalidProfile	Invalid profile—check the DXF contours.
+DXF_FileDialog_ImportTitle	Select DXF file to import
+DXF_FileFilter_Dxf	DXF Files (*.dxf)|*.dxf
+DXF_FileDialog_SaveTitle	Save DXFProfile List as CSV
+DXF_FileDialog_LoadTitle	Load DXFProfile CSV
+DXF_FileFilter_Csv	CSV Files (*.csv)|*.csv
+DXF_Msg_Imported	Imported {0} contour curves from:\n{1}
+DXF_Err_ImportFailed	Failed to import valid contours from:\n{0}
+DXF_Err_ProfileInvalid	DXF → Profile failed or was invalid.
+DXF_Msg_ProfileSucceeded	DXF→Profile succeeded.\n\nName = {0}\n(Profile string copied to clipboard.)
+DXF_Msg_NoProfilesToSave	No DXF profiles available to save.
+DXF_Msg_Saved	Saved {0} profiles to:\n{1}
+DXF_Err_SaveFailed	Failed to save CSV:\n{0}
+DXF_Msg_Loaded	Loaded {0} profiles from:\n{1}
+DXF_Err_LoadFailed	Failed to load CSV:\n{0}
+
+# === FRAME COMPARE ===
+Frame_Compare_Msg_NoBodies	No bodies found in the main part.
+
+# === FRAME JOINT (legacy ExecuteJointCommand) ===
+Frame_Joint_Msg_TrimRequiresSelection	Trim requires: select at least one profile (body/component/edge) and one face for the cutter.
+Frame_Joint_Msg_TrimRequiresSelection2	Trim requires: at least one profile (body/component/edge of target body) and one face for the cutter.\nPlease adjust your selection and try again.
+Frame_Joint_Msg_SelectTwoComponents	Select at least two components to apply a joint.
+Frame_Joint_Msg_NoJointPair	No joint pair found, check line connections.
+Frame_Joint_Msg_SelectOneRestoreGeometry	Select at least one component to restore geometry.
+Frame_Joint_Msg_SelectTwoRestoreJoints	Select at least two components to restore joints.
+Frame_Joint_Msg_SelectTwoProfiles	Select at least two profiles. The last selected will be cut by the others.
+
+# === PLATES (residual validation) ===
+Plates_Msg_NoSelection	No selection found. Please select a face.
+Plates_Msg_NoPlanarFaces	No planar faces found in selection.
+Plates_Err_SupportThicknessPositive	Support plate thickness must be positive.
+Plates_Err_FlangeThicknessPositive	Flange thickness must be positive.
+Plates_Err_UnpThicknessPositive	UNP thickness must be positive.
+Plates_Err_UnpContourFailed	UNP contour could not be built.
+
+# === CUSTOM COMPONENT ===
+CustomComponent_Msg_TemplateFolderNotFound	Template folder not found: {0}
+CustomComponent_Msg_TemplatesLoaded	Loaded {0} template(s) from {1}
+CustomComponent_Msg_NoTemplates	No .csv templates found in {0}
+CustomComponent_Msg_TemplateFileNotFound	Template file not found.
+CustomComponent_Err_ReadCsv	Failed to read template CSV.
+CustomComponent_Msg_TemplateNoProps	Template contains no properties.
+CustomComponent_Err_ReadExistingProps	Failed to read existing document properties.
+CustomComponent_Err_UpdateProps	Failed while updating document properties.
+CustomComponent_Msg_DocPropsUpdated	Document properties updated from {0}
+CustomComponent_Err_DeleteProps	Failed while deleting document properties.
+CustomComponent_Msg_DocPropsDeleted	Deleted properties from {0}
+CustomComponent_Msg_SelectComponents	Select one or more components.
+CustomComponent_Msg_PropsAddedSelection	Component properties added to selection.
+CustomComponent_Msg_PropsDeletedSelection	Component properties deleted from selection.
+CustomComponent_Msg_NoComponentsFound	No components found.
+CustomComponent_Msg_PropsAddedAll	Component properties added to all components.
+CustomComponent_Msg_PropsDeletedAll	Deleted component properties from all components.
+
+# === EXPORT / BOM ===
+Export_Dialog_NoSheetTitle	Export BOM
+Export_Dialog_NoSheetBody	No drawing sheet present. Create a drawing sheet?
+Export_Err_CreateSheet	Failed to create a drawing sheet.
+Export_Msg_NoComponents	No components found to export.
+Export_Err_CopyClipboard	Failed to copy BOM to clipboard:\n{0}
+Export_Msg_BomWritten	BOM table has been written to the active drawing sheet.
+Export_Err_BuildTable	Failed to build BOM table:\n{0}
+Export_Msg_BomExported	BOM exported:\n{0}
+Export_Err_ExcelFailed	Failed to export to Excel:\n{0}
+Export_Msg_NoParts	No parts found to export.
+Export_FileDialog_ExcelTitle	Export BOM to Excel
+Export_FileFilter_Excel	Excel Workbook (*.xlsx)|*.xlsx|All files (*.*)|*.*
+Export_FileDialog_StepFolderTitle	Select folder to export STEP files
+Export_Err_StepFailed	Failed to export STEP files:\n{0}
+
+# === RIBBON BUTTONS (DXF / legacy joint) ===
+Ribbon.Button.ImportDXFContours	Import DXF Contours
+Ribbon.Button.DXFToProfile	DXF → Profile
+Ribbon.Button.SaveDXFProfileCsv	Save DXFProfile CSV
+Ribbon.Button.LoadDXFProfileCsv	Load DXFProfile CSV
+Ribbon.Button.ExecuteJointLegacy	Execute Joint (Legacy)
+
+# === CONSTRUCT COMMAND HINTS ===
+Construct_Hint_SetMode3D	3D mode without converting closed line loops to surfaces
+Construct_Hint_ExportExcel	Export frame data to an Excel file.
+Construct_Hint_ExportBOM	Create a bill-of-materials.
+Construct_Hint_UpdateBOM	Update an existing bill-of-materials.
+Construct_Hint_ExportSTEP	Export frame as a STEP file.
+Construct_Hint_ImportDXFContours	Load DXF contours into the active document.
+Construct_Hint_DXFToProfile	Convert an open DXF window into a profile string and preview image.
+Construct_Hint_SaveDXFProfileCsv	Save all collected DXFProfile objects to a CSV file.
+Construct_Hint_LoadDXFProfileCsv	Load DXFProfile objects from a CSV file.
+Construct_Hint_Compare	Compare bodies to look for duplicates
+Construct_Hint_DetectClashes	Detect intersecting bodies in the model
+Construct_Hint_ExecuteJointLegacy	Applies a joint between selected components.
+
+# === NETWORK LICENSE / SETMODE3D ===
+Construct_Net_Msg_NoHandle	No license handle available (activate or check your license files).
+Construct_Net_Msg_NotNetwork	Current license is not a network license.
+Construct_Net_Err_ToggleFailed	Network license toggle failed:\n{0}
+Construct_Err_SetMode3D	SetMode3D error: {0}
+
+# === UIMANAGER (sidebar hints, panel, close tooltip) ===
+UIManager_Hint_FrameGenerator	Open the profile selection sidebar
+UIManager_Hint_Settings	Open the settings sidebar
+UIManager_Hint_Plate	Open the plate-creation pane
+UIManager_Hint_Fastener	Open the fastener insertion pane
+UIManager_Hint_RibCutOut	Open the rib cut-out pane
+UIManager_Hint_CustomProperties	Open the custom-properties pane
+UIManager_Hint_Engraving	Open the engraving pane
+UIManager_Hint_Connector	Open the connector pane
+UIManager_Panel_Title	AESC Construct
+UIManager_Panel_Hint	AESC Construct tools panel
+UIManager_Tooltip_ClosePanel	Close panel
+
+# === ENGRAVING (embedded Python strings) ===
+Engraving_Py_SaveDxfTitle	Please select a file to save the DXF.
+Engraving_Py_SelectTwoBodies	Select at least two solid bodies (source first, then one or more targets).
+Engraving_Py_SolidBodiesOnly	Select solid bodies only.
+Engraving_Py_BodyNotInComponent	Body not in a component.
+Engraving_Py_NoTouchingFaces	No touching faces were found to imprint. Ensure bodies actually touch (coincident faces).
+Engraving_Py_Unsupported	Unsupported selection.
+Engraving_Py_ImprintFinished	Imprint finished
+
+# === MISC UI (code-behind labels) ===
+Frame_Label_CustomProfile	Custom profile
+Settings_Label_Version	Version {0}  (build {1})
+
+# === FASTENER (module status / validation) ===
+Fastener_Err_LoadBoltData	Failed to load bolt data. Check CSV path in settings.
+Fastener_Err_LoadWasherData	Failed to load washer data. Check CSV path in settings.
+Fastener_Err_LoadNutData	Failed to load nut data. Check CSV path in settings.
+Fastener_Msg_NoObjectsSelected	No objects selected.
+Fastener_Msg_SelectSingleEdge	Please select a single edge when selecting faces.
+Fastener_Msg_SecondSelectionPlanar	Second selection must be planar face(s).
+Fastener_Msg_NonEdgeObjects	Selection contains non-edge objects.
+Fastener_Msg_EdgesMustBeCircles	All selected edges must be circles.
+Fastener_Msg_ObjectInHole	There is an object in the hole, no fastener created.
+Fastener_Msg_SelectOneCircle	Please select only one circle when selecting faces
+Fastener_Msg_NoPlacement	Could not find correct placement(s)
+Fastener_Err_NoBoltData	No bolt data available.
+Fastener_Err_NoWasherData	No washer data available.
+Fastener_Err_NoNutData	No nut data available.
+Fastener_Msg_SelectCircle	Please select a circle.
+
+# === FRAME EXTRUDE ===
+Frame_Extrude_Msg_SelectLineOrEdge	Select at least one straight line or edge.
+Frame_Extrude_Err_InvalidProfile	Error: invalid profile type or data. Cannot create extrusion.

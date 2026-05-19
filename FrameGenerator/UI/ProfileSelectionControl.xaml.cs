@@ -40,7 +40,7 @@ using Window = SpaceClaim.Api.V242.Window;
 
 namespace AESCConstruct2026.FrameGenerator.UI
 {
-    public partial class ProfileSelectionControl : UserControl
+    public partial class ProfileSelectionControl : UserControl, Localization.ILocalizable
     {
         private string selectedProfile = "";
         private string selectedProfileString = "";
@@ -103,7 +103,20 @@ namespace AESCConstruct2026.FrameGenerator.UI
             ApplyTooltip(Trim, "Frame_Tooltip_Trim");
             ApplyTooltip(RestoreGeometry, "Frame_Tooltip_RestoreGeometry");
             ApplyTooltip(RestoreJoint, "Frame_Tooltip_RestoreJoint");
+
+            // The custom-profile radio uses Tag="DXF" as a logic id, so its label
+            // cannot ride the Tag tree-walker; localize its Content here instead.
+            if (DXFProfileButton != null)
+            {
+                var t = Localization.Language.Translate("Frame_Label_CustomProfile");
+                if (!string.IsNullOrEmpty(t) && t != "Frame_Label_CustomProfile")
+                    DXFProfileButton.Content = t;
+            }
         }
+
+        // ILocalizable: RelocalizeAll already walked the Tag tree; re-apply the
+        // joint tooltips and custom-profile label on a live language change.
+        void Localization.ILocalizable.LocalizeUI() => LocalizeTooltips();
 
         // Replaces the element's ToolTip with the translation of key, but only if the CSV has it (Translate returns
         // something other than the key id itself). Keeps the design-time English fallback when the key is missing.

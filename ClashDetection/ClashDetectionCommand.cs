@@ -5,6 +5,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -24,7 +25,7 @@ namespace AESCConstruct2026.ClashDetection
             {
                 if (window?.Document == null)
                 {
-                    Application.ReportStatus("No document open.", StatusMessageType.Warning, null);
+                    L.Status("ClashDetection_Msg_NoDocument", StatusMessageType.Warning);
                     return;
                 }
 
@@ -33,7 +34,7 @@ namespace AESCConstruct2026.ClashDetection
 
                 if (allBodies.Count < 2)
                 {
-                    Application.ReportStatus("Need at least 2 bodies for clash detection.", StatusMessageType.Information, null);
+                    L.Status("ClashDetection_Msg_Need2Bodies", StatusMessageType.Information);
                     return;
                 }
 
@@ -64,7 +65,7 @@ namespace AESCConstruct2026.ClashDetection
 
                 if (entries.Count < 2)
                 {
-                    Application.ReportStatus("Not enough valid bodies for clash detection.", StatusMessageType.Information, null);
+                    L.Status("ClashDetection_Msg_NotEnoughValid", StatusMessageType.Information);
                     return;
                 }
 
@@ -130,19 +131,18 @@ namespace AESCConstruct2026.ClashDetection
                     // Select clashing bodies so SpaceClaim highlights them
                     window.ActiveContext.Selection = clashingBodies.Cast<IDocObject>().ToList();
 
-                    Application.ReportStatus(
-                        $"Found {clashes.Count} clash(es) involving {clashingBodies.Count} bodies. Clashing bodies selected.",
-                        StatusMessageType.Warning, null);
+                    L.Status("ClashDetection_Msg_Found", StatusMessageType.Warning,
+                        clashes.Count, clashingBodies.Count);
                 }
                 else
                 {
-                    Application.ReportStatus("No clashes detected.", StatusMessageType.Information, null);
+                    L.Status("ClashDetection_Msg_None", StatusMessageType.Information);
                 }
             }
             catch (Exception ex)
             {
                 Logger.Log($"[ClashDetection] DetectClashes failed: {ex}");
-                Application.ReportStatus("Clash detection failed: " + ex.Message, StatusMessageType.Error, null);
+                L.Status("ClashDetection_Err_Failed", StatusMessageType.Error, ex.Message);
             }
         }
 

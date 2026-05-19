@@ -2,7 +2,7 @@
 
 [Setup]
 AppName=AESC Construct 2026
-AppVersion=2026.1.0
+AppVersion=2026.1.1
 DefaultDirName={autopf}\AESCConstruct2026_Installer
 DisableDirPage=yes
 DisableProgramGroupPage=yes
@@ -15,9 +15,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 WizardSmallImageFile=icons\AESCLogo.bmp
 
-; Source path for plugin files (build output)
-#define SourcePlugin "C:\Program Files\ANSYS Inc\v251\scdm\Addins\AESCConstruct2026"
+; Source path for plugin files (build output — matches the csproj OutputPath)
+#define SourcePlugin "C:\Program Files\ANSYS Inc\v242\scdm\Addins\AESCConstruct2026"
 #define DestData     "C:\ProgramData\AESCConstruct"
+; Canonical, version-controlled language file (repo is the source of truth, not ProgramData)
+#define RepoLang     SourcePath + "\..\Language\languageConstruct.csv"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -29,8 +31,11 @@ Name: "{#DestData}"; Permissions: users-full; Flags: uninsneveruninstall
 [Files]
 ; Stage plugin files in installer app directory; [Code] deploys to all ANSYS versions
 Source: "{#SourcePlugin}\*"; DestDir: "{app}\Plugin"; Flags: recursesubdirs createallsubdirs ignoreversion
-; Data files go directly to their destination
-Source: "{#DestData}\*"; DestDir: "{#DestData}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Data files go directly to their destination (dev-only files and the stale
+; ProgramData language copy excluded — the language file ships from the repo)
+Source: "{#DestData}\*"; DestDir: "{#DestData}"; Excludes: "*.bak,*_Input.xlsm,languageConstruct.csv"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Ship the canonical, version-controlled language file from the repo
+Source: "{#RepoLang}"; DestDir: "{#DestData}\Language"; DestName: "languageConstruct.csv"; Flags: ignoreversion
 
 [Code]
 procedure DeployToAllVersions;

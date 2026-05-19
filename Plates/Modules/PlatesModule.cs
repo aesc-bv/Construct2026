@@ -5,6 +5,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -57,7 +58,7 @@ namespace AESCConstruct2026.Plates.Modules
             var win = Window.ActiveWindow;
             if (win == null)
             {
-                Application.ReportStatus("No active window found.", StatusMessageType.Error, null);
+                L.Status("Common_Msg_NoActiveWindow", StatusMessageType.Error);
                 return;
             }
             var doc = win.Document;
@@ -81,7 +82,7 @@ namespace AESCConstruct2026.Plates.Modules
                     return;
                 }
 
-                Application.ReportStatus("No selection found. Please select a face.", StatusMessageType.Warning, null);
+                L.Status("Plates_Msg_NoSelection", StatusMessageType.Warning);
                 return;
             }
 
@@ -92,7 +93,7 @@ namespace AESCConstruct2026.Plates.Modules
 
                 if (jobs.Count == 0)
                 {
-                    Application.ReportStatus("No planar faces found in selection.", StatusMessageType.Warning, null);
+                    L.Status("Plates_Msg_NoPlanarFaces", StatusMessageType.Warning);
                     return;
                 }
 
@@ -293,7 +294,7 @@ namespace AESCConstruct2026.Plates.Modules
                     // SUPPORT: same geometry as Base/Cap (rounded rectangle + holes) but UPRIGHT
                     if (T <= 0)
                     {
-                        Application.ReportStatus("Support plate thickness must be positive.", StatusMessageType.Error, null);
+                        L.Status("Plates_Err_SupportThicknessPositive", StatusMessageType.Error);
                         return null;
                     }
 
@@ -309,7 +310,7 @@ namespace AESCConstruct2026.Plates.Modules
                 {
                     if (T <= 0)
                     {
-                        Application.ReportStatus("Flange thickness must be positive.", StatusMessageType.Error, null);
+                        L.Status("Plates_Err_FlangeThicknessPositive", StatusMessageType.Error);
                         return null;
                     }
 
@@ -350,7 +351,7 @@ namespace AESCConstruct2026.Plates.Modules
                 {
                     if (T <= 0)
                     {
-                        Application.ReportStatus("UNP thickness must be positive.", StatusMessageType.Error, null);
+                        L.Status("Plates_Err_UnpThicknessPositive", StatusMessageType.Error);
                         return null;
                     }
 
@@ -364,7 +365,7 @@ namespace AESCConstruct2026.Plates.Modules
                     var segs = getBaseCapContour(pContour, dirX, dirY, type, L1, B1, Rad);
                     if (segs == null || (segs.Count != 4 && segs.Count != 6))
                     {
-                        Application.ReportStatus("UNP contour could not be built.", StatusMessageType.Error, null);
+                        L.Status("Plates_Err_UnpContourFailed", StatusMessageType.Error);
                         return null;
                     }
 

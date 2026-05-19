@@ -2,6 +2,10 @@
 * text=auto
 * text eol=lf
 
+# Canonical translation file is Windows-1252 — do not normalize line endings
+# or re-encode (Language.cs reads it via Encoding 1252; CR/LF tolerated).
+Language/languageConstruct.csv -text
+
 # Binary files — do not normalize line endings
 *.png binary
 *.jpg binary

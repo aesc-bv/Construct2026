@@ -30,7 +30,7 @@ using Path = System.IO.Path;
 
 namespace AESCConstruct2026.FrameGenerator.UI
 {
-    public partial class SettingsControl : UserControl
+    public partial class SettingsControl : UserControl, Localization.ILocalizable
     {
         public ObservableCollection<string> UnitOptions { get; }
             = new ObservableCollection<string>(new[] { "mm", "cm", "m", "inch" });
@@ -91,18 +91,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             // 2) translate every tagged element in _this_ control
             Localization.Language.LocalizeFrameworkElement(this);
-
-            // DataGrid columns are not in the logical tree walked by LocalizeFrameworkElement.
-            ColType.Header = Localization.Language.Translate("Settings_Grid_Type");
-            ColName.Header = Localization.Language.Translate("Settings_Grid_Name");
-            ColScheme.Header = Localization.Language.Translate("Settings_Grid_NamingScheme");
-
-            // PlaceholderText, ToolTip, and Window.Title are not handled by the walker.
-            SerialPlaceholder.Text = Localization.Language.Translate("Settings_Placeholder_SerialNumber");
-            BtnSave.ToolTip = Localization.Language.Translate("Settings_Tooltip_SaveSettings");
-            BtnImport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ImportSettings");
-            BtnExport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ExportSettings");
-            BtnReset.ToolTip = Localization.Language.Translate("Settings_Tooltip_ResetSettings");
+            ApplyNonTagLocalization();
 
             UIMain.UIManager.UpdateCommandTexts();
             Construct2026.UpdateCommandTexts();
@@ -112,6 +101,29 @@ namespace AESCConstruct2026.FrameGenerator.UI
             SetVersionLabel();
         }
 
+        // Re-applies strings the Tag tree-walker cannot reach (DataGrid headers,
+        // TextBox watermark, button tooltips). Called at construction and by
+        // UIManager.RelocalizeAll() via ILocalizable on language change.
+        private void ApplyNonTagLocalization()
+        {
+            // DataGrid columns are not in the logical tree walked by LocalizeFrameworkElement.
+            ColType.Header = Localization.Language.Translate("Settings_Grid_Type");
+            ColName.Header = Localization.Language.Translate("Settings_Grid_Name");
+            ColScheme.Header = Localization.Language.Translate("Settings_Grid_NamingScheme");
+
+            // PlaceholderText and ToolTip are not handled by the walker.
+            SerialPlaceholder.Text = Localization.Language.Translate("Settings_Placeholder_SerialNumber");
+            BtnSave.ToolTip = Localization.Language.Translate("Settings_Tooltip_SaveSettings");
+            BtnImport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ImportSettings");
+            BtnExport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ExportSettings");
+            BtnReset.ToolTip = Localization.Language.Translate("Settings_Tooltip_ResetSettings");
+
+            SetVersionLabel();
+        }
+
+        // ILocalizable: RelocalizeAll already walked the Tag tree; re-apply the rest.
+        void Localization.ILocalizable.LocalizeUI() => ApplyNonTagLocalization();
+
         private void SetVersionLabel()
         {
             try
@@ -119,7 +131,9 @@ namespace AESCConstruct2026.FrameGenerator.UI
                 var asm = Assembly.GetExecutingAssembly();
                 var version = asm.GetName().Version;
                 var buildDate = File.GetLastWriteTime(asm.Location);
-                VersionLabel.Text = $"Version {version}  (build {buildDate:yyyy-MM-dd HH:mm})";
+                VersionLabel.Text = string.Format(
+                    Localization.Language.Translate("Settings_Label_Version"),
+                    version, buildDate.ToString("yyyy-MM-dd HH:mm"));
             }
             catch (Exception ex)
             {

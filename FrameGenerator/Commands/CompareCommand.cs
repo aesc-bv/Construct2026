@@ -1,4 +1,5 @@
 ﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.UIMain;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
@@ -25,7 +26,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 var window = Window.ActiveWindow;
                 if (window == null)
                 {
-                    Application.ReportStatus("No active window found.", StatusMessageType.Warning, null);
+                    L.Status("Common_Msg_NoActiveWindow", StatusMessageType.Warning);
                     return;
                 }
 
@@ -40,7 +41,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
                 if (bodies.Count == 0)
                 {
-                    Application.ReportStatus("No bodies found in the main part.", StatusMessageType.Warning, null);
+                    L.Status("Frame_Compare_Msg_NoBodies", StatusMessageType.Warning);
                     return;
                 }
 

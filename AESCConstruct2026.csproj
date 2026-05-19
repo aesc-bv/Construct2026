@@ -115,6 +115,11 @@
     <Compile Include="Connector\UI\ConnectorControl.xaml.cs">
       <DependentUpon>ConnectorControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Connector2\Connector2.cs" />
+    <Compile Include="Connector2\CylInfo2.cs" />
+    <Compile Include="Connector2\UI\Connector2Control.xaml.cs">
+      <DependentUpon>Connector2Control.xaml</DependentUpon>
+    </Compile>
     <Compile Include="CustomComponent\UI\CustomComponentControl.xaml.cs">
       <DependentUpon>CustomComponentControl.xaml</DependentUpon>
     </Compile>
@@ -164,6 +169,8 @@
     <Compile Include="RibCutout\Commands\KruisRibCmd.cs" />
     <Compile Include="RibCutout\Modules\RibCutOutModule.cs" />
     <Compile Include="UIMain\Language.cs" />
+    <Compile Include="UIMain\L.cs" />
+    <Compile Include="UIMain\ILocalizable.cs" />
     <Compile Include="Licensing\LicenseSpot.cs" />
     <Compile Include="Plates\Modules\PlatesModule.cs" />
     <Compile Include="Plates\UI\PlatesControl.xaml.cs">
@@ -210,6 +217,9 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+    <None Include="Language\languageConstruct.csv">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -217,6 +227,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Connector\UI\ConnectorControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Connector2\UI\Connector2Control.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -379,5 +393,10 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets'))" />
+  </Target>
+  <!-- Keep the dev machine's ProgramData language file in sync with the repo's
+       canonical copy so contributors edit Language\languageConstruct.csv, never ProgramData directly. -->
+  <Target Name="SyncLanguageCsv" AfterTargets="Build">
+    <Copy SourceFiles="$(ProjectDir)Language\languageConstruct.csv" DestinationFiles="$(CommonProgramData)\AESCConstruct\Language\languageConstruct.csv" SkipUnchangedFiles="false" OverwriteReadOnlyFiles="true" />
   </Target>
 </Project>

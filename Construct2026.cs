@@ -99,7 +99,7 @@ namespace AESCConstruct2026
                 {
                     //AESC.Construct.SetMode3D
                     var set3DConstruct = Command.Create("AESC.Construct.SetMode3D");
-                    set3DConstruct.Hint = "3D mode without converting closed line loops to surfaces";
+                    set3DConstruct.Hint = Localization.L.T("Construct_Hint_SetMode3D");
                     set3DConstruct.Image = Command.GetCommand("SetMode3D").Image;
                     set3DConstruct.Executing += (s, e) => setMode3D();
                     set3DConstruct.KeepAlive(true);
@@ -112,7 +112,7 @@ namespace AESCConstruct2026
                     // Export to Excel
                     var exportExcel = Command.Create("AESCConstruct2026.ExportExcel");
                     exportExcel.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
-                    exportExcel.Hint = "Export frame data to an Excel file.";
+                    exportExcel.Hint = Localization.L.T("Construct_Hint_ExportExcel");
                     exportExcel.Image = loadImg(Resources.ExcelLogo);
                     exportExcel.IsEnabled = valid;
                     exportExcel.Executing += (s, e) => ExportCommands.ExportExcel(Window.ActiveWindow);
@@ -121,7 +121,7 @@ namespace AESCConstruct2026
                     // Export BOM
                     var exportBOM = Command.Create("AESCConstruct2026.ExportBOM");
                     exportBOM.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
-                    exportBOM.Hint = "Create a bill-of-materials.";
+                    exportBOM.Hint = Localization.L.T("Construct_Hint_ExportBOM");
                     exportBOM.Image = loadImg(Resources.BOMLogo);
                     exportBOM.IsEnabled = valid;
                     exportBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, false);
@@ -130,7 +130,7 @@ namespace AESCConstruct2026
 
                     var updateBOM = Command.Create("AESCConstruct2026.UpdateBOM");
                     updateBOM.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
-                    updateBOM.Hint = "Update an existing bill-of-materials.";
+                    updateBOM.Hint = Localization.L.T("Construct_Hint_UpdateBOM");
                     updateBOM.Image = loadImg(Resources.Icon_Update);
                     updateBOM.IsEnabled = valid;
                     updateBOM.Executing += (s, e) => ExportCommands.ExportBOM(Window.ActiveWindow, update: true);
@@ -139,7 +139,7 @@ namespace AESCConstruct2026
                     // Export STEP
                     var exportSTEP = Command.Create("AESCConstruct2026.ExportSTEP");
                     exportSTEP.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
-                    exportSTEP.Hint = "Export frame as a STEP file.";
+                    exportSTEP.Hint = Localization.L.T("Construct_Hint_ExportSTEP");
                     exportSTEP.Image = loadImg(Resources.STEPLogo);
                     exportSTEP.IsEnabled = valid;
                     exportSTEP.Executing += (s, e) => ExportCommands.ExportSTEP(Window.ActiveWindow);
@@ -150,36 +150,36 @@ namespace AESCConstruct2026
 
                     // 1) Import DXF Contours
                     var importDxfContours = Command.Create("AESCConstruct2026.ImportDXFContours");
-                    importDxfContours.Text = "Import DXF Contours";
-                    importDxfContours.Hint = "Load DXF contours into the active document.";
+                    importDxfContours.Text = Localization.L.T("Ribbon.Button.ImportDXFContours");
+                    importDxfContours.Hint = Localization.L.T("Construct_Hint_ImportDXFContours");
                     importDxfContours.Executing += ImportDXFContours_Execute;
                     importDxfContours.KeepAlive(true);
 
                     // 2) Convert (open) DXF → Profile
                     var dxfToProfile = Command.Create("AESCConstruct2026.DXFToProfile");
-                    dxfToProfile.Text = "DXF → Profile";
-                    dxfToProfile.Hint = "Convert an open DXF window into a profile string and preview image.";
+                    dxfToProfile.Text = Localization.L.T("Ribbon.Button.DXFToProfile");
+                    dxfToProfile.Hint = Localization.L.T("Construct_Hint_DXFToProfile");
                     dxfToProfile.Executing += DXFtoProfile_Execute;
                     dxfToProfile.KeepAlive(true);
 
                     // 3) Save DXFProfile list to CSV
                     var saveDxfCsv = Command.Create("AESCConstruct2026.SaveDXFProfileCsv");
-                    saveDxfCsv.Text = "Save DXFProfile CSV";
-                    saveDxfCsv.Hint = "Save all collected DXFProfile objects to a CSV file.";
+                    saveDxfCsv.Text = Localization.L.T("Ribbon.Button.SaveDXFProfileCsv");
+                    saveDxfCsv.Hint = Localization.L.T("Construct_Hint_SaveDXFProfileCsv");
                     saveDxfCsv.Executing += SaveDXFProfiles_Execute;
                     saveDxfCsv.KeepAlive(true);
 
                     // 4) Load DXFProfile list from CSV
                     var loadDxfCsv = Command.Create("AESCConstruct2026.LoadDXFProfileCsv");
-                    loadDxfCsv.Text = "Load DXFProfile CSV";
-                    loadDxfCsv.Hint = "Load DXFProfile objects from a CSV file.";
+                    loadDxfCsv.Text = Localization.L.T("Ribbon.Button.LoadDXFProfileCsv");
+                    loadDxfCsv.Hint = Localization.L.T("Construct_Hint_LoadDXFProfileCsv");
                     loadDxfCsv.Executing += LoadDXFProfiles_Execute;
                     loadDxfCsv.KeepAlive(true);
 
                     // 5)Compare bodies in document
                     var CompareCmd = Command.Create("AESCConstruct2026.CompareBodies");
-                    CompareCmd.Text = "Compare";
-                    CompareCmd.Hint = "Compare bodies to look for duplicates";
+                    CompareCmd.Text = Localization.L.T("Ribbon.Button.CompareBodies");
+                    CompareCmd.Hint = Localization.L.T("Construct_Hint_Compare");
                     CompareCmd.Image = loadImg(Resources.compare);
                     CompareCmd.IsEnabled = valid;
                     CompareCmd.KeepAlive(true);
@@ -188,8 +188,8 @@ namespace AESCConstruct2026
 
                     // 6) Detect Clashes
                     var clashCmd = Command.Create("AESCConstruct2026.DetectClashes");
-                    clashCmd.Text = "Detect Clashes";
-                    clashCmd.Hint = "Detect intersecting bodies in the model";
+                    clashCmd.Text = Localization.L.T("Ribbon.Button.DetectClashes");
+                    clashCmd.Hint = Localization.L.T("Construct_Hint_DetectClashes");
                     clashCmd.Image = loadImg(Resources.compare);
                     clashCmd.IsEnabled = valid;
                     clashCmd.Executing += (s, e) => ClashDetectionCommand.DetectClashes(Window.ActiveWindow);
@@ -201,8 +201,8 @@ namespace AESCConstruct2026
 
                     // Legacy Joint
                     var jointCmd = Command.Create(ExecuteJointCommand.CommandName);
-                    jointCmd.Text = "Execute Joint (Legacy)";
-                    jointCmd.Hint = "Applies a joint between selected components.";
+                    jointCmd.Text = Localization.L.T("Ribbon.Button.ExecuteJointLegacy");
+                    jointCmd.Hint = Localization.L.T("Construct_Hint_ExecuteJointLegacy");
                     jointCmd.KeepAlive(true);
                     jointCmd.Executing += (s, e) =>
                         ExecuteJointCommand.ExecuteJoint(Window.ActiveWindow, 0.0, "Miter", false);
@@ -222,14 +222,14 @@ namespace AESCConstruct2026
                             var lic = ConstructLicenseSpot.CurrentLicense;
                             if (lic == null)
                             {
-                                Application.ReportStatus("No license handle available (activate or check your license files).", StatusMessageType.Error, null);
+                                Localization.L.Status("Construct_Net_Msg_NoHandle", StatusMessageType.Error);
 
                                 return;
                             }
 
                             if (!lic.IsNetwork)
                             {
-                                Application.ReportStatus("Current license is not a network license.", StatusMessageType.Warning, null);
+                                Localization.L.Status("Construct_Net_Msg_NotNetwork", StatusMessageType.Warning);
                                 return;
                             }
 
@@ -245,7 +245,7 @@ namespace AESCConstruct2026
                         }
                         catch (Exception ex)
                         {
-                            Application.ReportStatus("Network license toggle failed:\n" + ex.Message, StatusMessageType.Warning, null);
+                            Localization.L.Status("Construct_Net_Err_ToggleFailed", StatusMessageType.Warning, ex.Message);
                         }
                     };
 
@@ -305,7 +305,7 @@ namespace AESCConstruct2026
             catch (Exception ex)
             {
                 Logger.Log("[Construct2026] setMode3D failed: " + ex.ToString());
-                Application.ReportStatus("SetMode3D error: " + ex.Message, StatusMessageType.Error, null);
+                Localization.L.Status("Construct_Err_SetMode3D", StatusMessageType.Error, ex.Message);
             }
         }
 
@@ -325,23 +325,32 @@ namespace AESCConstruct2026
             UpdateCommandTexts();
         }
 
-        // Refreshes localized button texts for all registered ribbon commands.
+        // Refreshes localized button texts and hints for all registered ribbon commands.
+        // Note: SpaceClaim may cache Command.Hint after the ribbon is first built, so a live
+        // hint refresh is best-effort; the label (Text) refresh is reliable.
+        private static void SetTextHint(string id, string textKey, string hintKey)
+        {
+            var cmd = Command.GetCommand(id);
+            if (cmd == null) return;
+            if (textKey != null) cmd.Text = Localization.L.T(textKey);
+            if (hintKey != null) cmd.Hint = Localization.L.T(hintKey);
+        }
+
         public static void UpdateCommandTexts()
         {
-            var cmd = Command.GetCommand("AESCConstruct2026.ExportExcel");
-            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportExcel");
-
-            cmd = Command.GetCommand("AESCConstruct2026.ExportBOM");
-            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.GenerateBOM");
-
-            cmd = Command.GetCommand("AESCConstruct2026.UpdateBOM");
-            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.UpdateBOM");
-
-            cmd = Command.GetCommand("AESCConstruct2026.ExportSTEP");
-            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ExportSTEP");
-
-            cmd = Command.GetCommand("AESCConstruct2026.ActivateNetwork");
-            if (cmd != null) cmd.Text = Localization.Language.Translate("Ribbon.Button.ActivateNetworkBtn");
+            SetTextHint("AESC.Construct.SetMode3D", null, "Construct_Hint_SetMode3D");
+            SetTextHint("AESCConstruct2026.ExportExcel", "Ribbon.Button.ExportExcel", "Construct_Hint_ExportExcel");
+            SetTextHint("AESCConstruct2026.ExportBOM", "Ribbon.Button.GenerateBOM", "Construct_Hint_ExportBOM");
+            SetTextHint("AESCConstruct2026.UpdateBOM", "Ribbon.Button.UpdateBOM", "Construct_Hint_UpdateBOM");
+            SetTextHint("AESCConstruct2026.ExportSTEP", "Ribbon.Button.ExportSTEP", "Construct_Hint_ExportSTEP");
+            SetTextHint("AESCConstruct2026.ImportDXFContours", "Ribbon.Button.ImportDXFContours", "Construct_Hint_ImportDXFContours");
+            SetTextHint("AESCConstruct2026.DXFToProfile", "Ribbon.Button.DXFToProfile", "Construct_Hint_DXFToProfile");
+            SetTextHint("AESCConstruct2026.SaveDXFProfileCsv", "Ribbon.Button.SaveDXFProfileCsv", "Construct_Hint_SaveDXFProfileCsv");
+            SetTextHint("AESCConstruct2026.LoadDXFProfileCsv", "Ribbon.Button.LoadDXFProfileCsv", "Construct_Hint_LoadDXFProfileCsv");
+            SetTextHint("AESCConstruct2026.CompareBodies", "Ribbon.Button.CompareBodies", "Construct_Hint_Compare");
+            SetTextHint("AESCConstruct2026.DetectClashes", "Ribbon.Button.DetectClashes", "Construct_Hint_DetectClashes");
+            SetTextHint(ExecuteJointCommand.CommandName, "Ribbon.Button.ExecuteJointLegacy", "Construct_Hint_ExecuteJointLegacy");
+            SetTextHint("AESCConstruct2026.ActivateNetwork", "Ribbon.Button.ActivateNetworkBtn", null);
         }
 
         // Creates a bitmap image from embedded byte resources for use as command icons.
@@ -415,8 +424,8 @@ namespace AESCConstruct2026
             string filePath;
             using (var dlg = new OpenFileDialog
             {
-                Title = "Select DXF file to import",
-                Filter = "DXF Files (*.dxf)|*.dxf"
+                Title = Localization.L.T("DXF_FileDialog_ImportTitle"),
+                Filter = Localization.L.T("DXF_FileFilter_Dxf")
             })
             {
                 if (dlg.ShowDialog() != DialogResult.OK)
@@ -427,11 +436,11 @@ namespace AESCConstruct2026
             // Call the helper
             if (DXFImportHelper.ImportDXFContours(filePath, out var contours))
             {
-                Application.ReportStatus($"Imported {contours.Count} contour curves from:\n{filePath}", StatusMessageType.Information, null);
+                Localization.L.Status("DXF_Msg_Imported", StatusMessageType.Information, contours.Count, filePath);
             }
             else
             {
-                Application.ReportStatus($"Failed to import valid contours from:\n{filePath}", StatusMessageType.Error, null);
+                Localization.L.Status("DXF_Err_ImportFailed", StatusMessageType.Error, filePath);
             }
         }
 
@@ -442,14 +451,14 @@ namespace AESCConstruct2026
             var profile = DXFImportHelper.DXFtoProfile();
             if (profile == null)
             {
-                Application.ReportStatus("DXF → Profile failed or was invalid.", StatusMessageType.Error, null);
+                Localization.L.Status("DXF_Err_ProfileInvalid", StatusMessageType.Error);
                 return;
             }
 
             // Copy the ProfileString to the clipboard
             Clipboard.SetText(profile.ProfileString);
 
-            Application.ReportStatus($"DXF→Profile succeeded.\n\nName = {profile.Name}\n(Profile string copied to clipboard.)", StatusMessageType.Information, null);
+            Localization.L.Status("DXF_Msg_ProfileSucceeded", StatusMessageType.Information, profile.Name);
 
             // Decode and display the preview image if available
             if (!string.IsNullOrEmpty(profile.ImgString))
@@ -486,15 +495,15 @@ namespace AESCConstruct2026
             var profileCount = profiles?.Count() ?? 0;
             if (profileCount == 0)
             {
-                Application.ReportStatus("No DXF profiles available to save.", StatusMessageType.Information, null);
+                Localization.L.Status("DXF_Msg_NoProfilesToSave", StatusMessageType.Information);
                 return;
             }
 
             string csvPath;
             using (var dlg = new SaveFileDialog
             {
-                Title = "Save DXFProfile List as CSV",
-                Filter = "CSV Files (*.csv)|*.csv",
+                Title = Localization.L.T("DXF_FileDialog_SaveTitle"),
+                Filter = Localization.L.T("DXF_FileFilter_Csv"),
                 FileName = "DXFProfiles.csv"
             })
             {
@@ -507,11 +516,11 @@ namespace AESCConstruct2026
             {
                 DXFImportHelper.DXFProfileCsvHandler.SaveDXFProfiles(csvPath, profiles);
 
-                Application.ReportStatus($"Saved {profileCount} profiles to:\n{csvPath}", StatusMessageType.Information, null);
+                Localization.L.Status("DXF_Msg_Saved", StatusMessageType.Information, profileCount, csvPath);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to save CSV:\n{ex.Message}", StatusMessageType.Error, null);
+                Localization.L.Status("DXF_Err_SaveFailed", StatusMessageType.Error, ex.Message);
             }
         }
 
@@ -593,8 +602,8 @@ namespace AESCConstruct2026
             string csvPath;
             using (var dlg = new OpenFileDialog
             {
-                Title = "Load DXFProfile CSV",
-                Filter = "CSV Files (*.csv)|*.csv"
+                Title = Localization.L.T("DXF_FileDialog_LoadTitle"),
+                Filter = Localization.L.T("DXF_FileFilter_Csv")
             })
             {
                 if (dlg.ShowDialog() != DialogResult.OK)
@@ -609,7 +618,7 @@ namespace AESCConstruct2026
                 DXFImportHelper.SessionProfiles.AddRange(profiles);
 
 
-                Application.ReportStatus($"Loaded {profiles.Count} profiles from:\n{csvPath}", StatusMessageType.Information, null);
+                Localization.L.Status("DXF_Msg_Loaded", StatusMessageType.Information, profiles.Count, csvPath);
                 // (Optional) Immediately reconstruct each profile in the main part:
                 foreach (var prof in profiles)
                 {
@@ -619,7 +628,7 @@ namespace AESCConstruct2026
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to load CSV:\n{ex.Message}", StatusMessageType.Error, null);
+                Localization.L.Status("DXF_Err_LoadFailed", StatusMessageType.Error, ex.Message);
             }
         }
     }

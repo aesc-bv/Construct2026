@@ -1,3 +1,4 @@
+using AESCConstruct2026.Localization;
 using System;
 using System.IO;
 using System.Windows;
@@ -78,8 +79,8 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(0, 12, 0, 0)
             };
-            var okButton = new Button { Content = "OK", Width = 75, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
-            var cancelButton = new Button { Content = "Cancel", Width = 75, IsCancel = true };
+            var okButton = new Button { Content = L.T("Common_Btn_OK"), Width = 75, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
+            var cancelButton = new Button { Content = L.T("Common_Btn_Cancel"), Width = 75, IsCancel = true };
             buttons.Children.Add(okButton);
             buttons.Children.Add(cancelButton);
             Grid.SetRow(buttons, row);

@@ -9,6 +9,7 @@
 
 using AESCConstruct2026.FrameGenerator.Modules;
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Extensibility;
 using SpaceClaim.Api.V242.Geometry;
@@ -45,7 +46,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 var win = Window.ActiveWindow;
                 if (win == null)
                 {
-                    Application.ReportStatus("No active window found.", StatusMessageType.Error, null);
+                    L.Status("Common_Msg_NoActiveWindow", StatusMessageType.Error);
                     return;
                 }
 
@@ -63,7 +64,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
                 if (rawCurves.Count == 0)
                 {
-                    Application.ReportStatus("Select at least one straight line or edge.", StatusMessageType.Warning, null);
+                    L.Status("Frame_Extrude_Msg_SelectLineOrEdge", StatusMessageType.Warning);
                     return;
                 }
 
@@ -85,7 +86,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 }
                 else
                 {
-                    Application.ReportStatus("Error: invalid profile type or data. Cannot create extrusion.", StatusMessageType.Error, null);
+                    L.Status("Frame_Extrude_Err_InvalidProfile", StatusMessageType.Error);
                     return;
                 }
 

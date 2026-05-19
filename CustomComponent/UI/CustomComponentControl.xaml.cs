@@ -4,6 +4,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.Properties;
 using SpaceClaim.Api.V242;
 using System;
@@ -85,7 +86,7 @@ namespace AESCConstruct2026.UI
 
             if (!Directory.Exists(searchDir))
             {
-                Application.ReportStatus($"Template folder not found: {searchDir}", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFolderNotFound", StatusMessageType.Warning, searchDir);
                 SelectedTemplate = null;
                 return;
             }
@@ -107,11 +108,10 @@ namespace AESCConstruct2026.UI
 
             SelectedTemplate = TemplateOptions.FirstOrDefault();
 
-            Application.ReportStatus(
-                TemplateOptions.Count > 0
-                    ? $"Loaded {TemplateOptions.Count} template(s) from {searchDir}"
-                    : $"No .csv templates found in {searchDir}",
-                StatusMessageType.Information, null);
+            if (TemplateOptions.Count > 0)
+                L.Status("CustomComponent_Msg_TemplatesLoaded", StatusMessageType.Information, TemplateOptions.Count, searchDir);
+            else
+                L.Status("CustomComponent_Msg_NoTemplates", StatusMessageType.Information, searchDir);
         }
 
         // Handles “Add document properties” button: merges CSV-defined props into Document.CustomProperties.
@@ -125,7 +125,7 @@ namespace AESCConstruct2026.UI
             if (doc == null)
             {
                 Logger.Log($"[AddDocProps:{runId}] No active document. ABORT");
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
@@ -134,7 +134,7 @@ namespace AESCConstruct2026.UI
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
                 Logger.Log($"[AddDocProps:{runId}] Template file not found. ABORT");
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
@@ -150,14 +150,14 @@ namespace AESCConstruct2026.UI
             catch (Exception ex)
             {
                 Logger.Log($"[AddDocProps:{runId}] ERROR reading CSV: {ex}");
-                Application.ReportStatus("Failed to read template CSV.", StatusMessageType.Error, null);
+                L.Status("CustomComponent_Err_ReadCsv", StatusMessageType.Error);
                 return;
             }
 
             if (csvProps.Count == 0)
             {
                 Logger.Log($"[AddDocProps:{runId}] CSV empty (after header skip). ABORT");
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
 
@@ -173,7 +173,7 @@ namespace AESCConstruct2026.UI
             catch (Exception ex)
             {
                 Logger.Log($"[AddDocProps:{runId}] ERROR reading existing DOC properties: {ex}");
-                Application.ReportStatus("Failed to read existing document properties.", StatusMessageType.Error, null);
+                L.Status("CustomComponent_Err_ReadExistingProps", StatusMessageType.Error);
                 return;
             }
 
@@ -197,11 +197,11 @@ namespace AESCConstruct2026.UI
             catch (Exception ex)
             {
                 Logger.Log($"[AddDocProps:{runId}] ERROR during rebuild (WriteBlock): {ex}");
-                Application.ReportStatus("Failed while updating document properties.", StatusMessageType.Error, null);
+                L.Status("CustomComponent_Err_UpdateProps", StatusMessageType.Error);
                 return;
             }
 
-            Application.ReportStatus($"Document properties updated from {SelectedTemplate}", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_DocPropsUpdated", StatusMessageType.Information, SelectedTemplate);
             Logger.Log($"[AddDocProps:{runId}] DONE");
         }
 
@@ -216,7 +216,7 @@ namespace AESCConstruct2026.UI
             if (doc == null)
             {
                 Logger.Log($"[DelDocProps:{runId}] No active document. ABORT");
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
@@ -225,7 +225,7 @@ namespace AESCConstruct2026.UI
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
                 Logger.Log($"[DelDocProps:{runId}] Template file not found. ABORT");
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
@@ -239,13 +239,13 @@ namespace AESCConstruct2026.UI
             catch (Exception ex)
             {
                 Logger.Log($"[DelDocProps:{runId}] ERROR reading CSV: {ex}");
-                Application.ReportStatus("Failed to read template CSV.", StatusMessageType.Error, null);
+                L.Status("CustomComponent_Err_ReadCsv", StatusMessageType.Error);
                 return;
             }
             if (csvProps.Count == 0)
             {
                 Logger.Log($"[DelDocProps:{runId}] CSV empty (after header skip). ABORT");
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
 
@@ -286,11 +286,11 @@ namespace AESCConstruct2026.UI
             catch (Exception ex)
             {
                 Logger.Log($"[DelDocProps:{runId}] ERROR during delete (WriteBlock): {ex}");
-                Application.ReportStatus("Failed while deleting document properties.", StatusMessageType.Error, null);
+                L.Status("CustomComponent_Err_DeleteProps", StatusMessageType.Error);
                 return;
             }
 
-            Application.ReportStatus($"Deleted properties from {SelectedTemplate}", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_DocPropsDeleted", StatusMessageType.Information, SelectedTemplate);
             Logger.Log($"[DelDocProps:{runId}] DONE");
         }
 
@@ -685,28 +685,28 @@ namespace AESCConstruct2026.UI
             var doc = window?.Document;
             if (doc == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
             var csvFullPath = GetSelectedTemplateFullPath();
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
             var comps = GetSelectedComponents(window);
             if (comps.Count == 0)
             {
-                Application.ReportStatus("Select one or more components.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_SelectComponents", StatusMessageType.Warning);
                 return;
             }
 
             var csvProps = ReadTemplateProperties(csvFullPath, Guid.NewGuid().ToString("N"), skipHeaderRow: true);
             if (csvProps.Count == 0)
             {
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
 
@@ -716,7 +716,7 @@ namespace AESCConstruct2026.UI
                     RebuildPartPropertiesInOrder(comp.Template, csvProps);
             });
 
-            Application.ReportStatus("Component properties added to selection.", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_PropsAddedSelection", StatusMessageType.Information);
         }
 
         // Deletes template-defined properties from all currently selected Components based on the CSV keys.
@@ -726,28 +726,28 @@ namespace AESCConstruct2026.UI
             var doc = window?.Document;
             if (doc == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
             var csvFullPath = GetSelectedTemplateFullPath();
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
             var comps = GetSelectedComponents(window);
             if (comps.Count == 0)
             {
-                Application.ReportStatus("Select one or more components.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_SelectComponents", StatusMessageType.Warning);
                 return;
             }
 
             var csvProps = ReadTemplateProperties(csvFullPath, Guid.NewGuid().ToString("N"), skipHeaderRow: true);
             if (csvProps.Count == 0)
             {
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
             var keys = csvProps.Select(p => p.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -759,7 +759,7 @@ namespace AESCConstruct2026.UI
                         DeletePartProperty(comp.Template, k);
             });
 
-            Application.ReportStatus("Component properties deleted from selection.", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_PropsDeletedSelection", StatusMessageType.Information);
         }
 
         // Applies template-defined properties to all components in the main part of the active document.
@@ -770,28 +770,28 @@ namespace AESCConstruct2026.UI
             var mainPart = doc?.MainPart;
             if (mainPart == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
             var csvFullPath = GetSelectedTemplateFullPath();
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
             var comps = mainPart.GetDescendants<IComponent>().OfType<Component>().ToList();
             if (comps.Count == 0)
             {
-                Application.ReportStatus("No components found.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_NoComponentsFound", StatusMessageType.Information);
                 return;
             }
 
             var csvProps = ReadTemplateProperties(csvFullPath, Guid.NewGuid().ToString("N"), skipHeaderRow: true);
             if (csvProps.Count == 0)
             {
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
 
@@ -801,7 +801,7 @@ namespace AESCConstruct2026.UI
                     RebuildPartPropertiesInOrder(comp.Template, csvProps);
             });
 
-            Application.ReportStatus("Component properties added to all components.", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_PropsAddedAll", StatusMessageType.Information);
         }
 
         // Deletes template-defined properties from all components in the main part of the active document.
@@ -812,28 +812,28 @@ namespace AESCConstruct2026.UI
             var mainPart = doc?.MainPart;
             if (mainPart == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
             var csvFullPath = GetSelectedTemplateFullPath();
             if (string.IsNullOrWhiteSpace(csvFullPath) || !File.Exists(csvFullPath))
             {
-                Application.ReportStatus("Template file not found.", StatusMessageType.Warning, null);
+                L.Status("CustomComponent_Msg_TemplateFileNotFound", StatusMessageType.Warning);
                 return;
             }
 
             var comps = mainPart.GetDescendants<IComponent>().OfType<Component>().ToList();
             if (comps.Count == 0)
             {
-                Application.ReportStatus("No components found.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_NoComponentsFound", StatusMessageType.Information);
                 return;
             }
 
             var csvProps = ReadTemplateProperties(csvFullPath, Guid.NewGuid().ToString("N"), skipHeaderRow: true);
             if (csvProps.Count == 0)
             {
-                Application.ReportStatus("Template contains no properties.", StatusMessageType.Information, null);
+                L.Status("CustomComponent_Msg_TemplateNoProps", StatusMessageType.Information);
                 return;
             }
             var keys = csvProps.Select(p => p.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -845,7 +845,7 @@ namespace AESCConstruct2026.UI
                         DeletePartProperty(comp.Template, k);
             });
 
-            Application.ReportStatus("Deleted component properties from all components.", StatusMessageType.Information, null);
+            L.Status("CustomComponent_Msg_PropsDeletedAll", StatusMessageType.Information);
         }
 
         // Returns only Component instances from the current SpaceClaim selection, logging them for diagnostics.

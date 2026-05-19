@@ -3,6 +3,7 @@
  and manages their hosting as docked SpaceClaim panels.
 */
 
+using AESCConstruct2026.Connector2.UI;
 using AESCConstruct2026.FrameGenerator.UI;
 using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Licensing;
@@ -40,7 +41,7 @@ namespace AESCConstruct2026.UIMain
         private static RibCutOutControl _ribCutOutControl;
         private static CustomComponentControl _customPropertiesControl;
         private static EngravingControl _engravingControl;
-        private static ConnectorControl _connectorControl;
+        private static Connector2Control _connectorControl;
 
         // Command names
         public const string ProfileCommand = "AESCConstruct2026.ProfileSidebar";
@@ -60,7 +61,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 ProfileCommand,
                 Localization.Language.Translate("Ribbon.Button.FrameGenerator"),
-                "Open the profile selection sidebar",
+                Localization.Language.Translate("UIManager_Hint_FrameGenerator"),
                 Resources.FrameGen,
                 () => Show(ProfileCommand),
                 valid
@@ -69,7 +70,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 SettingsCommand,
                 Localization.Language.Translate("Ribbon.Button.Settings"),
-                "Open the settings sidebar",
+                Localization.Language.Translate("UIManager_Hint_Settings"),
                 Resources.settings,
                 () => Show(SettingsCommand),
                 true
@@ -78,7 +79,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 PlateCommand,
                 Localization.Language.Translate("Ribbon.Button.Plate"),
-                "Open the plate-creation pane",
+                Localization.Language.Translate("UIManager_Hint_Plate"),
                 Resources.InsertPlate,
                 () => Show(PlateCommand),
                 valid
@@ -87,7 +88,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 FastenerCommand,
                 Localization.Language.Translate("Ribbon.Button.Fastener"),
-                "Open the fastener insertion pane",
+                Localization.Language.Translate("UIManager_Hint_Fastener"),
                 Resources.Fasteners,
                 () => Show(FastenerCommand),
                 valid
@@ -96,7 +97,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 RibCutOutCommand,
                 Localization.Language.Translate("Ribbon.Button.RibCutOut"),
-                "Open the rib cut-out pane",
+                Localization.Language.Translate("UIManager_Hint_RibCutOut"),
                 Resources.ribCutout,
                 () => Show(RibCutOutCommand),
                 valid
@@ -105,7 +106,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 CustomPropertiesCommand,
                 Localization.Language.Translate("Ribbon.Button.CustomProperties"),
-                "Open the custom-properties pane",
+                Localization.Language.Translate("UIManager_Hint_CustomProperties"),
                 Resources.Custom_Properties,
                 () => Show(CustomPropertiesCommand),
                 valid
@@ -114,7 +115,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 EngravingCommand,
                 Localization.Language.Translate("Ribbon.Button.Engraving"),
-                "Open the engraving pane",
+                Localization.Language.Translate("UIManager_Hint_Engraving"),
                 Resources.Engraving,
                 () => Show(EngravingCommand),
                 valid
@@ -123,7 +124,7 @@ namespace AESCConstruct2026.UIMain
             Register(
                 ConnectorCommand,
                 Localization.Language.Translate("Ribbon.Button.Connector"),
-                "Open the connector pane",
+                Localization.Language.Translate("UIManager_Hint_Connector"),
                 Resources.Menu_Connector,
                 () => Show(ConnectorCommand),
                 valid
@@ -182,8 +183,8 @@ namespace AESCConstruct2026.UIMain
                 Logger.Log($"[UIManager] RegisterConstructPanel start. _constructPanelCmd={(_constructPanelCmd == null ? "null" : "set")}, preExistingCommand={(preExisting == null ? "null" : "FOUND")}");
 
                 _constructPanelCmd = Command.Create(ConstructPanelCommand);
-                _constructPanelCmd.Text = "AESC Construct";
-                _constructPanelCmd.Hint = "AESC Construct tools panel";
+                _constructPanelCmd.Text = Localization.Language.Translate("UIManager_Panel_Title");
+                _constructPanelCmd.Hint = Localization.Language.Translate("UIManager_Panel_Hint");
                 _constructPanelCmd.Image = LoadImage(Resources.FrameGen);
                 _constructPanelCmd.IsEnabled = true;
                 _constructPanelCmd.IsVisible = false;   // hidden until first use
@@ -319,7 +320,7 @@ namespace AESCConstruct2026.UIMain
                 Background = System.Windows.Media.Brushes.Transparent,
                 BorderBrush = System.Windows.Media.Brushes.Transparent,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = "Close panel"
+                ToolTip = Localization.Language.Translate("UIManager_Tooltip_ClosePanel")
             };
             closeBtn.Click += (s, e) => ClosePanel();
 
@@ -409,38 +410,37 @@ namespace AESCConstruct2026.UIMain
             foreach (var ctl in controls)
             {
                 if (ctl == null) continue;
-                try { Localization.Language.LocalizeFrameworkElement(ctl); }
+                try
+                {
+                    Localization.Language.LocalizeFrameworkElement(ctl);
+                    // Refresh non-Tag strings (tooltips, watermarks, grid headers, code-built labels).
+                    if (ctl is Localization.ILocalizable loc) loc.LocalizeUI();
+                }
                 catch (Exception ex) { Logger.Log("[UIManager] RelocalizeAll: " + ctl.GetType().Name + " failed: " + ex.Message); }
             }
         }
 
-        // Updates localized texts for all sidebar commands.
+        // Sets a sidebar command's localized Text and Hint by id.
+        private static void SetTextHint(string id, string textKey, string hintKey)
+        {
+            var c = Command.GetCommand(id);
+            if (c == null) return;
+            if (textKey != null) c.Text = Localization.Language.Translate(textKey);
+            if (hintKey != null) c.Hint = Localization.Language.Translate(hintKey);
+        }
+
+        // Updates localized texts and hints for all sidebar commands and the Construct panel.
         public static void UpdateCommandTexts()
         {
-            // Sidebar buttons
-            var c = Command.GetCommand(ProfileCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.FrameGenerator");
-
-            c = Command.GetCommand(SettingsCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Settings");
-
-            c = Command.GetCommand(PlateCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Plate");
-
-            c = Command.GetCommand(FastenerCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Fastener");
-
-            c = Command.GetCommand(RibCutOutCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.RibCutOut");
-
-            c = Command.GetCommand(CustomPropertiesCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.CustomProperties");
-
-            c = Command.GetCommand(EngravingCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Engraving");
-
-            c = Command.GetCommand(ConnectorCommand);
-            if (c != null) c.Text = Localization.Language.Translate("Ribbon.Button.Connector");
+            SetTextHint(ProfileCommand, "Ribbon.Button.FrameGenerator", "UIManager_Hint_FrameGenerator");
+            SetTextHint(SettingsCommand, "Ribbon.Button.Settings", "UIManager_Hint_Settings");
+            SetTextHint(PlateCommand, "Ribbon.Button.Plate", "UIManager_Hint_Plate");
+            SetTextHint(FastenerCommand, "Ribbon.Button.Fastener", "UIManager_Hint_Fastener");
+            SetTextHint(RibCutOutCommand, "Ribbon.Button.RibCutOut", "UIManager_Hint_RibCutOut");
+            SetTextHint(CustomPropertiesCommand, "Ribbon.Button.CustomProperties", "UIManager_Hint_CustomProperties");
+            SetTextHint(EngravingCommand, "Ribbon.Button.Engraving", "UIManager_Hint_Engraving");
+            SetTextHint(ConnectorCommand, "Ribbon.Button.Connector", "UIManager_Hint_Connector");
+            SetTextHint(ConstructPanelCommand, "UIManager_Panel_Title", "UIManager_Panel_Hint");
         }
 
         // Nulls all cached controls so they are freshly constructed for a new ElementHost.
@@ -478,7 +478,7 @@ namespace AESCConstruct2026.UIMain
         private static void EnsureEngraving() { if (_engravingControl == null) _engravingControl = new EngravingControl(); }
 
         // Lazily creates the Connector sidebar control.
-        private static void EnsureConnector() { if (_connectorControl == null) _connectorControl = new ConnectorControl(); }
+        private static void EnsureConnector() { if (_connectorControl == null) _connectorControl = new Connector2Control(); }
 
         // Converts raw icon bytes to a System.Drawing.Image used as SpaceClaim command icon.
         private static Image LoadImage(byte[] bytes)

@@ -9,6 +9,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.Properties;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -47,7 +48,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
@@ -59,8 +60,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             if (sheet == null)
             {
                 var choice = MessageBox.Show(
-                    "No drawing sheet present. Create a drawing sheet?",
-                    "Export BOM",
+                    L.T("Export_Dialog_NoSheetBody"),
+                    L.T("Export_Dialog_NoSheetTitle"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question
                 );
@@ -77,7 +78,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
                 if (sheet == null)
                 {
-                    Application.ReportStatus("Failed to create a drawing sheet.", StatusMessageType.Error, null);
+                    L.Status("Export_Err_CreateSheet", StatusMessageType.Error);
                     return;
                 }
             }
@@ -114,7 +115,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
 
             if (!comps.Any())
             {
-                Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
+                L.Status("Export_Msg_NoComponents", StatusMessageType.Information);
                 return;
             }
 
@@ -178,7 +179,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             try { Clipboard.SetText(payload); }
             catch (Exception ex)
             {
-                Application.ReportStatus("Failed to copy BOM to clipboard:\n" + ex.Message, StatusMessageType.Error, null);
+                L.Status("Export_Err_CopyClipboard", StatusMessageType.Error, ex.Message);
                 return;
             }
 
@@ -246,11 +247,11 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 for (int colIndex = 0; colIndex < columnWidths.Length && colIndex < table.Columns.Count; colIndex++)
                     table.Columns[colIndex].Width = columnWidths[colIndex];
 
-                Application.ReportStatus("BOM table has been written to the active drawing sheet.", StatusMessageType.Information, null);
+                L.Status("Export_Msg_BomWritten", StatusMessageType.Information);
             }
             catch (Exception ex)
             {
-                Application.ReportStatus("Failed to build BOM table:\n" + ex.Message, StatusMessageType.Error, null);
+                L.Status("Export_Err_BuildTable", StatusMessageType.Error, ex.Message);
             }
         }
 
@@ -260,7 +261,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Warning, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Warning);
                 return;
             }
 
@@ -275,7 +276,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                            .ToList();
             if (!comps.Any())
             {
-                Application.ReportStatus("No components found to export.", StatusMessageType.Information, null);
+                L.Status("Export_Msg_NoComponents", StatusMessageType.Information);
                 return;
             }
 
@@ -314,8 +315,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             // Ask for file name + location (like ExportSettingsButton_Click)
             var dlg = new SaveFileDialog
             {
-                Title = "Export BOM to Excel",
-                Filter = "Excel Workbook (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                Title = L.T("Export_FileDialog_ExcelTitle"),
+                Filter = L.T("Export_FileFilter_Excel"),
                 FileName = "AESC_Construct2026_BOM.xlsx",
                 AddExtension = true,
                 DefaultExt = ".xlsx",
@@ -376,14 +377,14 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                     wbPart.Workbook.Save();
                 }
 
-                Application.ReportStatus("BOM exported:\n" + excelPath, StatusMessageType.Information, null);
+                L.Status("Export_Msg_BomExported", StatusMessageType.Information, excelPath);
 
                 // Open the file
                 Process.Start(new ProcessStartInfo(excelPath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to export to Excel:\n{ex.Message}", StatusMessageType.Error, null);
+                L.Status("Export_Err_ExcelFailed", StatusMessageType.Error, ex.Message);
             }
         }
 
@@ -393,7 +394,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             var doc = window?.Document;
             if (doc?.MainPart == null)
             {
-                Application.ReportStatus("No active document.", StatusMessageType.Error, null);
+                L.Status("Common_Msg_NoActiveDocument", StatusMessageType.Error);
                 return;
             }
 
@@ -405,7 +406,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                 .ToList();
             if (!partsToExport.Any())
             {
-                Application.ReportStatus("No parts found to export.", StatusMessageType.Warning, null);
+                L.Status("Export_Msg_NoParts", StatusMessageType.Warning);
                 return;
             }
 
@@ -414,7 +415,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             using (var bfb = new BetterFolderBrowser(new Container()))
             {
                 bfb.RootFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                bfb.Title = "Select folder to export STEP files";
+                bfb.Title = L.T("Export_FileDialog_StepFolderTitle");
                 if (bfb.ShowDialog() != DialogResult.OK)
                     return;
                 folderPath = bfb.SelectedFolder;
@@ -475,7 +476,7 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             }
             catch (Exception ex)
             {
-                Application.ReportStatus($"Failed to export STEP files:\n{ex.Message}", StatusMessageType.Error, null);
+                L.Status("Export_Err_StepFailed", StatusMessageType.Error, ex.Message);
             }
         }
 
