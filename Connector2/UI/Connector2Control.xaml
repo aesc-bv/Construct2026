@@ -1,0 +1,636 @@
+﻿<UserControl x:Class="AESCConstruct2026.Connector2.UI.Connector2Control"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+             xmlns:local="clr-namespace:AESCConstruct2026.UIMain"
+             MinWidth="300"
+             Background="White"
+             Loaded="Connector2Control_Loaded">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/AESCConstruct2026;component/UIMain/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Margin="0">
+        <Grid Margin="10"
+              Height="740">
+            <Grid.RowDefinitions>
+                <RowDefinition Height= "20" />
+                <RowDefinition Height="576.55" />
+                <RowDefinition Height="161.29" />
+            </Grid.RowDefinitions>
+
+            <!-- 1) BIG HEADER -->
+            <TextBlock Grid.Row="0"
+                       Style="{StaticResource TitleTextStyle}"
+                       Tag="ConnectoreHeader"
+                       Text="Parameters"
+                       Width="230"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,0"
+                       Grid.RowSpan="2" />
+
+            <StackPanel  Grid.Row="1"
+                         Orientation="Horizontal"
+                         Margin="0,10,0,0"
+                         HorizontalAlignment="Center"
+                         Width="280"
+                         Grid.RowSpan="8">
+                <Grid Width="260"
+                      Margin="10,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Tag="ConnectorShape"
+                                   x:Name="ConnectorShape"
+                                   Text="Shape"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_Shape"
+                                        Grid.Column="1" />
+                        <ComboBox x:Name="ConnectorShapeCombobox"
+                                  TabIndex="1"
+                                  Tag="ConnectorShapeCombobox"
+                                  Margin="0,0,0,0"
+                                  Grid.Column="2"
+                                  Style="{StaticResource ComboBoxFlatStyle}" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorDynamicHeight"
+                                  TabIndex="2"
+                                  Tag="connectorDynamicHeight"
+                                  IsChecked="True"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="ConnectorDynamicHeightText"
+                                   x:Name="ConnectorDynamicHeightText"
+                                   Text="Dynamic"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="If available height is smaller than input height, adjust automatically." />
+                        <local:InfoIcon HelpKey="Help_Connector2_DynamicHeight"
+                                        Grid.Column="2" />
+                        <TextBlock Tag="ConnectorHeightText"
+                                   x:Name="ConnectorHeightText"
+                                   Text="Height"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="3"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_Height"
+                                        Grid.Column="4" />
+                        <TextBox Tag="connectorHeight"
+                                 x:Name="connectorHeight"
+                                 TabIndex="3"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="5"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="2"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="connectorWidth1Text"
+                                   x:Name="connectorWidth1Text"
+                                   Text="Width 1"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_Width1"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorWidth1"
+                                 x:Name="connectorWidth1"
+                                 TabIndex="4"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="3"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="connectorWidth2Text"
+                                   x:Name="connectorWidth2Text"
+                                   Text="Width 2"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_Width2"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorWidth2"
+                                 x:Name="connectorWidth2"
+                                 TabIndex="5"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Separator Grid.Row="4"
+                               Margin="0,10,0,0" />
+
+                    <Grid Grid.Row="5"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="connectorRadius"
+                                     TabIndex="6"
+                                     Tag="connectorRadius"
+                                     Grid.Column="0"
+                                     Margin="0,0,10,0"
+                                     VerticalAlignment="Center"
+                                     Style="{x:Null}"
+                                     IsChecked="True" />
+                        <TextBlock Tag="connectorRadiusText"
+                                   x:Name="connectorRadiusText"
+                                   TextAlignment="Center"
+                                   Margin="0,0,20,0"
+                                   Text="Radius"
+                                   Grid.Column="1" />
+                        <RadioButton x:Name="connectorChamfer"
+                                     TabIndex="7"
+                                     Tag="connectorChamfer"
+                                     Grid.Column="2"
+                                     Margin="0,0,10,0"
+                                     VerticalAlignment="Center"
+                                     Style="{x:Null}" />
+                        <TextBlock Tag="connectorChamferText"
+                                   x:Name="connectorChamferText"
+                                   TextAlignment="Center"
+                                   Margin="0,0,10,0"
+                                   Text="Chamfer"
+                                   Grid.Column="3" />
+                        <local:InfoIcon HelpKey="Help_Connector2_RadiusChamferMode"
+                                        Grid.Column="4" />
+                    </Grid>
+
+                    <Grid Grid.Row="6"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="connectorRadiusChamferText"
+                                   x:Name="connectorRadiusChamferText"
+                                   Text="Radius / Chamfer"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_RadiusChamferValue"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorRadiusChamfer"
+                                 x:Name="connectorRadiusChamfer"
+                                 TabIndex="8"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="7"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="connectorToleranceText"
+                                   x:Name="connectorToleranceText"
+                                   Text="Tolerance"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Distance between connector and target body." />
+                        <local:InfoIcon HelpKey="Help_Connector2_Tolerance"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorTolerance"
+                                 x:Name="connectorTolerance"
+                                 TabIndex="9"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="8"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="Connector_Label_EndRelief"
+                                   x:Name="connectorSpacingText"
+                                   Text="End Relief"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Relief at the connector end; keeps the cut height as-is." />
+                        <local:InfoIcon HelpKey="Help_Connector2_EndRelief"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorSpacing"
+                                 x:Name="connectorSpacing"
+                                 TabIndex="10"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="9"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Tag="connectorLocationText"
+                                   x:Name="connectorLocationText"
+                                   Text="Location"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="0"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Offset value. Can be positive or negative." />
+                        <local:InfoIcon HelpKey="Help_Connector2_Location"
+                                        Grid.Column="1" />
+                        <TextBox Tag="connectorLocation"
+                                 x:Name="connectorLocation"
+                                 TabIndex="11"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Separator Grid.Row="10"
+                               Margin="0,10,0,0" />
+
+                    <Grid Grid.Row="11"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorCornerCutout"
+                                  TabIndex="12"
+                                  Tag="connectorCornerCutout"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorCornerCutoutText"
+                                   x:Name="connectorCornerCutoutText"
+                                   Text="Corner cutout"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Circular cutout on bottom of connector." />
+                        <local:InfoIcon HelpKey="Help_Connector2_CornerCutout"
+                                        Grid.Column="2" />
+                        <TextBox Tag="connectorCornerCutoutValue"
+                                 x:Name="connectorCornerCutoutValue"
+                                 TabIndex="13"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="4"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="12"
+                          Margin="0,10,0,0"
+                          Visibility="Hidden">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorCornerCutoutRadius"
+                                  Tag="connectorCornerCutoutRadius"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorCornerCutoutRadiusText"
+                                   x:Name="connectorCornerCutoutRadiusText"
+                                   Text="Cutout radius"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center" />
+                        <TextBox Tag="connectorCornerCutoutRadiusValue"
+                                 x:Name="connectorCornerCutoutRadiusValue"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="0"
+                                 Grid.Column="2"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+
+                    <Grid Grid.Row="12"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorClickLocation"
+                                  TabIndex="14"
+                                  Tag="connectorClickLocation"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorClickLocationText"
+                                   x:Name="connectorClickLocationText"
+                                   Text="Click location"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="If unchecked, connector gets placed on&#x0a;the center of the selected edge.&#x0a;If checked, the connector gets placed&#x0a;on the point you selected on the&#x0a;edge." />
+                        <local:InfoIcon HelpKey="Help_Connector2_ClickLocation"
+                                        Grid.Column="2" />
+                    </Grid>
+
+                    <Grid Grid.Row="13"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorRectangularCut"
+                                  TabIndex="15"
+                                  Tag="connectorRectangularCut"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="Connector_Label_RectangularCut"
+                                   x:Name="connectorRectangularCutText"
+                                   Text="Rectangular cut"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="If unchecked, connector follows the shape&#x0a;of the connector. If checked,&#x0a;the cut is rectangular." />
+                        <local:InfoIcon HelpKey="Help_Connector2_RectangularCut"
+                                        Grid.Column="2" />
+                    </Grid>
+
+                    <!--<Grid Grid.Row="13"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorStraight"
+                                  Tag="connectorStraight"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorStraightText"
+                                   x:Name="connectorStraightText"
+                                   Text="Straight connector"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="When creating a conenctor on a cylinder,&#x0a;determines if the edge faces are parallel&#x0a;to each other (checked) or aligned to the&#x0a;center of the cylinder (unchecked)" />
+                    </Grid>-->
+
+                    <Grid Grid.Row="14"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorPattern"
+                                  TabIndex="16"
+                                  Tag="connectorPattern"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0"/>
+                        <TextBlock Tag="connectorPatternText"
+                                   x:Name="connectorPatternText"
+                                   Text="Pattern"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_Pattern"
+                                        Grid.Column="2" />
+                        <TextBox Tag="connectorPatternValue"
+                                 x:Name="connectorPatternValue"
+                                 TabIndex="17"
+                                 TextAlignment="Center"
+                                 Width="40"
+                                 Height="25"
+                                 Margin="0"
+                                 Text="2"
+                                 Grid.Column="3"
+                                 HorizontalAlignment="Right">
+                        </TextBox>
+                    </Grid>
+                    
+                    
+
+                    <Separator Grid.Row="15"
+                               Margin="0,10,0,0" />
+
+                    <wfi:WindowsFormsHost x:Name="picDrawingHost"
+                                          Grid.Row="16"
+                                          Margin="4"
+                                          Focusable="False"
+                                          KeyboardNavigation.IsTabStop="False"
+                                          KeyboardNavigation.TabNavigation="None"
+                                          Width="150"
+                                          Height="150" />
+
+                    <Grid Grid.Row="17"
+                          Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorShowTolerance"
+                                  TabIndex="18"
+                                  Tag="connectorShowTolerance"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0" />
+                        <TextBlock Tag="connectorShowToleranceText"
+                                   x:Name="connectorShowToleranceText"
+                                   Text="Show tolerance"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center" />
+                        <local:InfoIcon HelpKey="Help_Connector2_ShowTolerance"
+                                        Grid.Column="2" />
+                    </Grid>
+
+                    <Grid Grid.Row="18"
+                          Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox x:Name="connectorShow3DPreview"
+                                  TabIndex="19"
+                                  Tag="connector3DPreview"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"
+                                  Grid.Column="0"
+                                  Checked="On3DPreviewToggled"
+                                  Unchecked="On3DPreviewToggled" />
+                        <TextBlock Tag="Connector_Label_3DPreview"
+                                   x:Name="connector3DPreviewText"
+                                   Text="3D Preview"
+                                   HorizontalAlignment="Left"
+                                   Margin="0,0,10,0"
+                                   Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Show a semi-transparent 3D preview of the connector in the viewport." />
+                        <local:InfoIcon HelpKey="Help_Connector2_3DPreview"
+                                        Grid.Column="2" />
+                    </Grid>
+
+                    <Button Tag="CreatePlate"
+                            TabIndex="20"
+                            Content="Create"
+                            Grid.Row="19"
+                            Style="{StaticResource FooterButtonStyle}"
+                            Width="150"
+                            HorizontalAlignment="Center"
+                            Margin="0,5,0,0"
+                            Click="btnCreate_connector" />
+                    <!--<Button Tag="TestPlate"
+                            Content="Test"
+                            Grid.Row="19"
+                            Style="{StaticResource FooterButtonStyle}"
+                            Width="150"
+                            HorizontalAlignment="Center"
+                            Margin="0,5,0,0"
+                            Click="btnCreate_Test" />-->
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

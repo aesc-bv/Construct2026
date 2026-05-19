@@ -11,6 +11,8 @@
     </UserControl.Resources>
     <Grid>
         <Button x:Name="InfoButton"
+                IsTabStop="False"
+                Focusable="False"
                 Width="16"
                 Height="16"
                 Padding="0"
