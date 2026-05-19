@@ -711,7 +711,6 @@ namespace AESCConstruct2026.Connector2.UI
                 Direction dirZ_m = Direction.Cross(dirX_m, dirY_m);
                 dirX_m = Direction.Cross(dirY_m, dirZ_m);
 
-                Direction dirZ_w = (masterToOcc * dirZ_m.ToVector()).Direction;
                 try
                 {
                     var bodyM = ownerMaster?.Shape;
@@ -723,6 +722,11 @@ namespace AESCConstruct2026.Connector2.UI
                     }
                 }
                 catch (Exception ex) { Logger.Log("ComputePlanarConnectorBodies: direction flip ContainsPoint failed: " + ex.ToString()); }
+
+                // dirZ_w must be derived from the FINAL dirZ_m: the ContainsPoint test above can
+                // flip dirZ_m, and the dynamic-height ray below must follow the corrected (outward)
+                // direction. Computing it before the flip cast the probe the wrong way.
+                Direction dirZ_w = (masterToOcc * dirZ_m.ToVector()).Direction;
 
                 var opp = getOppositeFace(smallFaceEdge, bigFaceEdge, isPlaneEdge, out double thickness, out Direction _);
                 if (opp == null) return null;
