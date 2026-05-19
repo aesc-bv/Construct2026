@@ -214,8 +214,6 @@ namespace AESCConstruct2026.FrameGenerator.UI
             var btn = GenerateButton;
             btn.IsEnabled = true;
 
-            PlacementFrame.Visibility = Visibility.Visible;
-
             var imgb = FindFirstImageChild(btn);
             if (imgb?.Source is BitmapImage bi)
             {
@@ -260,6 +258,8 @@ namespace AESCConstruct2026.FrameGenerator.UI
             selectedProfileString = "";
             selectedProfileImage = "";
             ProfilePreviewImage.Visibility = Visibility.Collapsed;
+            PlacementFrame.Source = null;
+            PlacementFrame.Visibility = Visibility.Collapsed;
 
             bool isPlaceholder = selectedRb.Name == "DXFProfileButton";
             bool isUserProfile = selectedRb.Tag is DXFProfile;
@@ -539,6 +539,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             if (string.IsNullOrEmpty(imgKey))
             {
                 ProfilePreviewImage.Visibility = Visibility.Collapsed;
+                PlacementFrame.Visibility = Visibility.Collapsed;
                 return;
             }
             var uri = new Uri($"/AESCConstruct2026;component/FrameGenerator/UI/Images/Img_Measures_Frame_{imgKey}.png", UriKind.Relative);
@@ -547,6 +548,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
             var uri2 = new Uri($"/AESCConstruct2026;component/FrameGenerator/UI/Images/Icon_Frame_{imgKey}_BG.png", UriKind.Relative);
             PlacementFrame.Source = new BitmapImage(uri2);
+            PlacementFrame.Visibility = Visibility.Visible;
         }
 
         // Opens a DXF file, converts it into a DXFProfile, persists profile and preview, and updates the user profiles list.
