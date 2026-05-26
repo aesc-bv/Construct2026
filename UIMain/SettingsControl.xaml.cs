@@ -117,6 +117,7 @@ namespace AESCConstruct2026.FrameGenerator.UI
             BtnImport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ImportSettings");
             BtnExport.ToolTip = Localization.Language.Translate("Settings_Tooltip_ExportSettings");
             BtnReset.ToolTip = Localization.Language.Translate("Settings_Tooltip_ResetSettings");
+            FrameColorPreview.ToolTip = Localization.Language.Translate("Settings_Tooltip_PickColor");
 
             SetVersionLabel();
         }
@@ -735,9 +736,31 @@ namespace AESCConstruct2026.FrameGenerator.UI
             else
             {
                 FrameColorCheckBox.IsChecked = false;
-                FrameColorTextBox.Text = "#006d8b";
+                // Show EMPTY (not the misleading "#006d8b") when no colour is
+                // configured, so the disabled state is unambiguous.
+                FrameColorTextBox.Text = string.Empty;
             }
+            ApplyFrameColorEnabledState();
             UpdateFrameColorPreview();
+        }
+
+        // Greys out + clears FrameColorTextBox when the checkbox is unchecked
+        // (no colour configured), and leaves it editable with its value when
+        // checked. IsEnabled is already XAML-bound to the checkbox; this only
+        // governs the empty-vs-value display so the UI is not misleading.
+        private void ApplyFrameColorEnabledState()
+        {
+            if (FrameColorCheckBox.IsChecked == true)
+            {
+                // Re-enable; if somehow blank, seed a sensible editable default
+                // so the user has a starting value to edit.
+                if (string.IsNullOrWhiteSpace(FrameColorTextBox.Text))
+                    FrameColorTextBox.Text = "#006d8b";
+            }
+            else
+            {
+                FrameColorTextBox.Text = string.Empty;
+            }
         }
 
         // Updates the preview rectangle to reflect the current hex value in the textbox.
@@ -765,12 +788,42 @@ namespace AESCConstruct2026.FrameGenerator.UI
 
         private void FrameColorCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            ApplyFrameColorEnabledState();
             UpdateFrameColorPreview();
         }
 
         private void FrameColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateFrameColorPreview();
+        }
+
+        // Opens a color picker when the user clicks the colour swatch. Auto-enables
+        // the checkbox so clicking the swatch is a complete "set a colour" gesture.
+        private void FrameColorPreview_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            using (var dlg = new System.Windows.Forms.ColorDialog())
+            {
+                dlg.AllowFullOpen = true;
+                dlg.FullOpen = true;
+                dlg.AnyColor = true;
+
+                try
+                {
+                    var current = FrameColorTextBox.Text?.Trim();
+                    if (!string.IsNullOrWhiteSpace(current))
+                        dlg.Color = System.Drawing.ColorTranslator.FromHtml(current);
+                }
+                catch { /* leave default if the textbox value isn't parseable */ }
+
+                if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                    return;
+
+                var c = dlg.Color;
+                FrameColorCheckBox.IsChecked = true;
+                FrameColorTextBox.Text = $"#{c.R:x2}{c.G:x2}{c.B:x2}";
+            }
+
+            e.Handled = true;
         }
 
         // Converts a JsonElement into a strongly typed value suitable for assigning to a Settings property.

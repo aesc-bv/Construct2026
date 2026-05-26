@@ -157,6 +157,7 @@ Settings_Tooltip_ExportSettings;Export settings to JSON file;Instellingen export
 Settings_Tooltip_ResetSettings;Reset all settings to defaults (license preserved);Alle instellingen herstellen naar standaardwaarden (licentie blijft behouden);Alle Einstellungen auf Standard zurï¿½cksetzen (Lizenz bleibt erhalten);Rï¿½initialiser tous les paramï¿½tres aux valeurs par dï¿½faut (licence conservï¿½e);Ripristina tutte le impostazioni ai valori predefiniti (licenza mantenuta);Restablecer toda la configuraciï¿½n a los valores predeterminados (se conserva la licencia)
 Settings_Tooltip_SelectNewFile;Select new file;Nieuw bestand selecteren;Neue Datei auswï¿½hlen;Sï¿½lectionner un nouveau fichier;Seleziona nuovo file;Seleccionar archivo nuevo
 Settings_Tooltip_OpenFileLocation;Open file location;Bestandslocatie openen;Dateispeicherort ï¿½ffnen;Ouvrir l'emplacement du fichier;Apri percorso del file;Abrir ubicaciï¿½n del archivo
+Settings_Tooltip_PickColor;Click to pick a color;Klik om een kleur te kiezen;Klicken, um eine Farbe auszuwählen;Cliquez pour choisir une couleur;Fai clic per scegliere un colore;Haga clic para elegir un color
 Settings_CsvPath_ConnectorProperties;Connector properties;Connector-eigenschappen;Verbindereigenschaften;Propriï¿½tï¿½s du connecteur;Proprietï¿½ connettore;Propiedades del conector
 Settings_CsvPath_ComponentProperties;Component properties;Componenteigenschappen;Komponenteneigenschaften;Propriï¿½tï¿½s du composant;Proprietï¿½ componente;Propiedades del componente
 Settings_CsvPath_Bolts;Bolts;Bouten;Schrauben;Boulons;Bulloni;Pernos

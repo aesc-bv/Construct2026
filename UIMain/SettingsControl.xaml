@@ -160,7 +160,9 @@
                                                Margin="4,0,0,0"
                                                Grid.Column="3"
                                                Stroke="Gray"
-                                               StrokeThickness="0.5" />
+                                               StrokeThickness="0.5"
+                                               Cursor="Hand"
+                                               MouseLeftButtonUp="FrameColorPreview_MouseLeftButtonUp" />
                                 </Grid>
                             </StackPanel>
                         </GroupBox>

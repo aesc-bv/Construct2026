@@ -25,6 +25,7 @@ Settings_Tooltip_ExportSettings	Export settings to JSON file
 Settings_Tooltip_ResetSettings	Reset all settings to defaults (license preserved)
 Settings_Tooltip_SelectNewFile	Select new file
 Settings_Tooltip_OpenFileLocation	Open file location
+Settings_Tooltip_PickColor	Click to pick a color
 Settings_CsvPath_ConnectorProperties	Connector properties
 Settings_CsvPath_ComponentProperties	Component properties
 Settings_CsvPath_Bolts	Bolts
