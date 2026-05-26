@@ -94,24 +94,13 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                                  + JointCurveHelper.GetOffset(componentA, "offsetX");
                 Point cutterOrigin = pTworld + worldPerp * halfOff;
 
-                // 7) Determine extrusion distances for T‐joint
-                //    (we build a temporary plane here just to feed into the helper)
-                var tempPlane = Plane.Create(Frame.Create(
-                    cutterOrigin,
-                    dA.Direction,
-                    worldUp.Direction
-                ));
-                var (forwardDist, backwardDist) = JointCurveHelper.PickTJointDirectionWorld(
-                    tempPlane,
-                    componentB,
-                    pTworld,
-                    connectedAtStart: startOn,
-                    connectedAtEnd: endOn,
-                    attachLen: 200.0,
-                    freeLen: spacing
-                );
-
-                // 8) Build & subtract the cutter in componentB’s local space
+                // 7) Determine extrusion distances for the T-joint.
+                //    NOTE: PickTJointDirectionWorld decided direction against a
+                //    `tempPlane` whose DirZ does NOT match the planeLocal that
+                //    SubtractLocalCutter actually extrudes against (different frame
+                //    construction) -> wrong side removed (same frame-mismatch class
+                //    as the Miter bug). The deterministic far-end decision is now
+                //    made INSIDE SubtractLocalCutter against the real planeLocal.
                 SubtractLocalCutter(
                     componentB,
                     cutterOrigin,
@@ -119,8 +108,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                     worldUp,
                     startConnected: startOn,
                     endConnected: endOn,
-                    forwardDist,
-                    backwardDist
+                    attachLen: 200.0,
+                    freeLen: spacing
                 );
 
                 //Logger.Log("TJoint: finished.");
@@ -137,8 +126,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             Vector worldUp,
             bool startConnected,
             bool endConnected,
-            double forwardDistance,
-            double backwardDistance
+            double attachLen,
+            double freeLen
         )
         {
             // 1) Map worldUp & points into local
@@ -148,19 +137,60 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             Point localPIn = inv * worldPIn;
             Point localPOut = inv * worldPOut;
 
-            //Logger.Log($"Building cutter in LOCAL for '{comp.Name}'.");
-
             // 2) Build local cutter‐frame & square loop
             var (planeLocal, loopLocal) = JointModule.BuildDebugCutterFrameAndLoop(
                 localPIn, localPOut, upLocal, 500.0
             );
             if (planeLocal == null)
             {
-                //Logger.Log($"  ERROR: BuildDebugCutterFrameAndLoop returned null for '{comp.Name}'.");
                 return;
             }
 
-            // 3) Extrude bi-directionally using the T-joint distances
+            // 3) Deterministic far-end rule against the REAL planeLocal (the plane
+            //    we actually extrude against). For a T-joint the BRANCH member B
+            //    must KEEP its free run and have the ATTACHED end (the part that
+            //    would penetrate the through member) coped/removed. far end here =
+            //    B's FREE (un-connected) end: Start if endConnected else End.
+            //    comp.Template (Part) and planeLocal.Frame share the same local
+            //    frame (planeLocal built from inv*world points), so dot is
+            //    frame-consistent. Long slab (attachLen) goes on the side WITHOUT
+            //    the free end (the attached/penetrating side); short (freeLen) on
+            //    the keep/free side.
+            var rawSeg = comp.Template.Curves
+                             .OfType<DesignCurve>()
+                             .FirstOrDefault()?.Shape as CurveSegment;
+
+            double forwardDistance, backwardDistance;
+            if (rawSeg == null)
+            {
+                // Robustness: never crash — fall back to prior helper behaviour.
+                var tempPlane = planeLocal;
+                var (fP, bP) = JointCurveHelper.PickTJointDirectionWorld(
+                    tempPlane, comp, localPIn,
+                    connectedAtStart: startConnected,
+                    connectedAtEnd: endConnected,
+                    attachLen: attachLen, freeLen: freeLen
+                );
+                forwardDistance = fP;
+                backwardDistance = bP;
+            }
+            else
+            {
+                Point freeLocal = endConnected ? rawSeg.StartPoint : rawSeg.EndPoint;
+                Vector planeZ = planeLocal.Frame.DirZ.ToVector();
+                Point planeOrigin = planeLocal.Frame.Origin;
+                Vector toFree = freeLocal - planeOrigin;
+                double dot = Vector.Dot(toFree, planeZ);
+                bool freeOnPlusZ = dot > 0;
+
+                // CreateBidirectionalExtrudedBody: arg1=forwardDistance => +DirZ,
+                // arg2=backwardDistance => -DirZ. Long slab on the side WITHOUT the
+                // free end (attached/penetrating side); short on the free/keep side.
+                forwardDistance = freeOnPlusZ ? freeLen : attachLen;
+                backwardDistance = freeOnPlusZ ? attachLen : freeLen;
+            }
+
+            // 4) Extrude bi-directionally (fwd => +DirZ, back => -DirZ)
             var cutterLocal = JointModule.CreateBidirectionalExtrudedBody(
                 planeLocal, loopLocal,
                 forwardDistance, backwardDistance
@@ -171,7 +201,7 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                 return;
             }
 
-            // 4) Subtract from the “ExtrudedProfile”
+            // 4) Subtract from the profile body (resolved via JointModule.FindProfileBody)
             JointModule.SubtractCutter(comp, cutterLocal);
             //Logger.Log($"  Subtraction complete for '{comp.Name}'.");
         }

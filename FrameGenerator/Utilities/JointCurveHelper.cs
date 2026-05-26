@@ -22,6 +22,7 @@
  DirectionExtensions adds a ToVector() helper to convert a Direction into a Vector.
 */
 
+using AESCConstruct2026.FrameGenerator.Modules;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using System;
@@ -416,10 +417,9 @@ namespace AESCConstruct2026.FrameGenerator.Utilities
             double shortLen
         )
         {
-            var extr = component.Template
-                         .Bodies
-                         .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-                         ?.Shape;
+            // Resolve the profile body via the shared Part-name-aware resolver
+            // (see JointModule.FindProfileBody / ProfileModule.cs:169-172).
+            var extr = JointModule.FindProfileBody(component.Template)?.Shape;
             if (extr == null)
                 return (longLen, shortLen);
 

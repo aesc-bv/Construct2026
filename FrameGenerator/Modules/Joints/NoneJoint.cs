@@ -137,22 +137,47 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                 return;
             }
 
-            // 3) Pick extrusion distances (local)
-            var (forwardDist, backwardDist) = JointCurveHelper.PickDirection(
-                planeLocal,
-                comp,
-                startConnected,
-                endConnected,
-                longLen: 200.0,
-                shortLen: spacing / 2.0
-            );
+            // 3) Pick extrusion distances (local). "No Joint" = a plain square end
+            //    cut at the joint point with no mitre/cope: it must still KEEP the
+            //    member's long run and REMOVE the short overlap PAST the cut, i.e.
+            //    the same far-end principle as Straight. Use the sign-/selection-
+            //    order-robust helper (was PickDirection-centroid + (back,fwd) swap,
+            //    same defect class as the pre-fix Miter/Straight).
+            double longLen = 200.0;
+            double shortLen = spacing / 2.0;
+
+            var rawSeg = comp.Template.Curves
+                             .OfType<DesignCurve>()
+                             .FirstOrDefault()?.Shape as CurveSegment;
+
+            double forwardDist, backwardDist;
+            if (rawSeg == null)
+            {
+                // Robustness: never crash — fall back to prior behaviour exactly
+                // (PickDirection + the previous (back,fwd) call mapping).
+                var (fwdP, backP) = JointCurveHelper.PickDirection(
+                    planeLocal, comp, startConnected, endConnected,
+                    longLen: longLen, shortLen: shortLen
+                );
+                forwardDist = backP;
+                backwardDist = fwdP;
+            }
+            else
+            {
+                var memberBody = JointModule.FindProfileBody(comp.Template)?.Shape;
+                (forwardDist, backwardDist) = JointModule.PickEndCutDirection(
+                    planeLocal, rawSeg, endConnected, memberBody,
+                    longLen, shortLen, $"None:{comp?.Template?.Name}"
+                );
+            }
 
             // 4) Create and subtract the bidirectional cutter
+            //    (forwardDist => +DirZ, backwardDist => -DirZ; no arg swap)
             var cutterLocal = JointModule.CreateBidirectionalExtrudedBody(
                 planeLocal,
                 loopLocal,
-                backwardDist,
-                forwardDist
+                forwardDist,
+                backwardDist
             );
             if (cutterLocal == null)
             {

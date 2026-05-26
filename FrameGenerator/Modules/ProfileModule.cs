@@ -154,8 +154,15 @@ namespace AESCConstruct2026.FrameGenerator.Modules
 
             // 8) Wipe out any old extruded-profile bodies (legacy "ExtrudedProfile" plus
             //    bodies previously named after the part itself) so we replace them in place.
+            //    EXCEPTION: keep "preservedHalf". JointModule.ResetHalfForJoint creates that
+            //    DesignBody to carry the member's far half ACROSS this regen; a transient
+            //    Body.Copy() does NOT survive this wipe (it is invalidated with its source),
+            //    so the survivor must be a persisted DesignBody that we skip here. No other
+            //    ExtrudeProfile caller creates "preservedHalf", so excluding it is a no-op
+            //    for them (new-profile and RestoreGeometry paths have no such body).
             foreach (var old in comp.Template.Bodies.ToList())
-                old.Delete();
+                if (old.Name != "preservedHalf")
+                    old.Delete();
 
             // 9) If we're creating a brand-new component, set its Placement now;
             //    but if we're re-using an existing component, do NOT touch its Placement.

@@ -9,6 +9,7 @@
 */
 
 using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using AESCConstruct2026.Properties;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
@@ -214,7 +215,10 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             try
             {
                 const double tol = 1e-6;
-                const double extendAmount = 200.0; // mm
+                // SpaceClaim API units are metres; origStart/origEnd below are metric.
+                // 0.2 m = 200 mm of extra length for joint construction. (Was 200.0,
+                // which extended each end by 200 m and exploded the body ~1000x.)
+                const double extendAmount = 0.2; // metres (= 200 mm)
 
                 if (allCurves == null)
                     allCurves = components
@@ -372,6 +376,13 @@ namespace AESCConstruct2026.FrameGenerator.Modules
 
             if (bodyForward != null && bodyBackward != null)
             {
+                // PART 1 GUARD: never feed a degenerate body to the ACIS Unite.
+                if (!IsUsableBody(bodyForward, "cbeb.fwd") || !IsUsableBody(bodyBackward, "cbeb.back"))
+                {
+                    return IsUsableBody(bodyForward, "cbeb.fwd.fallback") ? bodyForward
+                         : IsUsableBody(bodyBackward, "cbeb.back.fallback") ? bodyBackward
+                         : null;
+                }
                 bodyForward.Unite(new[] { bodyBackward });
                 return bodyForward;
             }
@@ -394,9 +405,18 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             if (component == null || cutter == null) return;
 
             Part part = component.Template;
-            DesignBody target = part.Bodies.FirstOrDefault(b => b.Name == "ExtrudedProfile");
+            DesignBody target = FindProfileBody(part);
             if (target == null)
             {
+                return;
+            }
+
+            // PART 1 GUARD: never feed a degenerate body to the ACIS Subtract.
+            // A degenerate / zero-volume body causes a native AV in SpaACIS.dll
+            // that no managed try/catch can recover from.
+            if (!IsUsableBody(target.Shape, "subtract.target") || !IsUsableBody(cutter, "subtract.cutter"))
+            {
+                L.Status("Frame_Joint_Msg_InvalidBody", StatusMessageType.Warning);
                 return;
             }
 
@@ -502,11 +522,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                     CurveSegment.Create(mid + vx - vy, mid - vx - vy),
                 };
 
-                // fetch or merge existing ExtrudedProfile
-                Body original = component.Template
-                                    .Bodies
-                                    .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-                                    ?.Shape.Copy();
+                // fetch or merge existing profile body (Part-name rule; see FindProfileBody)
+                Body original = FindProfileBody(component.Template)?.Shape.Copy();
                 if (original == null)
                 {
                     var hs = component.Template.Bodies
@@ -537,7 +554,20 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 // boolean‐intersect to get halves
                 Body halfEnd = original.Copy();
                 Body halfStart = original.Copy();
+
+                // PART 1 GUARD: never feed a degenerate body to the ACIS Intersect.
+                if (!IsUsableBody(halfEnd, "split.halfEnd.src") || !IsUsableBody(cutterEnd, "split.cutterEnd"))
+                {
+                    L.Status("Frame_Joint_Msg_InvalidBody", StatusMessageType.Warning);
+                    return (null, null);
+                }
                 halfEnd.Intersect(new[] { cutterEnd.Copy() });
+
+                if (!IsUsableBody(halfStart, "split.halfStart.src") || !IsUsableBody(cutterStart, "split.cutterStart"))
+                {
+                    L.Status("Frame_Joint_Msg_InvalidBody", StatusMessageType.Warning);
+                    return (null, null);
+                }
                 halfStart.Intersect(new[] { cutterStart.Copy() });
 
                 // delete old halves
@@ -590,6 +620,11 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             Point localStart = seg.StartPoint - shiftX;
             Point localEnd = seg.EndPoint - shiftX;
 
+            // Reference scale = true profile length from the construction curve.
+            // A correctly-built body's bbox diagonal is ~this; a unit-bug-exploded
+            // body is ~1000x this. Used for scale-aware IsUsableBody checks.
+            double refProfileDiag = (seg.EndPoint - seg.StartPoint).Magnitude;
+
             // 2) compute localUp, xDir, yDir
             Vector sweepDir = (localEnd - localStart).Direction.ToVector();
             if (sweepDir.Magnitude < 1e-6)
@@ -616,7 +651,10 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             bool preserveEnd = connectionSide == "HalfStart";
             Body preserved = preserveEnd ? halfEnd.Copy() : halfStart.Copy();
 
-            // 5) delete old halves & existing ExtrudedProfile
+            // 5) delete old halves & legacy-named profile body. The literal
+            //    "ExtrudedProfile" is intentionally kept to purge legacy-document
+            //    bodies; the current Part-named profile body (and everything else)
+            //    is wiped by the regen in step 6 (ProfileModule.ExtrudeProfile).
             foreach (var name in new[] { "HalfStart", "HalfEnd", "ExtrudedProfile" })
             {
                 var old = template.Bodies.FirstOrDefault(b => b.Name == name);
@@ -648,9 +686,21 @@ namespace AESCConstruct2026.FrameGenerator.Modules
                 );
             }
 
-            if (template.Bodies.All(b => b.Name != "ExtrudedProfile"))
+            // Post-regen the profile body is named after the Part (see FindProfileBody /
+            // ProfileModule.cs:169-172), not the legacy literal "ExtrudedProfile".
+            if (FindProfileBody(template) == null)
             {
                 return;
+            }
+
+            // FIX 4b: the original `preserved` Body was a transient Copy() invalidated by
+            // the regen body-wipe (preservedVol came back as -1 at R5a). Re-acquire it
+            // from the "preservedHalf" DesignBody that FIX 4a kept alive across the wipe,
+            // so `preserved` is a valid, document-anchored body for the rest of the method.
+            var preservedDb = template.Bodies.FirstOrDefault(b => b.Name == "preservedHalf");
+            if (preservedDb?.Shape != null)
+            {
+                preserved = preservedDb.Shape.Copy();
             }
 
             // 7) second split
@@ -663,27 +713,278 @@ namespace AESCConstruct2026.FrameGenerator.Modules
             // 8) isolate corner half
             Body corner = preserveEnd ? halfStart2 : halfEnd2;
 
+            // RELOCATED PART 1 GUARD: the original R6 guard ran AFTER the Copy()/Delete
+            // region; the native AV fires there. Validate the source bodies BEFORE the
+            // first ACIS call (.Copy()) in this region, scale-aware against the true
+            // profile length.
+            if (!IsUsableBody(preserved, "reset.preserved.src", refProfileDiag) ||
+                !IsUsableBody(corner, "reset.corner.src", refProfileDiag))
+            {
+                L.Status("Frame_Joint_Msg_InvalidBody", StatusMessageType.Warning);
+                return;
+            }
+
             // 9) copy & delete temps
             Body presCopy = preserved.Copy();
             Body corCopy = corner.Copy();
+            // NOTE: the legacy literal "ExtrudedProfile" is intentionally kept in this
+            // delete loop so old-named bodies from legacy documents are also purged.
+            // The current-named profile body (Part name) is removed separately below.
             foreach (var name in new[] { "HalfStart", "HalfEnd", "ExtrudedProfile", "preservedHalf" })
                 template.Bodies.FirstOrDefault(b => b.Name == name)?.Delete();
+            FindProfileBody(template)?.Delete();
 
             // 10) unite into final
+            // PART 1 GUARD: validate operands before the ACIS Unite.
+            if (!IsUsableBody(presCopy, "reset.preserved") || !IsUsableBody(corCopy, "reset.corner"))
+            {
+                L.Status("Frame_Joint_Msg_InvalidBody", StatusMessageType.Warning);
+                Body keep = IsUsableBody(presCopy, "reset.preserved.fallback") ? presCopy
+                          : IsUsableBody(corCopy, "reset.corner.fallback") ? corCopy
+                          : null;
+                if (keep == null)
+                {
+                    return;
+                }
+                var nameKeep = !string.IsNullOrWhiteSpace(template.Name) ? template.Name : "ExtrudedProfile";
+                DesignBody.Create(template, nameKeep, keep).Layer = GetOrCreateFramesLayer(template.Document);
+                return;
+            }
             presCopy.Unite(new[] { corCopy });
-            var finalDb = DesignBody.Create(template, "ExtrudedProfile", presCopy);
+            // Re-create the profile body under the Part-name rule (see FindProfileBody /
+            // ProfileModule.cs:169-172) so subsequent joints and BOM/STEP export find it.
+            var finalName = !string.IsNullOrWhiteSpace(template.Name) ? template.Name : "ExtrudedProfile";
+            var finalDb = DesignBody.Create(template, finalName, presCopy);
             finalDb.Layer = GetOrCreateFramesLayer(template.Document);
+        }
+
+        /// <summary>
+        /// Resolves the profile solid body of a Construct part.
+        ///
+        /// Naming contract: <see cref="ProfileModule"/> (ProfileModule.cs:169-172) names
+        /// the extruded profile body after the owning Part (e.g. "Rect_20x20_426"), and
+        /// only falls back to the literal "ExtrudedProfile" when the Part has no name.
+        /// All joint/export code must therefore resolve the body through THIS method
+        /// rather than hard-coding the literal "ExtrudedProfile", otherwise a normally
+        /// created profile body is never found (the lookup misses, the body appears
+        /// "missing", and the caller crashes on the empty result).
+        ///
+        /// Resolution order:
+        ///   1. Part-named, NOT a joint scratch/cutter body
+        ///      (HalfStart/HalfEnd/preservedHalf/TempCutter), Volume &gt; 1e-9;
+        ///      when several match, the SMALLEST sane volume wins (the true profile
+        ///      is far smaller than a cutter/merged/exploded body that may transiently
+        ///      share the Part name);
+        ///   2. body literally named "ExtrudedProfile" (legacy / unnamed-part documents);
+        ///   3. the single real solid body, excluding joint scratch bodies and
+        ///      zero-volume bodies.
+        /// Returns null if no suitable body exists.
+        ///
+        /// This still resolves the normal Part-named profile body (no Bug-A /
+        /// KeyNotFound regression), and the rule-2 legacy fallback still finds
+        /// old documents whose body is literally named "ExtrudedProfile".
+        /// </summary>
+        private static bool IsScratchBodyName(string n)
+            => n == "HalfStart" || n == "HalfEnd" || n == "preservedHalf" || n == "TempCutter";
+
+        public static DesignBody FindProfileBody(Part part)
+        {
+            if (part == null) return null;
+
+            // Rule 1: Part-named, non-scratch, sane volume; smallest volume wins.
+            var byPartName = part.Bodies
+                .Where(b => b.Name == part.Name
+                         && !IsScratchBodyName(b.Name)
+                         && b.Shape != null && b.Shape.Volume > 1e-9)
+                .OrderBy(b => b.Shape.Volume)
+                .FirstOrDefault();
+            if (byPartName != null) return byPartName;
+
+            // Rule 2: legacy literal "ExtrudedProfile" (unnamed-part or older documents).
+            var byLegacy = part.Bodies.FirstOrDefault(b => b.Name == "ExtrudedProfile");
+            if (byLegacy != null) return byLegacy;
+
+            // Rule 3: any real solid body, excluding joint scratch/cutter bodies.
+            return part.Bodies
+                .Where(b => !IsScratchBodyName(b.Name)
+                         && b.Shape != null && b.Shape.Volume > 1e-9)
+                .OrderBy(b => b.Shape.Volume)
+                .FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Returns a finite bounding-box diagonal length (m) for a body, or -1 if it
+        /// cannot be measured. Used by IsUsableBody for degenerate-geometry validation.
+        /// </summary>
+        private static double BboxDiagonal(Body b)
+        {
+            try
+            {
+                if (b == null) return -1.0;
+                var bb = b.GetBoundingBox(Matrix.Identity, tight: true);
+                var d = (bb.MaxCorner - bb.MinCorner).Magnitude;
+                return (double.IsNaN(d) || double.IsInfinity(d)) ? -1.0 : d;
+            }
+            catch
+            {
+                return -1.0;
+            }
+        }
+
+        /// <summary>Volume of a body, or -1 if it cannot be read (null / disposed).</summary>
+        private static double SafeVol(Body b)
+        {
+            try { return b == null ? -1.0 : b.Volume; }
+            catch { return -1.0; }
+        }
+
+        /// <summary>
+        /// Sign- and selection-order-robust cutter direction for end-cut joints
+        /// (Straight / None / any "keep the long run, remove the overlap past the
+        /// joint" case).
+        ///
+        /// Returns (forwardDistance, backwardDistance) for
+        /// CreateBidirectionalExtrudedBody (arg1 => +planeLocal.DirZ,
+        /// arg2 => -planeLocal.DirZ): the LONG slab on the waste side, the SHORT
+        /// allowance on the keep side.
+        ///
+        /// Why this is robust where (farLocal-origin).DirZ was not: that earlier
+        /// test reads a value that is NEAR ZERO and sign-unstable when the cut
+        /// plane is built nearly parallel to the member axis ("end cut parallel
+        /// to selection 2"), because BuildDebugCutterFrameAndLoop's DirZ sign
+        /// flips with perp/up-vector/selection order. Here we instead align the
+        /// (well-defined, ±) plane normal with the member's OWN construction axis
+        /// (joint -> far, never degenerate for a real member). If that alignment
+        /// is itself degenerate (cut ~parallel to the member), we fall back to a
+        /// body-centroid half-space test that does not depend on the member's
+        /// run direction. Caller passes the rebuilt profile body for the fallback.
+        /// </summary>
+        public static (double forward, double backward) PickEndCutDirection(
+            Plane planeLocal,
+            CurveSegment rawSegLocal,
+            bool endConnected,
+            Body memberBodyLocal,
+            double longLen,
+            double shortLen,
+            string diagTag)
+        {
+            const double degenDot = 1e-3; // |normal . memberAxis| below this = parallel
+
+            Vector nZ = planeLocal.Frame.DirZ.ToVector();
+            Point origin = planeLocal.Frame.Origin;
+
+            Point connectedLocal = endConnected ? rawSegLocal.EndPoint : rawSegLocal.StartPoint;
+            Point farLocal = endConnected ? rawSegLocal.StartPoint : rawSegLocal.EndPoint;
+
+            Vector keepVec = farLocal - connectedLocal;     // joint -> far (keeper side)
+            double keepMag = keepVec.Magnitude;
+            if (keepMag < 1e-9)
+            {
+                return (longLen, shortLen);
+            }
+            Vector keepDir = keepVec / keepMag;
+
+            double alongKeep = Vector.Dot(nZ, keepDir);
+
+            if (Math.Abs(alongKeep) >= degenDot)
+            {
+                // Primary (covers perpendicular butt and all well-conditioned cuts).
+                // +DirZ toward keeper => push long slab on -DirZ (backward) and vice versa.
+                bool plusZIsKeeper = alongKeep > 0;
+                double fwd = plusZIsKeeper ? shortLen : longLen;
+                double back = plusZIsKeeper ? longLen : shortLen;
+                return (fwd, back);
+            }
+
+            // Degenerate: cut plane ~parallel to member axis (the "parallel to
+            // selection 2" failing case). The plane normal cannot separate
+            // keep/waste along the member. Use the member body's centroid: the
+            // long slab must go to the half-space NOT containing the body mass.
+            if (memberBodyLocal != null && SafeVol(memberBodyLocal) > 1e-9)
+            {
+                var bb = memberBodyLocal.GetBoundingBox(Matrix.Identity, tight: true);
+                Vector toBody = bb.Center - origin;
+                bool bodyOnPlusZ = Vector.Dot(toBody, nZ) > 0;
+                // body on +DirZ => keep +DirZ, push long slab on -DirZ (backward).
+                return bodyOnPlusZ ? (shortLen, longLen) : (longLen, shortLen);
+            }
+
+            return (longLen, shortLen);
+        }
+
+        /// <summary>
+        /// Validates that a body is safe to hand to an ACIS boolean
+        /// (Subtract/Intersect/Unite). A degenerate / zero-volume / disposed body
+        /// fed to the ACIS kernel causes a native Access Violation (0xc0000005 in
+        /// SpaACIS.dll) that no managed try/catch can recover from — so every
+        /// boolean MUST validate its operands through this method first.
+        ///
+        /// Criteria: non-null, Shape readable, Volume &gt; 1e-9 m^3, and a finite
+        /// bounding-box diagonal within a sane range (1e-5 m .. 1e4 m).
+        ///
+        /// Scale-awareness: when <paramref name="referenceDiag"/> &gt; 0 is supplied
+        /// (the source profile's bbox diagonal), a body whose diagonal exceeds
+        /// MaxScaleFactor x referenceDiag is rejected as "wrong-scale garbage"
+        /// (e.g. a 400 m body for a 0.4 m profile = a unit-bug explosion).
+        /// </summary>
+        private const double MaxScaleFactor = 100.0;   // body may be at most 100x the source profile
+
+        public static bool IsUsableBody(Body b, string label = null, double referenceDiag = -1.0)
+        {
+            if (b == null) return false;
+
+            double vol = SafeVol(b);
+            if (vol <= 1e-9) return false;
+
+            double diag = BboxDiagonal(b);
+            if (diag < 1e-5 || diag > 1e4) return false;
+
+            // Scale-aware rejection (only when a reference profile size is known):
+            // reject a body whose bbox-diag exceeds MaxScaleFactor x the source
+            // profile size (e.g. a 400 m body for a 0.4 m profile = wrong-scale
+            // explosion). Tunable via MaxScaleFactor.
+            if (referenceDiag > 0 && diag > MaxScaleFactor * referenceDiag) return false;
+
+            return true;
         }
 
         private static Layer GetOrCreateFramesLayer(Document doc)
         {
-            var layer = doc.GetLayer("Frames");
-            if (layer != null) return layer;
-
+            // Setting key: Settings.Default.FrameColor (Properties/Settings.settings,
+            // System.String, default "#006d8b"). Body color is layer-driven via the
+            // "Frames" layer. The new-profile path (ProfileModule.CreateComponent)
+            // applies FrameColor to this layer; the joint/regen path never did, so
+            // jointed bodies kept whatever (stale/teal) color the layer already had.
+            // Fix: ALWAYS re-sync the existing/new Frames layer to the configured
+            // FrameColor so jointed/regenerated bodies match a freshly-created
+            // profile's color.
             string hex = Settings.Default.FrameColor ?? "";
-            if (string.IsNullOrWhiteSpace(hex)) hex = "#006d8b";
-            try { layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml(hex)); }
-            catch (Exception ex) { Logger.Log("GetOrCreateFramesLayer color parse failed: " + ex.ToString()); layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml("#006d8b")); }
+            bool blank = string.IsNullOrWhiteSpace(hex);
+            string effHex = blank ? "#006d8b" : hex;
+
+            var layer = doc.GetLayer("Frames");
+            if (layer != null)
+            {
+                // Re-apply the configured color when explicitly set (do NOT force
+                // the teal fallback onto a layer the user/doc may have customised
+                // when FrameColor is blank).
+                if (!blank)
+                {
+                    try { layer.SetColor(null, ColorTranslator.FromHtml(effHex)); }
+                    catch { /* invalid hex – leave existing layer color unchanged */ }
+                }
+                return layer;
+            }
+
+            try
+            {
+                layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml(effHex));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("GetOrCreateFramesLayer color parse failed: " + ex.ToString());
+                layer = Layer.Create(doc, "Frames", ColorTranslator.FromHtml("#006d8b"));
+            }
             return layer;
         }
     }

@@ -8,6 +8,7 @@
  It also contains helpers for cut-angle calculation and unit-aware length formatting.
 */
 
+using AESCConstruct2026.FrameGenerator.Modules;
 using AESCConstruct2026.FrameGenerator.Utilities;
 using AESCConstruct2026.Localization;
 using AESCConstruct2026.Properties;
@@ -515,9 +516,14 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             var seg = (CurveSegment)dc.Shape;
             Vector sweepLocal = (seg.EndPoint - seg.StartPoint).Direction.ToVector();
 
-            var body = comp.Template.Bodies
-                          .FirstOrDefault(b => b.Name == "ExtrudedProfile")
-                      ?? throw new InvalidOperationException("No ExtrudedProfile");
+            // Resolve the profile body via the shared Part-name-aware resolver
+            // (see JointModule.FindProfileBody / ProfileModule.cs:169-172).
+            var body = JointModule.FindProfileBody(comp.Template);
+            if (body == null)
+            {
+                Application.ReportStatus(L.T("Frame_Export_Msg_NoProfileBody"), StatusMessageType.Warning, null);
+                throw new InvalidOperationException("No profile body");
+            }
             var profileBody = (Body)body.Shape;
 
             var endCaps = profileBody.Faces

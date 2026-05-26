@@ -251,6 +251,12 @@ Frame_Joint_Msg_NoJointPair	No joint pair found, check line connections.
 Frame_Joint_Msg_SelectOneRestoreGeometry	Select at least one component to restore geometry.
 Frame_Joint_Msg_SelectTwoRestoreJoints	Select at least two components to restore joints.
 Frame_Joint_Msg_SelectTwoProfiles	Select at least two profiles. The last selected will be cut by the others.
+Frame_Joint_Msg_SplitFailed	Could not split a profile for the joint (profile body not found). Joint skipped.
+Frame_Joint_Msg_DegenerateGeometry	Joint skipped: the corner geometry is degenerate (zero profile width or coincident edges).
+Frame_Joint_Msg_InvalidBody	Joint skipped: an invalid or zero-volume body would have crashed the modeler.
+
+# === FRAME EXPORT (BOM / STEP) ===
+Frame_Export_Msg_NoProfileBody	Profile body not found for a component; its cut angles were omitted from the export.
 
 # === PLATES (residual validation) ===
 Plates_Msg_NoSelection	No selection found. Please select a face.

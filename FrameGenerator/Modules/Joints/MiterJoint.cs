@@ -1,4 +1,5 @@
 ﻿using AESCConstruct2026.FrameGenerator.Utilities;
+using AESCConstruct2026.Localization;
 using SpaceClaim.Api.V242;
 using SpaceClaim.Api.V242.Geometry;
 using SpaceClaim.Api.V242.Modeler;
@@ -22,14 +23,11 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
         {
             WriteBlock.ExecuteTask("MiterJoint", () =>
             {
-                //Logger.Log("MiterJoint.Execute() started");
-
                 // 1) grab the two raw construction segments
                 var rawA = componentA.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
                 var rawB = componentB.Template.Curves.FirstOrDefault()?.Shape as CurveSegment;
                 if (rawA == null || rawB == null)
                 {
-                    //Logger.Log("MiterJoint: ERROR – missing construction curve(s).");
                     return;
                 }
 
@@ -63,6 +61,14 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                 double oA = JointCurveHelper.GetOffset(componentA, "offsetX");
                 double oB = JointCurveHelper.GetOffset(componentB, "offsetX");
 
+                // PART 1 / LAYER 2 GUARD: a zero/degenerate profile width collapses the
+                // miter cutter to a sliver and crashes the ACIS kernel. Reject early.
+                if (wA <= 1e-6 || wB <= 1e-6)
+                {
+                    L.Status("Frame_Joint_Msg_DegenerateGeometry", StatusMessageType.Warning);
+                    return;
+                }
+
                 var (innerA, outerA, _) = JointCurveHelper.GetOffsetEdges(
                     componentA, rawA, componentB, wA, oA
                 );
@@ -74,7 +80,16 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                 Point? pOut = JointCurveHelper.IntersectLines(componentA, outerA, componentB, outerB);
                 if (pIn == null || pOut == null)
                 {
-                    //Logger.Log("MiterJoint: ERROR – cannot find intersections.");
+                    return;
+                }
+
+                // PART 1 / LAYER 2 GUARD: coincident inner/outer intersections mean a
+                // zero-thickness cutter -> native ACIS AV. Use a real tolerance (1e-4 m),
+                // NOT 1e-6, because a 1e-5..1e-4 sliver still crashes the kernel.
+                double pInOutMag = (pIn.Value - pOut.Value).Magnitude;
+                if (pInOutMag < 1e-4)
+                {
+                    L.Status("Frame_Joint_Msg_DegenerateGeometry", StatusMessageType.Warning);
                     return;
                 }
 
@@ -95,8 +110,6 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                 // 6) build & subtract on each
                 SubtractLocalCutter(componentA, aFrom, aTo, worldUp, aStart, aEnd, spacing);
                 SubtractLocalCutter(componentB, bFrom, bTo, worldUp, bStart, bEnd, spacing);
-
-                //Logger.Log("MiterJoint: finished.");
             });
         }
 
@@ -119,37 +132,71 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             Point inLoc = inv * worldPIn;
             Point outLoc = inv * worldPOut;
 
-            //Logger.Log($"Building cutter in LOCAL for '{comp.Name}'.");
-
             // build local cutter‐frame & loop
             var (planeLocal, loopLocal) = JointModule.BuildDebugCutterFrameAndLoop(
                 inLoc, outLoc, upLocal, 500.0 // mm, cutter size
             );
             if (planeLocal == null)
             {
-                //Logger.Log($"  ERROR: BuildDebugCutterFrameAndLoop returned null for '{comp.Name}'.");
                 return;
             }
 
-            // pick forward/back in local
-            var (fwd, back) = JointCurveHelper.PickDirection(
-                planeLocal, comp, startConnected, endConnected,
-                longLen: 200.0 /* mm, extrusion length */, shortLen: spacing / 2.0
-            );
+            // Deterministic far-end rule (replaces the unreliable PickDirection
+            // body-centroid heuristic + the confusing (back,fwd) arg swap):
+            //
+            // The miter cut must REMOVE the side of the cutting plane that does NOT
+            // contain the member's FAR (un-connected) end, and KEEP the long run up
+            // to the joint. Far end = Start if endConnected, else End. Both the
+            // construction segment (comp.Template = the Part / local frame) and
+            // planeLocal.Frame are in the SAME local frame (planeLocal was built
+            // from inv*world points, inv = comp.Placement.Inverse), so the dot
+            // product below is frame-consistent.
+            double longLen = 200.0;            // mm-scale slab (kept large)
+            double shortLen = spacing / 2.0;   // small keep-side allowance (gap)
 
-            // extrude
+            var rawSeg = comp.Template.Curves
+                             .OfType<DesignCurve>()
+                             .FirstOrDefault()?.Shape as CurveSegment;
+
+            double fwdDist, backDist;
+            if (rawSeg == null)
+            {
+                // Robustness: never crash — fall back to the previous behaviour.
+                var (fwdP, backP) = JointCurveHelper.PickDirection(
+                    planeLocal, comp, startConnected, endConnected,
+                    longLen: longLen, shortLen: shortLen
+                );
+                fwdDist = backP;   // preserve the previous (back,fwd) call mapping
+                backDist = fwdP;
+            }
+            else
+            {
+                Point farLocal = endConnected ? rawSeg.StartPoint : rawSeg.EndPoint;
+                Vector planeZ = planeLocal.Frame.DirZ.ToVector();
+                Point planeOrigin = planeLocal.Frame.Origin;
+                Vector toFar = farLocal - planeOrigin;
+                double dot = Vector.Dot(toFar, planeZ);
+                bool farOnPlusZ = dot > 0;
+
+                // Extrude the LONG cutter slab on the side WITHOUT the far end
+                // (the waste side), the SHORT allowance on the keep side.
+                // CreateBidirectionalExtrudedBody: arg1=forwardDistance => +DirZ,
+                //                                  arg2=backwardDistance => -DirZ.
+                fwdDist = farOnPlusZ ? shortLen : longLen;   // +DirZ extrusion
+                backDist = farOnPlusZ ? longLen : shortLen;  // -DirZ extrusion
+            }
+
+            // extrude (fwdDist => +DirZ, backDist => -DirZ)
             var cutter = JointModule.CreateBidirectionalExtrudedBody(
-                planeLocal, loopLocal, back, fwd
+                planeLocal, loopLocal, fwdDist, backDist
             );
             if (cutter == null)
             {
-                //Logger.Log($"  ERROR: CreateBidirectionalExtrudedBody returned null for '{comp.Name}'.");
                 return;
             }
 
             // subtract
             JointModule.SubtractCutter(comp, cutter);
-            //Logger.Log($"  Subtraction complete for '{comp.Name}'.");
         }
     }
 

@@ -117,8 +117,8 @@ namespace AESCConstruct2026.FrameGenerator.Commands
             else
             {
                 // 5) Build all valid A–B pairs
-                var workItems = GetConnectedPairs(selectedComponents, jointType);
-                int total = workItems.Count();
+                var workItems = GetConnectedPairs(selectedComponents, jointType).ToList();
+                int total = workItems.Count;
                 if (total > 0)
                 {
                     using (var PT = ProgressTracker.Create(workItems.Count()))
@@ -198,13 +198,9 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                                     new List<Component> { compA, compB }
                                 );
 
-                                Body resetHalf = null;
-                                foreach (var b in compB.Template.Bodies)
-                                    if (b.Name == "ExtrudedProfile")
-                                    {
-                                        resetHalf = b.Shape;
-                                        break;
-                                    }
+                                // Resolve the regenerated profile body via the shared
+                                // Part-name-aware resolver (see JointModule.FindProfileBody).
+                                Body resetHalf = JointModule.FindProfileBody(compB.Template)?.Shape;
                                 if (resetHalf == null) continue;
 
                                 joint.Execute(compA, compB, spacing, null, resetHalf);
@@ -224,6 +220,18 @@ namespace AESCConstruct2026.FrameGenerator.Commands
                                     var (sB, eB) = JointModule.SplitBodyAtMidpoint(compB, localUp);
                                     if (sB != null && eB != null)
                                         halves[compB] = (sB, eB);
+                                }
+
+                                // Guard: if either profile could not be split (e.g. its
+                                // profile body was not found), the keys were never inserted.
+                                // Indexing them would throw KeyNotFoundException out of the
+                                // WriteBlock and hard-kill SpaceClaim. Skip the pair cleanly.
+                                if (!halves.ContainsKey(compA) || !halves.ContainsKey(compB))
+                                {
+                                    Logger.Log($"FrameGenerator: joint skipped - could not split profile(s) for pair " +
+                                               $"A='{compA?.Template?.Name}' B='{compB?.Template?.Name}'.");
+                                    L.Status("Frame_Joint_Msg_SplitFailed", StatusMessageType.Warning);
+                                    continue;
                                 }
 
                                 var (aStart, aEnd) = halves[compA];

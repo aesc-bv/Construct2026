@@ -72,14 +72,30 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                     return;
                 }
 
-                // 5) Determine connection ends by shared local-points
-                var jointPt = JointCurveHelper.FindSharedPoint(rawA, rawB);
-                bool aStartConn = (rawA.StartPoint - jointPt).Magnitude < 1e-6;
-                bool aEndConn = (rawA.EndPoint - jointPt).Magnitude < 1e-6;
-                bool bStartConn = (rawB.StartPoint - jointPt).Magnitude < 1e-6;
-                bool bEndConn = (rawB.EndPoint - jointPt).Magnitude < 1e-6;
+                // 5) Determine connection ends in WORLD space (per member).
+                //    BUG (fixed): the previous code used FindSharedPoint(rawA,rawB)
+                //    which compares each member's LOCAL construction points without
+                //    lifting through Placement. Every Construct profile's local
+                //    segment is (0,0,0)->(0,0,len), so rawA and rawB always
+                //    "coincide" at local (0,0,0) -> it always returned
+                //    aStartConn=bStartConn=True, aEndConn=bEndConn=False regardless
+                //    of true connectivity. Both members then got the SAME keep
+                //    side. Lift to world (as StraightJoint/MiterJoint do) so each
+                //    member's joint end is its OWN true connected end.
+                const double connTol = 1e-6;
+                bool aStartConn = (wA0 - wB0).Magnitude < connTol || (wA0 - wB1).Magnitude < connTol;
+                bool aEndConn = !aStartConn;
+                bool bStartConn = (wB0 - wA0).Magnitude < connTol || (wB0 - wA1).Magnitude < connTol;
+                bool bEndConn = !bStartConn;
 
-                // 6) Cutter on A: base=pY, offset-pZ, perp=perpA
+                // ROLE MAPPING (proven from JointSelectionHelper.GetSelectedComponents
+                // + GetConnectedPairs): panel Selection 1 = componentA = LONG part
+                // (kept full, only trimmed to meet => shortLen 0); panel Selection 2
+                // = componentB = SHORTENED part (=> shortLen spacing). The role
+                // asymmetry is carried by these per-call shortLen values; the
+                // keep/remove DIRECTION uses the sign-robust far-end rule.
+
+                // 6) Cutter on A (Sel1, LONG): base=pY, offset-pZ, perp=perpA
                 SubtractLocalCutter(
                     componentA,
                     worldBase: pY.Value,
@@ -89,10 +105,11 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                     startConnected: aStartConn,
                     endConnected: aEndConn,
                     longLen: 200.0,
-                    shortLen: 0.0
+                    shortLen: 0.0,
+                    role: "Sel1-LONG"
                 );
 
-                // 7) Cutter on B: base=pIn, offset = along A’s world-dir by ε
+                // 7) Cutter on B (Sel2, SHORT): base=pIn, offset = along A’s world-dir by ε
                 Vector worldDirA = dirA;
                 const double eps = 0.01;
                 Point worldOffsetB = pIn.Value + worldDirA * eps;
@@ -106,7 +123,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
                     startConnected: bStartConn,
                     endConnected: bEndConn,
                     longLen: 200.0,
-                    shortLen: spacing
+                    shortLen: spacing,
+                    role: "Sel2-SHORT"
                 );
 
                 //Logger.Log("StraightJoint2: finished.");
@@ -122,7 +140,8 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             bool startConnected,
             bool endConnected,
             double longLen,
-            double shortLen
+            double shortLen,
+            string role
         )
         {
             // 1) world→local reprojection
@@ -132,36 +151,56 @@ namespace AESCConstruct2026.FrameGenerator.Modules.Joints
             Point baseLoc = inv * worldBase;
             Point offLoc = inv * worldOffset;
 
-            //Logger.Log($"Building cutter in LOCAL for '{comp.Name}'.");
-
             // 2) build cutter‐plane + loop in local
             var (planeLocal, loopLocal) = JointModule.BuildDebugCutterFrameAndLoop(
                 baseLoc, offLoc, upLocal, 500.0
             );
             if (planeLocal == null)
             {
-                //Logger.Log($"  ERROR: BuildDebugCutterFrameAndLoop returned null for '{comp.Name}'.");
                 return;
             }
 
-            // 3) pick extrusion lengths in local
-            var (fwd, back) = JointCurveHelper.PickDirection(
-                planeLocal, comp, startConnected, endConnected,
-                longLen: longLen, shortLen: shortLen
-            );
+            // 3) Sign-/selection-order-robust keep/remove DIRECTION (the role
+            //    asymmetry is already carried by longLen/shortLen from Execute:
+            //    Sel1-LONG passes shortLen 0, Sel2-SHORT passes shortLen spacing).
+            //    The cut plane for the SHORT member is built parallel to A's axis
+            //    ("end cut parallel to selection 2") => DEGEN branch of
+            //    PickEndCutDirection (member-axis vs plane-normal ~0) -> body-
+            //    centroid fallback. far end = member's own un-connected end.
+            double fwdDist, backDist;
+            var rawSeg = comp.Template.Curves
+                             .OfType<DesignCurve>()
+                             .FirstOrDefault()?.Shape as CurveSegment;
+            if (rawSeg == null)
+            {
+                // Robustness: never crash — fall back to prior behaviour exactly
+                // (PickDirection + the previous (back,fwd) call mapping).
+                var (fwdP, backP) = JointCurveHelper.PickDirection(
+                    planeLocal, comp, startConnected, endConnected,
+                    longLen: longLen, shortLen: shortLen
+                );
+                fwdDist = backP;
+                backDist = fwdP;
+            }
+            else
+            {
+                var memberBody = JointModule.FindProfileBody(comp.Template)?.Shape;
+                (fwdDist, backDist) = JointModule.PickEndCutDirection(
+                    planeLocal, rawSeg, endConnected, memberBody,
+                    longLen, shortLen, $"Straight2[{role}]:{comp?.Template?.Name}"
+                );
+            }
 
-            // 4) extrude & subtract
+            // 4) extrude & subtract (fwdDist => +DirZ, backDist => -DirZ; no swap)
             var cutterLocal = JointModule.CreateBidirectionalExtrudedBody(
-                planeLocal, loopLocal, back, fwd
+                planeLocal, loopLocal, fwdDist, backDist
             );
             if (cutterLocal == null)
             {
-                //Logger.Log($"  ERROR: CreateBidirectionalExtrudedBody returned null for '{comp.Name}'.");
                 return;
             }
 
             JointModule.SubtractCutter(comp, cutterLocal);
-            //Logger.Log($"  Subtraction complete for '{comp.Name}'.");
         }
     }
 }
