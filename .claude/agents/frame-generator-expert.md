@@ -301,6 +301,30 @@ These are durable, non-obvious facts learned from a multi-round investigation th
 - Joint/regen paths re-sync the color in `JointModule.GetOrCreateFramesLayer`: if `FrameColor` is non-blank, the existing "Frames" layer's color is updated to it on every joint operation (so jointed parts match freshly-created profile color). If blank, the layer is left as-is.
 - **UX trap fixed in this cluster**: when the checkbox is unchecked, `SettingsControl` now disables AND clears the textbox (previously it displayed `#006d8b` while disabled, making "a color is configured" look true when it wasn't). Initial-load and toggle both call `ApplyFrameColorEnabledState()`.
 
+### Investigation playbook (symptom → first place to look)
+
+Quick triage for the joint-pipeline symptoms that recur — saves debug rounds.
+
+| Symptom | First check |
+|---|---|
+| SpaceClaim hard-crashes on joint, no managed exception | Windows Event Log → if faulting module is `SpaACIS.dll`, it's a native ACIS AV. Enumerate every ACIS boolean in the joint path; each must be guarded by `IsUsableBody` *before* the call. If `ExecuteJoint` is on the stack, also verify the `halves[…]` indexer has a `ContainsKey` guard (unhandled `KeyNotFoundException` from inside a WriteBlock kills the host). |
+| Wrong side of the cut is kept / member shortened on the wrong end | (a) Is the joint class routing through `JointModule.PickEndCutDirection`? If it still uses `JointCurveHelper.PickDirection` or has a `(back, fwd)` arg swap into `CreateBidirectionalExtrudedBody`, that's the bug. (b) Is the `endConnected` flag derived in **world space** per-member (`comp.Placement * rawSeg.Start/EndPoint`)? Local-space tests always return identical answers for both members. (c) For asymmetric modes, confirm the role lives in `longLen`/`shortLen` per call, not in cut-direction branching. |
+| Geometry blown up to >100× expected size after regen | A metres-API call got fed a millimetres-shaped constant. Grep `extendAmount`, any `* 200`, any `// mm` comment adjacent to a SpaceClaim call. |
+| Leftover `HalfStart`/`HalfEnd`/`preservedHalf` bodies after a joint | `ResetHalfForJoint` short-circuited at the R5a guard because `preserved` was null. Check (a) `ProfileModule.ExtrudeProfile` wipe still excludes `preservedHalf`, (b) `ResetHalfForJoint` still re-acquires `preserved` from the surviving DesignBody after regen. |
+| Joint silently does nothing | Both components must have `AESC_Construct`; both must have a `ConstructCurve`; world endpoints must coincide within `ArePointsConnected` tolerance; `FindProfileBody` must resolve a non-null body for each Template. |
+| Jointed parts the wrong color (e.g. teal when user set orange) | Read `Settings.Default.FrameColor` first. **Blank = "no override"** (Settings checkbox unticked or textbox empty). Not a code bug — user must tick the checkbox + enter a hex + Save. If `FrameColor` is non-blank but the layer is still teal, the re-sync in `GetOrCreateFramesLayer` was lost. |
+| Joint works for some selections, fails for others | Selection-order asymmetry in a Straight/Straight2/T variant where per-member world-space connectivity is needed. `StraightJoint2`'s local-frame `FindSharedPoint` had this exact bug (both members always got the same connectivity, so one worked by chance and one was wrong). |
+| User log has values like `5,695599E-005` | Dutch locale: comma is the decimal separator. Read as `5.695599E-005`. The data is correct, only the display format differs. |
+
+### Diagnostic discipline (when you need exhaustive tracing)
+
+When debugging joint geometry deeply, use a consistent prefix on every log line so the cleanup pass is one trivial grep-and-strip:
+
+- Prefix: `[MITER-DIAG]` (extend the same prefix for non-miter debugging — what matters is that ONE prefix sweeps the whole investigation).
+- Per-step markers in long methods: `S0..S17` (SplitBodyAtMidpoint), `R0..R8`/`R5a..R5h` (ResetHalfForJoint), `M0..M11` (MiterJoint.Execute), `C0..C7` (SubtractLocalCutter), `E0..E7` (ExecuteJoint), `W1..W5` (world-space verification). The log alone reconstructs the path from a single repro.
+- `Logger.Log` flushes to disk on every call (`File.AppendAllText`, no buffering) — the **last line in the log before a native AV is the last code that ran**. The only reliable signal when a corrupted-state exception kills the process with no managed trace.
+- After the fix is verified, one mechanical pass strips every `[MITER-DIAG]` line and any helper that's now unused (e.g. `DumpPartBodies`). Permanent fixes (guards, resolvers, directional helpers) stay; diagnostics go. Verify with `grep MITER-DIAG` returning zero before commit.
+
 ### Build & deploy (this user's environment)
 
 - User runs **SpaceClaim 2024 R2 = v242**, NOT ANSYS Discovery v251. Live addin folder: `C:\Program Files\ANSYS Inc\v242\scdm\Addins\AESCConstruct2026\`. `CLAUDE.md` says v251 — that's wrong for this user; verify deploy by checking the **v242** DLL timestamp, not v251.
