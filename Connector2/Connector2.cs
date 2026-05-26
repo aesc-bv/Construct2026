@@ -730,6 +730,13 @@ public class Connector2
             if (cutBody.ContainsPoint(center + (0.99 * thickness) * dirY))
                 cutBody = Body.ExtrudeProfile(new Profile(rProfPlane, rLoop), -thickness);
 
+            try
+            {
+                double grow = Math.Max(1e-6, tol);
+                cutBody.OffsetFaces(cutBody.Faces, grow);
+            }
+            catch (Exception ex) { Logger.Log("Connector2.CreateGeometry: rectangular cutter OffsetFaces failed: " + ex.ToString()); }
+
             TryDrawBody(part, "CutRect_rectangular_match_height", cutBody.Copy());
         }
         else

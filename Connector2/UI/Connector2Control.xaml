@@ -475,6 +475,7 @@
                         <CheckBox x:Name="connectorRectangularCut"
                                   TabIndex="15"
                                   Tag="connectorRectangularCut"
+                                  IsChecked="True"
                                   Margin="0,0,10,0"
                                   VerticalAlignment="Center"
                                   Grid.Column="0" />
