@@ -116,6 +116,7 @@
       <DependentUpon>ConnectorControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Connector2\Connector2.cs" />
+    <Compile Include="Connector2\ConnectorValidator.cs" />
     <Compile Include="Connector2\CylInfo2.cs" />
     <Compile Include="Connector2\UI\Connector2Control.xaml.cs">
       <DependentUpon>Connector2Control.xaml</DependentUpon>

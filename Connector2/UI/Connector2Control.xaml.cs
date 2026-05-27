@@ -2471,22 +2471,66 @@ namespace AESCConstruct2026.Connector2.UI
                       ?? this.FindName("btnCreate") as System.Windows.Controls.Button
                       ?? this.FindName("generateButton") as System.Windows.Controls.Button;
 
-            if (btn == null) return; // if your XAML uses a different name, adjust the FindName above
+            bool reliefOk = IsReliefAllowed(out var reliefReason);
+            string geometryReason = null;
+            if (reliefOk)
+                TryValidateConnectorInputs(out geometryReason);
 
-            if (IsReliefAllowed(out var reason))
+            string firstFailure = !reliefOk ? reliefReason : geometryReason;
+
+            if (firstFailure == null)
             {
-                btn.IsEnabled = true;
-                btn.ToolTip = null;
-                // optional: clear visual warning
+                if (btn != null) { btn.IsEnabled = true; btn.ToolTip = null; }
                 if (connectorSpacing != null) connectorSpacing.Background = System.Windows.Media.Brushes.White;
+                if (connectorValidationMsg != null)
+                {
+                    connectorValidationMsg.Text = string.Empty;
+                    connectorValidationMsg.Visibility = System.Windows.Visibility.Collapsed;
+                }
             }
             else
             {
-                btn.IsEnabled = false;
-                btn.ToolTip = reason;
-                // optional: subtle visual cue on the End Relief box
-                if (connectorSpacing != null) connectorSpacing.Background = System.Windows.Media.Brushes.MistyRose;
+                if (btn != null) { btn.IsEnabled = false; btn.ToolTip = firstFailure; }
+                if (connectorSpacing != null)
+                    connectorSpacing.Background = !reliefOk
+                        ? System.Windows.Media.Brushes.MistyRose
+                        : System.Windows.Media.Brushes.White;
+                if (connectorValidationMsg != null)
+                {
+                    connectorValidationMsg.Text = firstFailure;
+                    connectorValidationMsg.Visibility = System.Windows.Visibility.Visible;
+                }
             }
+        }
+
+        // TryValidateConnectorInputs parses all numeric inputs and runs the geometric validator.
+        // On parse failure or constraint violation, sets reason to a localized message.
+        private bool TryValidateConnectorInputs(out string reason)
+        {
+            if (!TryReadDouble(connectorWidth1, out var w1)
+                || !TryReadDouble(connectorWidth2, out var w2)
+                || !TryReadDouble(connectorHeight, out var h)
+                || !TryReadDouble(connectorTolerance, out var tol)
+                || !TryReadDouble(connectorSpacing, out var endRelief)
+                || !TryReadDouble(connectorRadiusChamfer, out var radius)
+                || !TryReadDouble(connectorCornerCutoutValue, out var cornerCutoutR)
+                || !TryReadDouble(connectorCornerCutoutRadiusValue, out var radiusInCutOutR))
+            {
+                reason = Localization.Language.Translate("Connector_Msg_FillValidValues");
+                return false;
+            }
+
+            bool hasRounding = connectorRadius?.IsChecked == true;
+            bool hasCornerCutout = connectorCornerCutout?.IsChecked == true;
+            bool radiusInCutOut = connectorCornerCutoutRadius?.IsChecked == true;
+
+            reason = AESCConstruct2026.Connector2.ConnectorValidator.Validate(
+                w1, w2, h, tol, endRelief,
+                radius, hasRounding,
+                hasCornerCutout, cornerCutoutR,
+                radiusInCutOut, radiusInCutOutR);
+
+            return reason == null;
         }
 
         // OnTextBoxKeyDown intercepts Enter presses to trigger a debounced redraw instead of default behavior.

@@ -64,6 +64,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
@@ -613,10 +614,20 @@
                                         Grid.Column="2" />
                     </Grid>
 
-                    <Button Tag="CreatePlate"
+                    <TextBlock x:Name="connectorValidationMsg"
+                               Tag="connectorValidationMsg"
+                               Grid.Row="19"
+                               Foreground="#C0392B"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Margin="0,5,0,0"
+                               Visibility="Collapsed" />
+
+                    <Button x:Name="btnCreateConnector"
+                            Tag="CreatePlate"
                             TabIndex="20"
                             Content="Create"
-                            Grid.Row="19"
+                            Grid.Row="20"
                             Style="{StaticResource FooterButtonStyle}"
                             Width="150"
                             HorizontalAlignment="Center"

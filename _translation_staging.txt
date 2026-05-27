@@ -374,3 +374,20 @@ Fastener_Msg_SelectCircle	Please select a circle.
 # === FRAME EXTRUDE ===
 Frame_Extrude_Msg_SelectLineOrEdge	Select at least one straight line or edge.
 Frame_Extrude_Err_InvalidProfile	Error: invalid profile type or data. Cannot create extrusion.
+
+
+# === CONNECTOR2 GEOMETRY VALIDATION ===
+Connector_Err_Width1Positive	Width 1 must be greater than 0 mm.
+Connector_Err_Width2Positive	Width 2 must be greater than 0 mm.
+Connector_Err_HeightPositive	Height must be greater than 0 mm.
+Connector_Err_TolerancePositive	Tolerance cannot be negative.
+Connector_Err_EndReliefPositive	End relief cannot be negative.
+Connector_Err_EndReliefLessThanHeight	End relief ({0} mm) must be less than height ({1} mm).
+Connector_Err_FilletRadiusExceedsHalfWidth2	Fillet radius ({0} mm) cannot exceed Width 2 / 2 ({1} mm).
+Connector_Err_FilletRadiusExceedsHeight	Fillet radius ({0} mm) cannot exceed Height ({1} mm).
+Connector_Err_ChamferExceedsWidth2	Chamfer ({0} mm) cannot exceed Width 2 / sqrt(2) ({1} mm).
+Connector_Err_ChamferExceedsHeight	Chamfer ({0} mm) cannot exceed Height * sqrt(2) ({1} mm).
+Connector_Err_CornerCutoutExceedsHalfWidth1	Corner cutout radius ({0} mm) must be less than Width 1 / 2 ({1} mm).
+Connector_Err_CornerCutoutExceedsHeight	Corner cutout radius ({0} mm) must be less than Height ({1} mm).
+Connector_Err_RadiusInCutOutExceedsHalfWidth2	Cutout corner radius ({0} mm) must be less than Width 2 / 2 ({1} mm).
+Connector_Err_RadiusInCutOutExceedsHeight	Cutout corner radius ({0} mm) must be less than Height ({1} mm).

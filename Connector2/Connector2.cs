@@ -118,6 +118,20 @@ public class Connector2
             int patternQty = (int)ParseWithTrace(nameof(patternQty), form.connectorPatternValue.Text);
             bool connectorStraight = false;
 
+            var validationError = ConnectorValidator.Validate(
+                width1, width2, height,
+                tolerance, endRelief,
+                radius, rounding,
+                hasCornerCutout, cornerCutoutRadius,
+                radiusInCutOut, radiusInCutOut_Radius);
+            if (validationError != null)
+            {
+                sw.Stop();
+                Logger.Log($"[CreateConnector] Validation rejected: {validationError}");
+                Application.ReportStatus(validationError, StatusMessageType.Warning, null);
+                return null;
+            }
+
             var result = new Connector2(
                 width1, height, tolerance, endRelief, width2, radius,
                 oneSide, location, clickPosition, rounding, dynamicHeight,
@@ -204,6 +218,11 @@ public class Connector2
         double r = (Radius) / 1000.0;                                       // m
         double h = DynamicHeight ? dynHeightVal : (Height / 1000.0) + bottomHeight; // mm to meters conversion
 
+        string FmtPt(Point p) => $"({p.X:0.######},{p.Y:0.######},{p.Z:0.######})";
+
+        Logger.Log($"[CYL-CB] inputs Width1={Width1:0.###} Width2={Width2:0.###} Radius={Radius:0.###} Height={Height:0.###} DynHeight={DynamicHeight} dynHeightVal={dynHeightVal:0.######} bottomHeight={bottomHeight:0.######} widthDiff_mm={widthDiff * 1000.0:0.######}");
+        Logger.Log($"[CYL-CB] derived halfWidth1={halfWidth1:0.######} halfWidth2={halfWidth2:0.######} r={r:0.######} h={h:0.######} HasRounding={HasRounding}");
+
         // Bottom and top references (X only at top)
         Point p1 = pCenter - halfWidth1 * dirX;        // bottom-left
         Point p6 = pCenter + halfWidth1 * dirX;        // bottom-right
@@ -223,6 +242,7 @@ public class Connector2
             boundary.Add(CurveSegment.Create(p2, p5));
             boundary.Add(CurveSegment.Create(p5, p6));
             boundary.Add(CurveSegment.Create(p6, p1));
+            Logger.Log($"[CYL-CB] rect path p1={FmtPt(p1)} p2={FmtPt(p2)} p5={FmtPt(p5)} p6={FmtPt(p6)} segs={boundary.Count}");
             return boundary;
         }
 
@@ -332,6 +352,9 @@ public class Connector2
         boundary.Add(CurveSegment.Create(p5, p6));
         boundary.Add(CurveSegment.Create(p6, p1));
 
+        Logger.Log($"[CYL-CB] {(HasRounding ? "fillet" : "chamfer")} path dist={dist:0.######} distBefore={distBefore:0.######} sideLen={sideLen:0.######} alpha={alpha:0.######} stepX={stepX:0.######} stepZ={stepZ:0.######} topWider={topWider} segs={boundary.Count}");
+        Logger.Log($"[CYL-CB] points p1={FmtPt(p1)} p2={FmtPt(p2)} p3={FmtPt(p3)} p4={FmtPt(p4)} p5={FmtPt(p5)} p6={FmtPt(p6)}");
+
         return boundary;
     }
 
@@ -349,6 +372,20 @@ public class Connector2
             bound1,
             bound2
         };
+
+        string FmtPt2(Point p) => $"({p.X:0.######},{p.Y:0.######},{p.Z:0.######})";
+        string GeoName(ITrimmedCurve s) => (s as CurveSegment)?.Geometry?.GetType().Name ?? s?.GetType().Name ?? "?";
+        Logger.Log($"[CYL-LOFT] bound1.Count={bound1?.Count ?? -1} bound2.Count={bound2?.Count ?? -1}");
+        for (int i = 0; bound1 != null && i < bound1.Count; i++)
+        {
+            var s = bound1[i];
+            Logger.Log($"[CYL-LOFT] bound1[{i}] {GeoName(s)} start={FmtPt2(s.StartPoint)} end={FmtPt2(s.EndPoint)} len={s.Length:0.######}");
+        }
+        for (int i = 0; bound2 != null && i < bound2.Count; i++)
+        {
+            var s = bound2[i];
+            Logger.Log($"[CYL-LOFT] bound2[{i}] {GeoName(s)} start={FmtPt2(s.StartPoint)} end={FmtPt2(s.EndPoint)} len={s.Length:0.######}");
+        }
 
         loft = Body.LoftProfiles(profiles, periodic: false, ruled: false);
         Body cap0 = Body.CreatePlanarBody(plane2, bound2);
